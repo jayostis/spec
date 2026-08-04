@@ -48,6 +48,28 @@ Example relationship:
 - `clinical.ttl` defines `clinical:MedicationRecord` as an OWL class with properties
 - `clinical.shapes.ttl` defines `clinical:MedicationShape` targeting `health:MedicationRecord` with constraints like required fields, datatypes, and value enumerations
 
+### Shapes MUST be entailment-independent
+
+Read `validation/index.md` before authoring or editing a shape. The rule in one line: **a shape never reaches a class through `rdfs:subClassOf`.**
+
+SHACL resolves class membership over the DATA graph. Pod records carry `rdf:type` triples and no schema axioms, so a subclass axiom that lives in an ontology file confers nothing at validation time. A validator that merges the ontology first sees the opposite, which means the same file can be valid under one implementation and invalid under another.
+
+Three consequences when you touch a shapes file:
+
+1. Every class you mean to constrain gets its own `sh:targetClass`. Declaring `Child rdfs:subClassOf Parent` does not put `Child` under `ParentShape`.
+2. Constraint inheritance is written, not inferred: either one shape names parent and children in `sh:targetClass`, or the child's shape names the parent's shape with `sh:node`.
+3. `sh:class` works the same way. `sh:class Parent` rejects a value typed `Child`; enumerate the acceptable subclasses with `sh:or`.
+
+This has been authored wrong twice, in two different vocabularies, both times with a comment claiming an inheritance the shape did not have. Run the check rather than trusting the comment:
+
+```sh
+python3 -m pip install -r scripts/requirements.txt
+python3 scripts/check-shape-targets.py          # the rule
+sh scripts/test-check-shape-targets.sh          # the rule's own regression suite
+```
+
+`rdfs:subClassOf` itself stays. It is what makes `rdfs:domain` / `rdfs:range` true and what the check uses to work out which classes need an explicit target. It is simply not a validation mechanism.
+
 ### Version Bumping
 
 When modifying an ontology:
@@ -68,6 +90,7 @@ Before committing any change to an ontology (`.ttl`) file, you MUST:
 - [ ] Update the corresponding `.shapes.ttl` if new classes/properties were added
 - [ ] Update JSON-LD context (`contexts/v1/{name}.jsonld`) if new terms need `@type` / `@id` mappings
 - [ ] Update `VOCAB_VERSIONS` file for this vocabulary — stage it with `git add VOCAB_VERSIONS`
+- [ ] Run `python3 scripts/check-shape-targets.py` and get exit 0 (the `shapes` CI job runs it, and its regression suite, on every PR touching `ontologies/`)
 - [ ] Tag the commit: `git tag vocab/{name}-v{X.Y}` after committing
 
 After committing, complete the downstream update sequence (in order):

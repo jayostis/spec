@@ -5,6 +5,44 @@ namespace is `https://ns.cascadeprotocol.org/genomics/v1#`. Pre-stable drafts
 (`v1-draft`) are not registered in `spec/VOCAB_VERSIONS` per D-PATH; they land
 there at v1.0 graduation.
 
+## v1-draft.0.5 - 2026-08-03
+
+Two SHACL corrections. No vocabulary additions; shapes only. Both were found by
+`scripts/check-shape-targets.py`, the new check that enforces the Validation
+Profile (`validation/index.md`), on its first run against this repository.
+
+### `CopyNumberVariantShape` did not actually inherit `VariantShape`
+
+`genomics:CopyNumberVariant` is `rdfs:subClassOf genomics:Variant`, and the
+shape's own comment stated that `VariantShape`'s constraints "apply
+transitively". They did not. SHACL resolves `sh:targetClass` over
+SHACL-instances in the DATA graph, and pod records carry `rdf:type` triples
+rather than schema axioms, so a subclass axiom declared in `genomics.ttl`
+reaches nothing at validation time.
+
+The measured effect: a copy number variant carrying no
+`genomics:dataQualityTier` and no stable identifier was reported **conforming**
+by a validator that performs no entailment, and **non-conforming with two
+Violation-severity results** by one that merges the subclass axioms. The
+missing tier matters beyond bookkeeping, because the `D-QUALITY-TIER` safety
+constraint on `VariantInterpretation` is evaluated against it.
+
+`genomics:CopyNumberVariantShape` now carries `sh:node genomics:VariantShape`,
+which every conforming validator applies whether or not it entails. Both
+engines now agree that the same fixture fails. This is a **tightening**: CNV
+records that were silently unchecked for gene symbol, data-quality tier and
+stable identifier are now checked for them.
+
+### `HaplotypeShape` `hasComponent` excluded `CopyNumberVariant`
+
+`sh:class` is resolved the same way as `sh:targetClass`, so
+`sh:class genomics:Variant` accepted only components explicitly typed
+`genomics:Variant`. A component typed `genomics:CopyNumberVariant` was rejected
+by a non-entailing validator and accepted by an entailing one. The acceptable
+classes are now enumerated with `sh:or`, matching the idiom already used by
+`VariantInterpretationShape.variantInterpreted`. This is a **relaxation** for
+strict validators: CNV components that were reported as warnings now pass.
+
 ## v1-draft.0.4 - 2026-06-16
 
 Index-patient phenotype capture (for Cascade Workbench).

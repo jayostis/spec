@@ -180,6 +180,8 @@ The shapes use three severity levels:
 
 **Validation workflow:** To validate serialized data, load the appropriate shapes file and the data file into a SHACL validator (e.g., Apache Jena, pySHACL, or TopBraid). The validator will report violations, warnings, and informational messages according to the severity levels above.
 
+**Entailment.** Cascade shapes are authored so that no RDFS entailment or ontology merge is needed to reach a correct verdict, and so that performing one does not change the verdict either. A validator that loads only the shapes file and the data file is fully conforming. The rule, its rationale, and what it requires of shape authors and of conformance suites are stated normatively in [`validation/index.md`](../validation/index.md); implementers whose validator has an inferencing setting should read it before choosing one.
+
 ---
 
 ## 2. Medications

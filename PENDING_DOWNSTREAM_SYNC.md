@@ -351,6 +351,51 @@ above — those repos are still at `clinical=1.9`):**
 
 ---
 
+## Pending batch — Validation Profile 1.0 + genomics v1-draft.0.5 (authored 2026-08-03)
+
+**No released vocabulary changed and no version in `VOCAB_VERSIONS` moved**, so
+the drift checker will keep reporting every repo up to date. The propagation
+below is nonetheless real: it changes what two tools are permitted to do, and it
+tightens one draft shape that `cascade-cli` embeds a copy of.
+
+**What was authored:** `validation/index.md` (Validation Profile 1.0), the
+normative statement of the entailment regime these shapes assume;
+`scripts/check-shape-targets.py` and `scripts/test-check-shape-targets.sh`
+enforcing it; CI job `shapes`; genomics v1-draft.0.5, the two shape corrections
+the check found on its first run. See `CHANGELOG.md` for the rule.
+
+**Synced NOW (not batched):**
+
+- [x] `spec/` — authored (this repo). No `VOCAB_VERSIONS` change: drafts are
+      unrowed per D-PATH and no released vocabulary moved.
+- [ ] `cascade-cli` — re-sync `src/shapes/genomics.shapes.ttl` so the embedded
+      copy carries the `sh:node` and the widened `sh:class`. Until then
+      `cascade validate` will not check copy number variants for
+      `genomics:dataQualityTier`.
+
+**Batched:**
+
+- [ ] `conformance` — the runner passes the `rdfs:subClassOf` axioms as
+      `ont_graph`, which entails more than the implementations it certifies, so
+      a fixture can pass the gate and fail in a strict validator. Per profile
+      rule V5 every fixture's expected outcome must be reproducible with no
+      pre-validation merge. Re-run with the merge removed and confirm no fixture
+      outcome changes; any that does was testing the runner's configuration
+      rather than the implementation's behaviour. Cite `validation/index.md`
+      wherever the inferencing setting lives.
+- [ ] `cascade-cli` — cite `validation/index.md` at the shapes-loading site, so
+      the (correct, conformant) decision not to entail is recorded as a decision
+      rather than an accident. Consider the profile's §6 assertion for vendored
+      shapes: every `sh:targetClass` in the bundled copy must resolve to a class
+      in the bundled vocabulary.
+- [ ] `cascadeprotocol.org` — publish `validation/index.md`; add it to
+      `scripts/sync-from-spec.sh`, which currently copies ontologies and
+      contexts only.
+- [ ] `sdk-typescript` / `sdk-python` / `cascade-agent` — no change. Neither SDK
+      validates, and no vocabulary term moved.
+
+---
+
 ## Open items
 
 ### 1. `clinical:sourceSystemOID` (planned) — NOT yet authored, deferred

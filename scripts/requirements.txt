@@ -1,0 +1,7 @@
+# Python dependencies for this repository's own checks.
+#
+# Pinned to the same rdflib the conformance suite installs, so a Turtle file
+# that parses here parses there. Nothing in spec/ runs a SHACL validator
+# (check-shape-targets.py reasons over graph structure only), so pyshacl is
+# deliberately not a dependency of this repository.
+rdflib==7.6.0

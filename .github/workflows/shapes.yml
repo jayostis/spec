@@ -1,0 +1,40 @@
+name: shapes
+
+# Enforces the Validation Profile (validation/index.md) on every change to a
+# vocabulary or its shapes: no shape published here may depend on RDFS
+# entailment to reach the classes it constrains. Without this job the rule is
+# only a document, and the gap it forbids has already been authored twice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'ontologies/**'
+      - 'scripts/check-shape-targets.py'
+      - 'scripts/test-check-shape-targets.sh'
+      - 'scripts/requirements.txt'
+      - '.github/workflows/shapes.yml'
+  workflow_dispatch:
+
+jobs:
+  entailment-independence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # The regression suite runs the check against the repository AND against
+      # scratch copies with known violations reintroduced, so a check that has
+      # stopped being able to fail is caught here rather than in a consumer.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-shape-targets.sh
+
+      - name: Entailment-independence check
+        run: python3 scripts/check-shape-targets.py
