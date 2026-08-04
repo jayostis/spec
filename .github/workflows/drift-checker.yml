@@ -1,0 +1,44 @@
+name: drift-checker
+
+# Runs the regression suite for scripts/check-downstream-versions.sh.
+#
+# That script is the gate that decides whether a vocabulary rollout is complete,
+# so a bug in it is a bug in every "we are in sync" claim made downstream. Its
+# suite previously existed but was never executed by CI, and it silently went red
+# on main without anyone noticing. A gate whose own tests are not run is not a
+# gate. This job exists so that cannot happen again.
+#
+# The suite is hermetic: it builds throwaway git repositories in a temp dir and
+# pins its negative controls to frozen specimens in scripts/testdata/. It needs
+# no network and never reads any real downstream repository.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'scripts/check-downstream-versions.sh'
+      - 'scripts/test-check-downstream-versions.sh'
+      - 'scripts/testdata/**'
+      - '.github/workflows/drift-checker.yml'
+  workflow_dispatch:
+
+jobs:
+  regression-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # POSIX sh, not bash: the script declares #!/bin/sh and must keep working
+      # there. Running the suite under dash catches bashisms that a bash-backed
+      # /bin/sh would silently accept.
+      - name: Install dash
+        run: sudo apt-get update && sudo apt-get install -y dash
+
+      - name: POSIX syntax check
+        run: |
+          dash -n scripts/check-downstream-versions.sh
+          dash -n scripts/test-check-downstream-versions.sh
+
+      - name: Regression suite (fixes + negative controls)
+        run: dash scripts/test-check-downstream-versions.sh
