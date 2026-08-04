@@ -12,6 +12,8 @@
     "owl": "http://www.w3.org/2002/07/owl#",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "foaf": "http://xmlns.com/foaf/0.1/",
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "void": "http://rdfs.org/ns/void#",
 
     "DataProvenance": "cascade:DataProvenance",
     "ConsumerGenerated": "cascade:ConsumerGenerated",
@@ -184,6 +186,46 @@
     "proxyRevokedAt": {
       "@id": "cascade:proxyRevokedAt",
       "@type": "xsd:dateTime"
-    }
+    },
+
+    "_comment_v3_4": "core v3.4 — pod export manifest (DCAT/VoID grounded) and reading-level terms",
+
+    "ExportManifest": "cascade:ExportManifest",
+    "RecordSummary": "cascade:RecordSummary",
+    "InteractionScenario": "cascade:InteractionScenario",
+
+    "patientProfileVersion": "cascade:patientProfileVersion",
+    "provenanceLayers": { "@id": "cascade:provenanceLayers", "@container": "@list", "@type": "@id" },
+    "clinicalSummary": { "@id": "cascade:clinicalSummary", "@type": "@id" },
+    "wellnessSummary": { "@id": "cascade:wellnessSummary", "@type": "@id" },
+    "deviceSources": { "@id": "cascade:deviceSources", "@container": "@list" },
+    "interactionScenarios": { "@id": "cascade:interactionScenarios", "@container": "@list" },
+
+    "domain": "cascade:domain",
+    "coreNotes": "cascade:notes",
+    "conditionCount": { "@id": "cascade:conditionCount", "@type": "xsd:integer" },
+    "medicationCount": { "@id": "cascade:medicationCount", "@type": "xsd:integer" },
+    "allergyCount": { "@id": "cascade:allergyCount", "@type": "xsd:integer" },
+    "labResultCount": { "@id": "cascade:labResultCount", "@type": "xsd:integer" },
+    "immunizationCount": { "@id": "cascade:immunizationCount", "@type": "xsd:integer" },
+    "coverageCount": { "@id": "cascade:coverageCount", "@type": "xsd:integer" },
+    "supplementCount": { "@id": "cascade:supplementCount", "@type": "xsd:integer" },
+    "vitalSignDays": { "@id": "cascade:vitalSignDays", "@type": "xsd:integer" },
+    "heartRateDays": { "@id": "cascade:heartRateDays", "@type": "xsd:integer" },
+    "bloodPressureDays": { "@id": "cascade:bloodPressureDays", "@type": "xsd:integer" },
+    "activityDays": { "@id": "cascade:activityDays", "@type": "xsd:integer" },
+    "sleepDays": { "@id": "cascade:sleepDays", "@type": "xsd:integer" },
+
+    "involvedResources": { "@id": "cascade:involvedResources", "@container": "@list", "@type": "@id" },
+    "severity": "cascade:severity",
+    "requiresCrossProvenance": { "@id": "cascade:requiresCrossProvenance", "@type": "xsd:boolean" },
+
+    "sourceType": "cascade:sourceType",
+    "dataTypes": "cascade:dataTypes",
+    "version": "cascade:version",
+
+    "date": { "@id": "cascade:date", "@type": "xsd:dateTime" },
+    "sampleCount": { "@id": "cascade:sampleCount", "@type": "xsd:integer" },
+    "coreLoincCode": { "@id": "cascade:loincCode", "@type": "@id" }
   }
 }
