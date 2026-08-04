@@ -13,32 +13,10 @@
 # from its own integration branch, so an unmerged sync branch is reported as
 # UNMERGED rather than silently counted as done.
 #
-# FRESHNESS: `origin/main` is a remote-tracking ref. It is only as current as the
-# last fetch in that checkout, so a repo whose sync merged upstream minutes ago
-# still reads at its pre-merge version until someone fetches. Reporting drift
-# from a stale ref is a false alarm; the reverse -- a stale ref that happens to
-# match -- is a false all-clear. This script therefore refreshes every repo's
-# remote-tracking refs before reading them.
-#
-# A repo whose fetch FAILS is never reported as a plain UP TO DATE. Its verdict
-# is computed from refs that could not be refreshed, which means the honest
-# answer is "could not verify", not "fine". Such a repo is reported as UNVERIFIED
-# and fails the run. Offline and air-gapped use is served by VOCAB_NO_FETCH=1, which
-# is a deliberate operator choice rather than a silent failure, and which labels
-# the whole run as unrefreshed.
-#
-# Likewise a repo that is not present on disk cannot be checked, so it fails the
-# run rather than being skipped past. "I could not look" is not "it is fine".
-#
 # Overrides:
 #   VOCAB_CANONICAL_REF=<ref>   use <ref> instead of origin/main / main
 #   VOCAB_ALLOW_WORKTREE=1      read working-tree files instead of git refs
 #                               (for tarball checkouts / CI without full history)
-#                               implies VOCAB_NO_FETCH=1, since no refs are read
-#   VOCAB_NO_FETCH=1            do not refresh remote-tracking refs before
-#                               reading them (offline / air-gapped runs). Every
-#                               verdict is then labelled as based on unrefreshed
-#                               refs.
 #
 # Usage: ./scripts/check-downstream-versions.sh
 
@@ -49,38 +27,8 @@ DEV_ROOT="$(cd "$SPEC_ROOT/.." && pwd)"
 SPEC_VERSIONS_FILE="$SPEC_ROOT/VOCAB_VERSIONS"
 ALLOW_WORKTREE="${VOCAB_ALLOW_WORKTREE:-0}"
 
-# Refresh remote-tracking refs unless told not to. Reading the working tree
-# instead of refs makes fetching pointless, so it implies no fetch.
-FETCH_ENABLED=1
-if [ "${VOCAB_NO_FETCH:-0}" = "1" ] || [ "$ALLOW_WORKTREE" = "1" ]; then
-  FETCH_ENABLED=0
-fi
-
 warn() {
   echo "$@" >&2
-}
-
-# fetch_repo <repo_path>
-# Refreshes <repo_path>'s remote-tracking refs so that origin/main is current.
-# Returns 0 when the refs can be trusted, which covers three cases:
-#   - the fetch succeeded
-#   - fetching is disabled (the caller labels the run instead)
-#   - there is nothing to fetch: no git dir, or no `origin` remote, in which case
-#     resolve_ref falls back to a local branch that is already current
-# Returns 1 only when a fetch was genuinely attempted and failed, leaving the
-# remote-tracking refs at whatever they happened to be.
-fetch_repo() {
-  _repo="$1"
-  [ "$FETCH_ENABLED" = "1" ] || return 0
-  git -C "$_repo" rev-parse --git-dir >/dev/null 2>&1 || return 0
-  git -C "$_repo" remote 2>/dev/null | grep -q '^origin$' || return 0
-  # GIT_TERMINAL_PROMPT=0 and BatchMode make an unauthenticated remote fail fast.
-  # Without them a credential or host-key prompt blocks this check forever, which
-  # in CI is an indefinite hang rather than an answer.
-  GIT_TERMINAL_PROMPT=0 \
-  GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -o BatchMode=yes}" \
-    git -C "$_repo" fetch --quiet origin >/dev/null 2>&1 || return 1
-  return 0
 }
 
 # resolve_ref <repo_path>
@@ -139,18 +87,6 @@ read_versions() {
 # Canonical versions, read from spec's integration branch
 # ---------------------------------------------------------------------------
 
-stale_refs=0
-
-if ! fetch_repo "$SPEC_ROOT"; then
-  stale_refs=1
-  warn ""
-  warn "!! WARNING: could not fetch spec's own remote-tracking refs."
-  warn "!! The canonical versions below are read from a ref that may be behind"
-  warn "!! its remote, so every downstream verdict in this run is suspect."
-  warn "!! This run will exit non-zero. Use VOCAB_NO_FETCH=1 for a deliberate"
-  warn "!! offline run."
-fi
-
 SPEC_CANONICAL="$(mktemp)"
 SPEC_SOURCE="$(read_versions "$SPEC_ROOT" "$SPEC_CANONICAL")"
 if [ -z "$SPEC_SOURCE" ]; then
@@ -174,13 +110,6 @@ while IFS='=' read -r key val; do
   echo "  $key = $val"
 done < "$SPEC_CANONICAL"
 echo ""
-
-if [ "$FETCH_ENABLED" = "0" ] && [ "$ALLOW_WORKTREE" != "1" ]; then
-  echo "NOTE: VOCAB_NO_FETCH=1 -- remote-tracking refs were NOT refreshed."
-  echo "      Every verdict below reflects this machine's last fetch, which may"
-  echo "      be older than the remotes."
-  echo ""
-fi
 
 # ---------------------------------------------------------------------------
 # Loud warning when the spec working tree proposes versions main has not ratified
@@ -223,23 +152,13 @@ fi
 
 DOWNSTREAM_REPOS="cascade-cli sdk-typescript sdk-python cascade-agent conformance cascadeprotocol.org cascade-sdk-swift"
 any_drift=0
-missing_repo=0
 
 for repo in $DOWNSTREAM_REPOS; do
   repo_path="$DEV_ROOT/$repo"
 
   if [ ! -d "$repo_path" ]; then
-    # A repo that is not here was not checked. Reporting that as anything other
-    # than a failure would let "I could not look" pass for "it is fine".
-    echo "[$repo] NOT FOUND at $repo_path -- CANNOT VERIFY"
-    missing_repo=1
+    echo "[$repo] NOT FOUND at $repo_path"
     continue
-  fi
-
-  stale_note=""
-  if ! fetch_repo "$repo_path"; then
-    stale_note="fetch failed"
-    stale_refs=1
   fi
 
   repo_versions="$(mktemp)"
@@ -271,17 +190,7 @@ for repo in $DOWNSTREAM_REPOS; do
   done < "$SPEC_CANONICAL"
   rm -f "$repo_versions"
 
-  if [ -n "$stale_note" ]; then
-    # The comparison ran, but against refs that could not be refreshed. Neither
-    # answer is trustworthy, so neither answer is given: this is UNVERIFIED, not
-    # UP TO DATE and not DRIFT DETECTED. stale_refs already fails the run.
-    if [ -z "$drift_lines" ]; then
-      echo "[$repo] UNVERIFIED  ($stale_note; last-known state from $repo_source was in sync)"
-    else
-      echo "[$repo] UNVERIFIED  ($stale_note; last-known state from $repo_source shows):"
-      printf "%b" "$drift_lines"
-    fi
-  elif [ -z "$drift_lines" ]; then
+  if [ -z "$drift_lines" ]; then
     echo "[$repo] UP TO DATE  (read from $repo_source)"
   else
     echo "[$repo] DRIFT DETECTED  (read from $repo_source):"
@@ -293,38 +202,12 @@ done
 rm -f "$SPEC_CANONICAL"
 
 echo ""
-rc=0
-
 if [ "$pending_spec" = "1" ]; then
   echo "Spec has UNMERGED version bumps. Downstream sync is blocked until they merge."
-  rc=1
-fi
-
-if [ "$any_drift" = "1" ]; then
+  exit 1
+elif [ "$any_drift" = "1" ]; then
   echo "Action required: update VOCAB_VERSIONS in drifted repos and implement missing vocabulary support."
-  rc=1
+  exit 1
+else
+  echo "All downstream repos are in sync."
 fi
-
-if [ "$missing_repo" = "1" ]; then
-  echo "Action required: one or more downstream repos are NOT PRESENT and could not be checked."
-  echo "A repo that cannot be read has not been shown to be in sync. Clone the missing"
-  echo "repos and re-run before treating this check as green."
-  rc=1
-fi
-
-if [ "$stale_refs" = "1" ]; then
-  echo "Action required: one or more fetches FAILED, so those verdicts were computed"
-  echo "from remote-tracking refs that could not be refreshed. Restore network access"
-  echo "and re-run, or set VOCAB_NO_FETCH=1 to declare an intentionally offline run."
-  rc=1
-fi
-
-if [ "$rc" = "0" ]; then
-  if [ "$FETCH_ENABLED" = "0" ] && [ "$ALLOW_WORKTREE" != "1" ]; then
-    echo "All downstream repos are in sync (refs NOT refreshed: VOCAB_NO_FETCH=1)."
-  else
-    echo "All downstream repos are in sync."
-  fi
-fi
-
-exit "$rc"

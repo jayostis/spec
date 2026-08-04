@@ -104,6 +104,28 @@ After committing, complete the downstream update sequence (in order):
 
 Run `scripts/check-downstream-versions.sh` at any time to see which repos are behind.
 
+The checker refreshes each repo's remote-tracking refs before reading them, so a
+sync that merged upstream a moment ago is seen immediately rather than reported as
+drift until someone happens to pull. Two conditions fail the run besides drift
+itself, both because they mean a repo was not actually checked:
+
+- a downstream repo that is **not present** on disk
+- a repo whose **fetch failed**, whose verdict is printed as `UNVERIFIED`
+
+For a deliberate offline run, `VOCAB_NO_FETCH=1` skips fetching and labels every
+verdict as computed from unrefreshed refs. Do not use it to make a red gate green.
+
+The checker has its own regression suite, which CI runs on every change to it:
+
+```sh
+sh scripts/test-check-downstream-versions.sh
+```
+
+It is hermetic (throwaway git repos in a temp dir, no network, no real downstream
+repo is read). Its negative controls run against frozen pre-fix specimens in
+`scripts/testdata/`; do not "fix" those files, their bugs are what make the
+controls meaningful.
+
 ## Commit Conventions
 
 ```
