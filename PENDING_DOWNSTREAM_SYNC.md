@@ -83,7 +83,7 @@ and `vocab/evidence-v1-draft.0.2` are applied on merge.
   is generalized (SHACL Core). `evidence:verdict` and the `VerdictValue`
   individuals are deprecated, kept one release.
 - **Code sync (already done in lockstep, not batched):**
-  `cascade-workbench/packages/contracts` (invariant + migration) and
+  the consuming application's contracts package (invariant + migration) and
   `packages/claims` `reify()`; Workbench grounding-gate fixtures exercise the
   new shapes against the real validator.
 - **Downstream:**
@@ -95,7 +95,7 @@ and `vocab/evidence-v1-draft.0.2` are applied on merge.
 - **At v1.0 graduation (do NOT batch-forget):** remove `evidence:verdict` +
   the `VerdictValue` individuals and the legacy SHACL branch; make
   `evidence:settled` `sh:minCount 1`; drop the derived legacy `Verdict` from
-  `@cascade-workbench/contracts`. Also: mint the JSON-LD context for `evidence:`
+  the consuming application's contracts package. Also: mint the JSON-LD context for `evidence:`
   and remove the `DRAFT_CONTEXT_EXCLUDED_PREFIXES` guard in sdk-typescript.
 
 ### 3. `workbench:` notes / flags / follow-ups as Web Annotations (draft, v1-draft.0.5) — DONE
@@ -134,7 +134,7 @@ the seam table, `spec/` + the `cascade-cli` shape sync happen NOW (so `cascade
 validate` knows the terms); the rest of the 7-repo checklist BATCHES here and
 runs at the next release boundary. Open-world shapes mean the DATA can ship
 before this batch fires. Slice V1 of the graph-retrieval sequenced plan
-(root backlog 3.12 + 3.11(d)); it blocks importer slice R3.
+; it blocks importer slice R3.
 
 **What was authored (the four changes):**
 
@@ -149,7 +149,7 @@ before this batch fires. Slice V1 of the graph-retrieval sequenced plan
   `owl:deprecated true` on `clinical:linkedConditionIds` (the space-separated
   UUID literal it replaces; retained for backward compatibility).
 - `clinical:hasLabResult` `rdfs:range` corrected `clinical:LabResult` to
-  `health:LabResultRecord` (root 3.11(d)) to match what both importer paths
+  `health:LabResultRecord` to match what both importer paths
   actually type.
 - Shapes: three open-world `sh:targetSubjectsOf` PropertyShapes (IRI nodeKind,
   class where committed, `sh:Warning`, no minCount). JSON-LD context: the three
@@ -190,7 +190,7 @@ cascade-cli reads 1.10 immediately after its shape-sync PR merges.**
 Released-vocab change (`clinical` 1.10 to 1.11), tag `vocab/clinical-v1.11`. A
 one-property vocabulary-correctness tweak, folded into the same v1.10 batch when
 it fires. Per the seam table, `spec/` + the `cascade-cli` shape sync happen NOW;
-the rest batches. Slice R3 of the graph-retrieval sequenced plan (root 3.11(b)).
+the rest batches. Slice R3 of the graph-retrieval sequenced plan.
 
 **What was authored (two changes):**
 
@@ -252,7 +252,7 @@ repos, same release boundary). Slice M1 of the graph-meaning plan.
   structural/temporal inference (which stays query-time, per GM-Q2).
 - `ParsedIndicationReferenceEdgeShape` — warning-only, `sh:nodeKind sh:IRI`
   only, no `sh:class`, matching `IndicationReferenceEdgeShape` and the v1.11
-  per-file-validation rationale (root 4.6a).
+  per-file-validation rationale.
 
 Motivation (M1 Phase 0 census, counts only): a real provider export reached via
 Apple Health carried 0 `reasonReference` but 50 `reasonCode` instances on
