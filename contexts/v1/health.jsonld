@@ -291,6 +291,69 @@
     "healthLoincCode": "health:loincCode",
     "healthUnit": "health:unit",
     "healthUcumCode": "health:ucumCode",
-    "trendPolarity": "health:trendPolarity"
+    "trendPolarity": "health:trendPolarity",
+
+    "_comment_v2_5": "health v2.5 — clinical record classes, wellness containers, daily snapshot properties",
+
+    "LabResultRecord": "health:LabResultRecord",
+    "ConditionRecord": "health:ConditionRecord",
+    "AllergyRecord": "health:AllergyRecord",
+    "ImmunizationRecord": "health:ImmunizationRecord",
+    "FamilyHistoryRecord": "health:FamilyHistoryRecord",
+    "SocialHistoryRecord": "health:SocialHistoryRecord",
+    "ActivityData": "health:ActivityData",
+    "SleepData": "health:SleepData",
+    "HeartRateData": "health:HeartRateData",
+    "BloodPressureData": "health:BloodPressureData",
+    "HRVData": "health:HRVData",
+    "BodyMeasurements": "health:BodyMeasurements",
+    "SleepQuality": "health:SleepQuality",
+
+    "notes": "health:notes",
+    "sourceRecordId": "health:sourceRecordId",
+    "status": "health:status",
+    "onsetDate": { "@id": "health:onsetDate", "@type": "xsd:dateTime" },
+    "conditionName": "health:conditionName",
+
+    "testName": "health:testName",
+    "resultValue": "health:resultValue",
+    "resultUnit": "health:resultUnit",
+    "interpretation": "health:interpretation",
+    "performedDate": { "@id": "health:performedDate", "@type": "xsd:dateTime" },
+    "reportedDate": { "@id": "health:reportedDate", "@type": "xsd:dateTime" },
+    "testCode": { "@id": "health:testCode", "@type": "@id" },
+    "labCategory": "health:labCategory",
+    "referenceRange": "health:referenceRange",
+    "specimenType": "health:specimenType",
+    "orderingProvider": "health:orderingProvider",
+    "performingLab": "health:performingLab",
+
+    "icd10Code": { "@id": "health:icd10Code", "@type": "@id" },
+    "conditionClass": "health:conditionClass",
+    "monitoredVitalSigns": { "@id": "health:monitoredVitalSigns", "@container": "@list" },
+
+    "allergen": "health:allergen",
+    "allergyCategory": "health:allergyCategory",
+    "reaction": "health:reaction",
+    "allergySeverity": "health:allergySeverity",
+
+    "vaccineName": "health:vaccineName",
+    "administrationDate": { "@id": "health:administrationDate", "@type": "xsd:dateTime" },
+    "vaccineCode": "health:vaccineCode",
+    "manufacturer": "health:manufacturer",
+    "lotNumber": "health:lotNumber",
+    "doseQuantity": "health:doseQuantity",
+    "route": "health:route",
+    "site": "health:site",
+    "administeringProvider": "health:administeringProvider",
+    "administeringLocation": "health:administeringLocation",
+
+    "onsetAge": { "@id": "health:onsetAge", "@type": "xsd:integer" },
+
+    "steps": { "@id": "health:steps", "@type": "xsd:integer" },
+    "activeEnergyKcal": { "@id": "health:activeEnergyKcal", "@type": "xsd:decimal" },
+    "exerciseMinutes": { "@id": "health:exerciseMinutes", "@type": "xsd:integer" },
+    "standHours": { "@id": "health:standHours", "@type": "xsd:integer" },
+    "durationHours": { "@id": "health:durationHours", "@type": "xsd:decimal" }
   }
 }

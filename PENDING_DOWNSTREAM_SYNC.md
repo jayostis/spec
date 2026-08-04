@@ -280,6 +280,77 @@ record by exact coding identity. Those relations are dropped entirely today.
 
 ---
 
+## Pending batch — health v2.5 / clinical v1.13 / core v3.4 (authored 2026-08-03)
+
+Three released-vocab changes authored together because they are one change:
+defining record classes in `health` is what makes the `clinical` duplicates
+deprecable, and the pod manifest in `core` counts the same records. Tags
+`vocab/health-v2.5`, `vocab/clinical-v1.13`, `vocab/core-v3.4`. **Additive
+vocabulary plus shapes only — no serializer, converter or emitter changed in
+any repo.**
+
+**What was authored:**
+
+- `health` 2.4 to 2.5 — 5 record classes (`LabResultRecord`, `ConditionRecord`,
+  `AllergyRecord`, `ImmunizationRecord`, `FamilyHistoryRecord`) that serializers
+  have emitted since schema 1.3 but the ontology never defined; the 40
+  properties they use; 6 wellness container classes as
+  `rdfs:subClassOf health:HealthProfile`; 4 sleep-quality named individuals; a
+  namespace-boundary note stating that `health:` vs `clinical:` is historical
+  and that provenance is carried only by `cascade:dataProvenance`.
+- `health.shapes.ttl` 1.1 to 1.2 — 8 new node shapes (the 5 record classes plus
+  `DailyVitalReading`, `DailyActivitySnapshot`, `DailySleepSnapshot`).
+  Constraint sets lifted from the corresponding `clinical:*` shapes and checked
+  against FHIR R4; `sh:Violation` on required fields.
+  `HealthProfileShape` now names the 6 wellness containers as explicit
+  additional `sh:targetClass` values.
+- `clinical` 1.12 to 1.13 — `owl:deprecated true` + `rdfs:seeAlso` on
+  `clinical:LabResult`, `Condition`, `Allergy`, `Immunization`. **Not removed:**
+  the pod export path is still their sole emitter. Also documents the intended
+  FHIR value sets on `clinical:status` and `clinical:interpretation` and records
+  why two of them are deliberately unenforced (constraining either is breaking
+  for existing pods). No shape changed.
+- `core` 3.3 to 3.4 — the pod export manifest vocabulary: 32 previously
+  undefined `cascade:` terms. `ExportManifest` as `rdfs:subClassOf dcat:Dataset`
+  (DCAT 3), `RecordSummary` as `rdfs:subClassOf void:Dataset` with counts as
+  `rdfs:subPropertyOf void:entities`, `InteractionScenario` kept novel.
+  `core.shapes.ttl` 1.0 to 1.1 adds shapes for all three.
+
+**Measured against the reference patient pod (19 files):** undefined `health:`
+terms 51 to 0, undefined `cascade:` terms 32 to 0, typed subjects matched by
+some shape 156 of 448 to 277 of 448. Validation stays 19 of 19 PASS with 0
+violations — the pod's data is conformant, what changed is that it is now
+actually checked.
+
+**Synced NOW (not batched):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `health=2.5`,
+      `clinical=1.13`, `core=3.4`.
+- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` (embedded `health.ttl`,
+      `health.shapes.ttl`, `clinical.ttl`, `core.ttl`, `core.shapes.ttl`) +
+      `VOCAB_VERSIONS`. Note: `src/shapes/health.ttl` has never been synced by
+      that script, which syncs full ontologies for `core clinical coverage`
+      only; fix the script in the same pass.
+
+**Batched (do NOT execute now; fold into the clinical v1.10/v1.11/v1.12 batch
+above — those repos are still at `clinical=1.9`):**
+
+- [ ] `cascadeprotocol.org` — HTML docs + `cascade-protocol-schemas.md`: the
+      five record classes are now defined and shaped, so the four "note on type
+      discrepancy" blocks in the serialization docs are stale. Retype the
+      reference pod's six wellness containers.
+- [ ] `conformance` — 26 existing fixtures (`lab-001..007`, `cond-001..007`,
+      `allergy-001..006`, `imm-001..003`, `fam-001..003`) become executable
+      against real constraints; add wellness fixtures for the 3 daily shapes.
+      Bump `VOCAB_VERSIONS`.
+- [ ] `sdk-typescript` / `sdk-python` — model files for the 5 record classes,
+      JSON-LD context terms, `VOCAB_VERSIONS`.
+- [ ] `cascade-agent` — query patterns for the record classes; `VOCAB_VERSIONS`.
+- [ ] `cascade-sdk-swift` — `VOCAB_VERSIONS` only. No serializer change: it is
+      already emitting the ratified names.
+
+---
+
 ## Open items
 
 ### 1. `clinical:sourceSystemOID` (planned) — NOT yet authored, deferred
