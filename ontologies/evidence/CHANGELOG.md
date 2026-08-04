@@ -12,4 +12,3 @@ All notable changes to the `evidence:` vocabulary. Draft status: not registered 
 - **SHACL:** `AssertionShape` with a **SHACL-Core** grounding invariant (`sh:or`/`sh:not`/`sh:in`: a `Supported`/`Contradicted` verdict requires ≥1 evidence link), `EvidenceLinkShape`, `CitationShape`. Core (not `sh:sparql`) so `rdf-validate-shacl` / `cascade validate` actually enforces it; verified with a build-breaking negative fixture.
 - Reuses core provenance (`cascade:extractionModel`, `cascade:extractionConfidence`, `cascade:requiresUserReview`, `prov:wasDerivedFrom`) rather than redefining it.
 - Term **"Assertion"** chosen over "Claim" to avoid collision with `coverage:ClaimRecord`.
-- Rationale and design review: `cascade-assets/Cascade-documents/Cascade-Workbench/vocab-proposals/`.

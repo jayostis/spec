@@ -26,12 +26,12 @@ The released vocabularies (`core`, `health`, `clinical`, `coverage`, `checkup`, 
 
 ## 2026-07-16: clinical v1.9 to v1.10 (graph edge vocabulary)
 
-Gives the importer traversable RDF for the relationships EHR sources carry but the pod has been flattening. Four authored changes to the released `clinical` vocabulary (slice V1 of the graph-retrieval sequenced plan; root backlog 3.12 and 3.11(d); blocks importer slice R3):
+Gives the importer traversable RDF for the relationships EHR sources carry but the pod has been flattening. Four authored changes to the released `clinical` vocabulary (slice V1 of the graph-retrieval sequenced plan; and 3.11(d); blocks importer slice R3):
 
 - `clinical:hasEncounter` (ObjectProperty, range `clinical:Encounter`): the record-to-encounter edge for grouping clinical events by visit context. FHIR-aligned to the `.encounter` Reference(Encounter) element on Observation, MedicationRequest, Condition, Procedure, DiagnosticReport, DocumentReference. Broad domain, constrained by SHACL rather than a restrictive `rdfs:domain` union.
 - `clinical:indicationReference` (ObjectProperty, open range `rdfs:Resource`): the medication-to-condition indication edge, alongside the retained free-text `clinical:indication` / `clinical:reasonForUse` literals. FHIR-aligned to `MedicationRequest.reasonReference` (R4; `reason` CodeableReference in R5). Range left open because FHIR allows Condition or Observation.
 - `clinical:linkedCondition` (ObjectProperty, Condition to Condition) plus `owl:deprecated true` on `clinical:linkedConditionIds`. Replaces the space-separated-UUID literal wart with a real traversable edge; the old property is retained (not removed) for backward compatibility with existing Checkup data.
-- `clinical:hasLabResult` `rdfs:range` corrected from `clinical:LabResult` to `health:LabResultRecord`, matching the class both importer paths actually type panel members (root 3.11(d)). Non-breaking (no SHACL shape constrained the edge target). Surfaced a related gap: `health:LabResultRecord` is emitted by the importer but has no class definition in the health vocabulary, filed as a follow-up.
+- `clinical:hasLabResult` `rdfs:range` corrected from `clinical:LabResult` to `health:LabResultRecord`, matching the class both importer paths actually type panel members. Non-breaking (no SHACL shape constrained the edge target). Surfaced a related gap: `health:LabResultRecord` is emitted by the importer but has no class definition in the health vocabulary, filed as a follow-up.
 
 Shapes: three open-world `sh:targetSubjectsOf` PropertyShapes (IRI nodeKind, class where the range is committed, `sh:Warning`, no `minCount`), so no pod current or future fails validation on account of these edges. JSON-LD context: the three ObjectProperties as `@type: @id`.
 

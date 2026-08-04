@@ -4,7 +4,7 @@ All notable changes to the `workbench:` vocabulary. Draft status: not registered
 
 ## v1-draft.0.5 (2026-07-15)
 
-- **Added the notes / research-flags / follow-ups substrate as W3C Web Annotations** ([NOTES-ANNOTATION-VOCAB]; proposal `cascade-workbench/docs/planning/vocab-proposals/2026-07-13-notes-as-web-annotations.md`). All three artifacts are ONE thing, an `oa:Annotation` over one or more graph nodes, distinguished by `oa:motivatedBy`: caregiver note = `oa:commenting`, research flag = `oa:questioning`, follow-up = `workbench:followUp`.
+- **Added the notes / research-flags / follow-ups substrate as W3C Web Annotations**. All three artifacts are ONE thing, an `oa:Annotation` over one or more graph nodes, distinguished by `oa:motivatedBy`: caregiver note = `oa:commenting`, research flag = `oa:questioning`, follow-up = `workbench:followUp`.
 - **Layer-1 reuse, nothing redeclared:** `oa:` carries body (`oa:TextualBody`), multi-target (`oa:hasTarget`), motivation, and span selectors (`oa:TextQuoteSelector` / `oa:TextPositionSelector` via `oa:SpecificResource`); PROV-O carries required attribution (`prov:wasAttributedTo`, `prov:generatedAtTime`). Follow-ups are dual-typed `cal:Vtodo` and reuse W3C RDF Calendar `ical:due` (optional) + `ical:status` (required, RFC 5545 VTODO enum). `schema:dueDate` was considered and rejected: it does not exist (verified 404; schema.org defines only `paymentDueDate`).
 - **Minted exactly one term:** `workbench:followUp`, an `oa:Motivation` with `skos:broader oa:questioning`, per the Web Annotation model's custom-motivation extension rule.
 - **Removed** `workbench:InvestigationNote`, `workbench:hasNote`, `workbench:noteText` (draft removal; never emitted by shipping code). An investigation-scoped note is an `oa:Annotation` targeting the `workbench:Investigation`.
@@ -28,4 +28,3 @@ All notable changes to the `workbench:` vocabulary. Draft status: not registered
 - Properties linking investigations to conversations, hypotheses, pins, and notes; conversation metadata; assertion links into `evidence:`.
 - **SHACL:** `InvestigationShape`, `ImportedConversationShape`.
 - Deliberately thin: grounding model lives in Layer-2 `evidence:`; phenotype lives in `genomics:`.
-- Rationale and design review: `cascade-assets/Cascade-documents/Cascade-Workbench/vocab-proposals/`.
