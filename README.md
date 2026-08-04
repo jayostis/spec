@@ -46,6 +46,8 @@ spec/
   serialization/
     turtle-rules.md         # Turtle serialization conventions
     pod-structure.md        # Pod directory layout spec
+  validation/
+    index.md                # Validation Profile: the entailment regime shapes assume
   contexts/
     cascade-v1.jsonld       # JSON-LD context for all vocabularies
   CHANGELOG.md
@@ -76,6 +78,8 @@ Validate data against shapes using the [Cascade CLI](https://github.com/the-casc
 ```bash
 cascade validate record.ttl
 ```
+
+**Shapes are entailment-independent.** SHACL resolves class membership over the data graph, so a shape that reached a class only through an `rdfs:subClassOf` axiom would fire in a validator that merges ontologies and stay silent in one that does not, so the same file would be valid under one implementation and invalid under another. Every class these shapes constrain therefore carries an explicit `sh:targetClass`, and constraint inheritance is stated with `sh:node` rather than inferred. [`validation/index.md`](validation/index.md) states the rule normatively; `scripts/check-shape-targets.py` enforces it on every change.
 
 ## Namespace Prefixes
 

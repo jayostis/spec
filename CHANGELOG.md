@@ -6,6 +6,24 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-08-03: Validation Profile 1.0 (the entailment regime, stated and enforced)
+
+New normative document `validation/index.md`, plus the check that holds this repository to it. No released vocabulary changes; nothing in `VOCAB_VERSIONS` moves.
+
+**The problem.** SHACL is a validation language, not a validation configuration. [SHACL 2.1.3.1](https://www.w3.org/TR/shacl/#targetClass) resolves `sh:targetClass` over SHACL-instances in the DATA graph, and Cascade pod records carry `rdf:type` triples but no schema axioms. A subclass axiom declared in an ontology file therefore confers no shape coverage on the subclass. A validator that merges ontologies into the data graph before validating sees the opposite, and both readings conform to SHACL. The same file could be valid under one implementation and invalid under another with neither doing anything wrong.
+
+**The rule.** Cascade shapes are entailment-independent. Every class a shape means to constrain carries an explicit `sh:targetClass`; constraint inheritance is stated with `sh:node` or a shared target list rather than inferred; `sh:class` value constraints enumerate the acceptable subclasses. A conforming validator MUST reach a correct verdict with no inferencing, MAY perform entailment as an extension, and MUST get the same verdict either way. A verdict difference between an entailing and a non-entailing validator is a defect in the shapes, not a validator configuration question. A conformance suite must be able to reproduce every fixture's expected outcome with no pre-validation merge. The rejected alternative, mandating an ontology merge, is argued in `validation/index.md` §4: it moves correctness into every consumer's configuration and is unenforceable in a library embedded in someone else's application.
+
+`rdfs:subClassOf` is unaffected and still required for modelling. It is what makes `rdfs:domain` / `rdfs:range` true, and it is what the check reads to work out which classes need an explicit target. It is simply not a validation mechanism.
+
+**The enforcement.** `scripts/check-shape-targets.py` evaluates three assertions over every ontology and shapes file here: target closure (T), constraint-set equivalence (I), and value-class closure (C). It reports how many cases each examined and fails if any examined none, because an assertion with nothing to inspect has established nothing. `scripts/test-check-shape-targets.sh` is its regression suite: every assertion is paired with a scratch copy of the repository carrying a deliberately reintroduced violation that the check must catch and name. New CI job `shapes` runs both on every PR touching `ontologies/`. This is the first automated test of this repository's own shapes.
+
+**Found on the first run, and fixed here:** genomics v1-draft.0.5. `genomics:CopyNumberVariantShape` claimed in its comment to inherit `VariantShape` transitively and did not, so copy number variants were never checked for `genomics:dataQualityTier` (the value the `D-QUALITY-TIER` safety constraint on `VariantInterpretation` is evaluated against) or for carrying a stable identifier. Measured across both engines: the same fixture was reported conforming by a non-entailing validator and non-conforming with two Violation results by an entailing one. Fixed with an explicit `sh:node`, after which both engines agree. `HaplotypeShape`'s `hasComponent` `sh:class` was widened to enumerate `CopyNumberVariant`. See `ontologies/genomics/CHANGELOG.md`.
+
+The released vocabularies (`core`, `health`, `clinical`, `coverage`, `checkup`, `pots`) already satisfy all three assertions and are unchanged. No tag; the Validation Profile carries its own version, as `serialization/index.md` does, and `VOCAB_VERSIONS` records vocabulary versions rather than profile versions.
+
+---
+
 ## 2026-07-16: clinical v1.9 to v1.10 (graph edge vocabulary)
 
 Gives the importer traversable RDF for the relationships EHR sources carry but the pod has been flattening. Four authored changes to the released `clinical` vocabulary (slice V1 of the graph-retrieval sequenced plan; root backlog 3.12 and 3.11(d); blocks importer slice R3):
