@@ -166,6 +166,7 @@
     "Condition": "clinical:Condition",
     "Immunization": "clinical:Immunization",
     "Procedure": "clinical:Procedure",
+    "Encounter": "clinical:Encounter",
     "VitalSign": "clinical:VitalSign",
     "MedicationUseEpisode": "clinical:MedicationUseEpisode",
     "Supplement": "clinical:Supplement",
@@ -180,14 +181,8 @@
     "clinicalSourceBundleId": "clinical:sourceBundleId",
     "fhirResourceId": "clinical:fhirResourceId",
     "fhirResourceType": "clinical:fhirResourceType",
-    "documentDate": {
-      "@id": "clinical:documentDate",
-      "@type": "xsd:dateTime"
-    },
-    "encounterDate": {
-      "@id": "clinical:encounterDate",
-      "@type": "xsd:dateTime"
-    },
+    "documentDate": "clinical:documentDate",
+    "encounterDate": "clinical:encounterDate",
     "displayName": "clinical:displayName",
     "narrativeText": "clinical:narrativeText",
     "narrativeXHTML": "clinical:narrativeXHTML",
@@ -209,7 +204,13 @@
     },
     "status": "clinical:status",
     "loincCode": "clinical:loincCode",
-    "snomedCode": "clinical:snomedCode",
+    "snomedCode": { "@id": "clinical:snomedCode", "@container": "@set" },
+    "encounterClass": "clinical:encounterClass",
+    "encounterStatus": "clinical:encounterStatus",
+    "encounterType": "clinical:encounterType",
+    "encounterStart": "clinical:encounterStart",
+    "encounterEnd": "clinical:encounterEnd",
+    "facilityName": "clinical:facilityName",
     "drugName": "clinical:drugName",
     "dosage": "clinical:dosage",
     "route": "clinical:route",
@@ -252,17 +253,14 @@
     "interpretation": "clinical:interpretation",
     "specimenType": "clinical:specimenType",
     "conditionName": "clinical:conditionName",
-    "onsetDate": {
-      "@id": "clinical:onsetDate",
-      "@type": "xsd:dateTime"
-    },
+    "onsetDate": "clinical:onsetDate",
     "abatementDate": {
       "@id": "clinical:abatementDate",
       "@type": "xsd:dateTime"
     },
     "clinicalStatus": "clinical:clinicalStatus",
     "verificationStatus": "clinical:verificationStatus",
-    "icd10Code": "clinical:icd10Code",
+    "icd10Code": { "@id": "clinical:icd10Code", "@container": "@set" },
     "vaccineName": "clinical:vaccineName",
     "vaccineCode": "clinical:vaccineCode",
     "lotNumber": "clinical:lotNumber",
@@ -274,10 +272,7 @@
       "@type": "xsd:date"
     },
     "procedureName": "clinical:procedureName",
-    "procedureDate": {
-      "@id": "clinical:procedureDate",
-      "@type": "xsd:dateTime"
-    },
+    "procedureDate": "clinical:procedureDate",
     "bodySite": "clinical:bodySite",
     "performer": "clinical:performer",
     "cptCode": "clinical:cptCode",
@@ -756,7 +751,7 @@
       "@id": "health:hasBPStatistics",
       "@type": "@id"
     },
-    "healthSnomedCode": "health:snomedCode",
+    "healthSnomedCode": { "@id": "health:snomedCode", "@container": "@set" },
     "healthLoincCode": "health:loincCode",
     "healthUnit": "health:unit",
     "healthUcumCode": "health:ucumCode",
