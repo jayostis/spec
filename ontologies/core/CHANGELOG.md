@@ -1,5 +1,34 @@
 # Core Vocabulary Changelog
 
+## v3.5 - 2026-08-09
+
+The ORIGIN axis: a declared source identity that is canonical across transports.
+
+- Added `cascade:sourceIdentity` (`owl:DatatypeProperty`, domain `owl:Thing`,
+  range `xsd:string`): the canonical, transport-independent identity of the
+  organization a record came from. Scheme-prefixed so a reader can tell how much
+  the producer knew: `org:{slug}`, `ns:{namespace}` (FHIR server base URL or
+  C-CDA `<id>` root OID), `transport:{label}` as an honestly-labelled last resort
+  that is not an origin claim. The slug normalization both transports must
+  implement is stated on the property in `core.ttl`.
+- Documented the three source axes in `core.ttl` and narrowed
+  `cascade:sourceSystem`'s comment to say what it is NOT: it is the INGESTION
+  batch, records how and when data arrived rather than where it came from, and
+  must not be used as a reconciliation key. `clinical:sourceEHR` remains the
+  display LABEL with unchanged semantics.
+- SHACL: `cascade:SourceIdentityShape` (core.shapes.ttl v1.5), an open-world
+  `sh:targetSubjectsOf` shape. It constrains the VALUE wherever the property
+  appears (single, string, one of the three schemes) and never requires its
+  presence, so every pod written before v3.5 validates unchanged. Ratchet path
+  to Warning and then Violation is written into the v3.5 changelog in
+  `core.ttl`.
+- JSON-LD: `sourceIdentity` and `sourceSystem` added to `contexts/v1/core.jsonld`
+  and `contexts/v1/cascade.jsonld`.
+- No class or property removed, renamed or deprecated.
+- Downstream sync (cascadeprotocol.org, conformance, cascade-cli) in the same
+  train; sdk-typescript, sdk-python and cascade-agent pending per the Vocabulary
+  Change Checklist.
+
 ## v3.3 - 2026-06-16
 
 Cascade Workbench support: ungrounded-AI provenance + caregiver-proxy.
