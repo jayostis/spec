@@ -51,6 +51,8 @@
       "@id": "cascade:creatorWebID",
       "@type": "@id"
     },
+    "sourceSystem": "cascade:sourceSystem",
+    "sourceIdentity": "cascade:sourceIdentity",
     "sourceName": "cascade:sourceName",
     "sourceBundleId": "cascade:sourceBundleId",
     "sourceReliabilityTier": "cascade:sourceReliabilityTier",

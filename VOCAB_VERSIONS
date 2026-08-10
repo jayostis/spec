@@ -2,7 +2,7 @@
 # Maintained in spec/. Downstream repos copy this file and update it
 # as they implement support for each vocabulary version.
 # Format: {vocab}={major}.{minor}
-core=3.4
+core=3.5
 health=2.6
 clinical=1.14
 coverage=1.4

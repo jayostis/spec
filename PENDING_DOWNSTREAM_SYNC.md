@@ -396,9 +396,51 @@ the check found on its first run. See `CHANGELOG.md` for the rule.
 
 ---
 
+## Pending batch — core v3.5 (authored 2026-08-09)
+
+**What was authored:** `cascade:sourceIdentity`, the ORIGIN axis — a canonical,
+transport-independent identity for the organization a record came from,
+scheme-prefixed `org:` / `ns:` / `transport:`. `cascade:sourceSystem`'s comment
+narrowed to state it is the INGESTION batch and not a reconciliation key.
+`cascade:SourceIdentityShape` added as an open-world `sh:targetSubjectsOf` shape,
+so absence is not a finding and pods written before v3.5 validate unchanged.
+`VOCAB_VERSIONS` `core=3.5`. Tag `vocab/core-v3.5`.
+
+**Synced NOW (not batched):**
+
+- [x] `spec/` — authored (this repo).
+- [ ] `cascadeprotocol.org` — `scripts/sync-from-spec.sh`, HTML docs +
+      `cascade-protocol-schemas.md`.
+- [ ] `conformance` — fixtures for the three value schemes, including a
+      two-transport-one-system pair whose FHIR and C-CDA halves carry the same
+      `org:` slug.
+- [ ] `cascade-cli` — `scripts/sync-shapes-from-spec.sh` + `VOCAB_VERSIONS`, and
+      the emission itself: both converters mint the identity at one chokepoint
+      and the reconciler's same-source guard reads it.
+
+**Batched:**
+
+- [ ] `sdk-typescript` — register the `sourceIdentity` predicate and add it to the
+      generated JSON-LD context. Neither SDK validates, so nothing is blocked on
+      this; a reader of a v3.5 pod simply will not have a typed accessor.
+- [ ] `sdk-python` — same, snake and camel spellings.
+- [ ] `cascade-agent` — system-prompt query patterns: "records from one
+      organization" should read `cascade:sourceIdentity`, not
+      `cascade:sourceSystem`.
+
+---
+
 ## Open items
 
 ### 1. `clinical:sourceSystemOID` (planned) — NOT yet authored, deferred
+
+> **Superseded in part by core v3.5.** `cascade:sourceIdentity`'s `ns:` tier
+> already carries an assigning-authority namespace (the FHIR server base URL or
+> the C-CDA `<id>` root OID) as the fallback when no organization is derivable.
+> What this item would still add is the RAW OID carried alongside a derivable
+> organization, as supplementary provenance and as the key an OID-to-org registry
+> would join on. Author it only if that registry work begins; do not author it as
+> a second identity axis.
 
 - **Status:** DEFERRED from the 2026-06-28 source-attribution work. The Apple
   Health authoritative-`sourceName` fix (importer reads `export.xml`
@@ -416,4 +458,4 @@ the check found on its first run. See `CHANGELOG.md` for the rule.
 
 ---
 
-_Last updated: 2026-07-20._
+_Last updated: 2026-08-09._
