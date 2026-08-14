@@ -108,6 +108,7 @@
     "unit": "clinical:unit",
     "referenceRange": "clinical:referenceRange",
     "interpretation": "clinical:interpretation",
+    "interpretationSourceCode": "clinical:interpretationSourceCode",
     "specimenType": "clinical:specimenType",
     "conditionName": "clinical:conditionName",
     "onsetDate": "clinical:onsetDate",
