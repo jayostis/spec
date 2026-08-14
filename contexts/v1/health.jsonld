@@ -319,6 +319,7 @@
     "resultValue": "health:resultValue",
     "resultUnit": "health:resultUnit",
     "interpretation": "health:interpretation",
+    "interpretationSourceCode": "health:interpretationSourceCode",
     "performedDate": "health:performedDate",
     "reportedDate": "health:reportedDate",
     "testCode": { "@id": "health:testCode", "@type": "@id", "@container": "@set" },

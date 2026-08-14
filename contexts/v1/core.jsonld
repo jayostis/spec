@@ -43,6 +43,7 @@
     },
     "sourceSystem": "cascade:sourceSystem",
     "sourceIdentity": "cascade:sourceIdentity",
+    "dataAbsentReason": "cascade:dataAbsentReason",
     "sourceName": "cascade:sourceName",
     "sourceBundleId": "cascade:sourceBundleId",
     "sourceReliabilityTier": "cascade:sourceReliabilityTier",
