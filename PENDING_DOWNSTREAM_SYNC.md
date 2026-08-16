@@ -463,21 +463,35 @@ anywhere is at `sh:Warning`. See `CHANGELOG.md` for the full statement.
 - [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `core=3.6`,
       `health=2.7`, `clinical=1.15`. `check-shape-targets.py` PASS 3/3;
       regression suite 21/21.
-- [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, HTML docs +
-      `cascade-protocol-schemas.md`.
-- [ ] `conformance` — vital/procedure/absence fixtures, order-shuffle identity
-      vectors, `VOCAB_VERSIONS`, `scripts/SPEC_PIN`.
-- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` + `VOCAB_VERSIONS`, the
+- [x] `cascadeprotocol.org` — `sync-from-spec.sh`, HTML docs +
+      `cascade-protocol-schemas.md` (the-cascade-protocol/cascadeprotocol.org#10,
+      merged 2026-08-14).
+- [x] `conformance` — vital/procedure/absence fixtures, order-shuffle identity
+      vectors, `VOCAB_VERSIONS`, `scripts/SPEC_PIN` re-pinned to the merge
+      commit (the-cascade-protocol/conformance#13, merged 2026-08-14).
+- [x] `cascade-cli` — `sync-shapes-from-spec.sh` + `VOCAB_VERSIONS`, the
       procedure-name emission, the nullFlavor mapping, and the identity
-      canonicalization at the set-valued key builders.
-- [ ] `sdk-typescript` — identity canonicalization only (see the deferred row
-      below for everything else).
+      canonicalization at the set-valued key builders
+      (the-cascade-protocol/cascade-cli#57, merged 2026-08-14; released in
+      cli 0.17.0).
+- [x] `sdk-typescript` — identity canonicalization only
+      (the-cascade-protocol/sdk-typescript#7, merged 2026-08-14).
 
 ### PENDING_DOWNSTREAM_SYNC — deferred out of this train, deliberately
 
 These are NOT oversights. Each is listed with what fires it.
 
-- [ ] **`sdk-python`, delete `_SDK_LEGACY_INTERPRETATIONS`.**
+**ALL ROWS COMPLETED by the follow-through sync, merged 2026-08-15:**
+sdk-python#5 (released 3.0.0), sdk-typescript#8 (released 3.0.0),
+cascade-agent#17, Cascade-Agentic-Labs/cascade-sdk-swift#4. Two notes against
+the rows as written: the sdk-python registration row understated the work
+(this train's conformance fixture retarget onto `clinical:Procedure` required
+the Procedure record type and validator support, a seven-failure baseline
+before any sdk-python change); and the swift outcome is health bumped to 2.7
+with core, clinical and coverage HELD with stated per-vocab reasons, so the
+drift checker showing those swift rows is honest, not a missed sync.
+
+- [x] **`sdk-python`, delete `_SDK_LEGACY_INTERPRETATIONS`.**
       `src/cascade_protocol/validator/validator.py` carries a one-member
       `frozenset({"elevated"})` special case, accepted because that package put
       the word into the world and the conformance corpus asserted it. The
@@ -485,18 +499,18 @@ These are NOT oversights. Each is listed with what fires it.
       ratified code". **This train fires it**: the two vital fixtures move to a
       ratified code plus a verbatim source code. Delete the set, the branch that
       reads it, and its test. Nothing else depends on it.
-- [ ] **`sdk-python`, register the new vocabulary.**
+- [x] **`sdk-python`, register the new vocabulary.**
       `cascade:dataAbsentReason`, `health:interpretationSourceCode`,
       `clinical:interpretationSourceCode` (snake and camel); the 74-value
       interpretation list; `VOCAB_VERSIONS` `core=3.6 health=2.7 clinical=1.15`.
-- [ ] **`sdk-python`, no identity change needed.** Its
+- [x] **`sdk-python`, no identity change needed.** Its
       `_canonical_field_value` is the rule this release ratified, and its
       cross-process/cross-directory determinism test already proves the
       invariants. The cross-SDK caveat in that function's docstring — that the
       sequence rule is an extension the other SDKs do not implement — can be
       dropped once the conformance vectors and the two TypeScript
       implementations land.
-- [ ] **`sdk-typescript`, model-level work.** The identity canonicalization is
+- [x] **`sdk-typescript`, model-level work.** The identity canonicalization is
       in this train; the MODEL layer is not. Still to do: register
       `dataAbsentReason` and both `interpretationSourceCode` spellings in the
       generated JSON-LD context; extend `LAB_INTERPRETATION_VALUES` from 60 to
@@ -506,14 +520,14 @@ These are NOT oversights. Each is listed with what fires it.
       agree with the shape this train put on `clinical:VitalSignShape`; do it in
       the same round as the sdk-python removal above so the two SDKs stop
       disagreeing about vitals in opposite directions.
-- [ ] **`cascade-agent`.** Query patterns: a record's absence reason
+- [x] **`cascade-agent`.** Query patterns: a record's absence reason
       (`cascade:dataAbsentReason`) is now answerable and must not be reported as
       "no data"; an interpretation answer should read
       `interpretationSourceCode` alongside `interpretation` so the source's own
       word is quotable; procedure-name queries must read
       `clinical:procedureName` and keep `health:procedureName` until the
       migration window closes. `VOCAB_VERSIONS`.
-- [ ] **`cascade-sdk-swift`.** `VOCAB_VERSIONS` only, pending confirmation that
+- [x] **`cascade-sdk-swift`.** `VOCAB_VERSIONS` only, pending confirmation that
       it emits none of the affected predicates.
 
 ---
@@ -546,4 +560,4 @@ These are NOT oversights. Each is listed with what fires it.
 
 ---
 
-_Last updated: 2026-08-14._
+_Last updated: 2026-08-15._
