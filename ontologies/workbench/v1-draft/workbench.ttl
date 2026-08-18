@@ -21,8 +21,12 @@
 #       annotationValue, PROV attribution on the overlay), exactly like
 #       workbench:userSourceLabel in v1-draft.0.4. No oa: term is redeclared.
 #     - Resolution rule shared by all three: latest overlay by dct:created
-#       wins. Apps MUST preserve curation state across duplicate merges so a
-#       flag on a merged-away record is not silently lost.
+#       wins. Merge behavior is per-axis: recordImportance follows the
+#       surviving record; recordVisibility is discharged when its record is
+#       superseded (the survivor's own visibility governs, so a hidden
+#       duplicate never silently hides the record the user chose to keep);
+#       problemListCuration resolves across a cluster's member records, so it
+#       follows by construction.
 #     - No SHACL change: the overlays reuse the already-shaped string
 #       predicates workbench:annotationProperty and workbench:annotationValue.
 #     - problemListCuration formalizes a term the shipping app already emits
@@ -409,8 +413,9 @@ workbench:userSourceLabel a owl:DatatypeProperty ; rdfs:label "user source label
 # (prov:wasAttributedTo, dct:created) on the overlay. The latest overlay by
 # dct:created wins. These are projection state for effective views: they never
 # alter or erase the underlying record, which stays discoverable with
-# receipts. Apps MUST carry curation state across duplicate merges (a flag on
-# a merged-away record follows the surviving record).
+# receipts. Merge behavior is per-axis and is stated on each property: a mark
+# of salience follows the surviving record, a mark of noise is discharged with
+# the copy it marked.
 
 workbench:problemListCuration a owl:DatatypeProperty ; rdfs:label "problem list curation"@en ;
     rdfs:comment "The user's ruling on whether a condition cluster belongs on the effective problem list. Closed token set: \"included\" / \"excluded\". Targets a member record of the cluster; resolution is the latest overlay by dct:created across all of the cluster's member records. Distinct from clinical truth: an excluded condition's records remain intact and visible in receipts views."@en ;
@@ -418,11 +423,11 @@ workbench:problemListCuration a owl:DatatypeProperty ; rdfs:label "problem list 
     owl:versionInfo "Added in workbench v1-draft.0.6" .
 
 workbench:recordVisibility a owl:DatatypeProperty ; rdfs:label "record visibility"@en ;
-    rdfs:comment "A user's non-destructive visibility preference for one record in effective views. Closed token set: \"hidden\" / \"visible\". Hiding is an append-only overlay and unhiding is a later overlay, never a deletion; the record remains in its bucket and in receipts views. Distinct from workbench:Retraction (entered in error, superseded) and workbench:Tombstone (erasure): a hidden record is still asserted as true, the user just does not want it in the way."@en ;
+    rdfs:comment "A user's non-destructive visibility preference for one record in effective views. Closed token set: \"hidden\" / \"visible\". Hiding is an append-only overlay and unhiding is a later overlay, never a deletion; the record remains in its bucket and in receipts views. Distinct from workbench:Retraction (entered in error, superseded) and workbench:Tombstone (erasure): a hidden record is still asserted as true, the user just does not want it in the way. Discharged when its record is superseded by a duplicate merge: hiding is a statement about the copy that was hidden, and the surviving record's own visibility governs, so a hidden duplicate never silently hides the record the user chose to keep."@en ;
     rdfs:range xsd:string ;
     owl:versionInfo "Added in workbench v1-draft.0.6" .
 
 workbench:recordImportance a owl:DatatypeProperty ; rdfs:label "record importance"@en ;
-    rdfs:comment "A user salience flag on one record. Closed token set: \"important\" / \"normal\". Marks the record as a priority retrieval key for downstream queries and agent searches; it carries no further semantics."@en ;
+    rdfs:comment "A user salience flag on one record. Closed token set: \"important\" / \"normal\". Marks the record as a priority retrieval key for downstream queries and agent searches; it carries no further semantics. Follows the surviving record across a duplicate merge: salience is about the fact, not the copy."@en ;
     rdfs:range xsd:string ;
     owl:versionInfo "Added in workbench v1-draft.0.6" .
