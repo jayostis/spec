@@ -3,6 +3,35 @@
 # until v1.0 graduation.
 #
 # Changelog
+#   v1-draft.0.6 (2026-08-18)
+#     - ADDED the curation axes: three flag properties that carry a user's
+#       curation of EFFECTIVE VIEWS as append-only overlay state, never a
+#       mutation of the records themselves. workbench:problemListCuration
+#       ("included"/"excluded") records the user's ruling on whether a
+#       condition cluster belongs on the effective problem list;
+#       workbench:recordVisibility ("hidden"/"visible") hides a record from
+#       effective views non-destructively, with unhide as a later overlay;
+#       workbench:recordImportance ("important"/"normal") marks a record as
+#       salient, usable as a retrieval key by downstream queries.
+#     - Standards-first check: W3C Web Annotation motivations (oa:bookmarking,
+#       oa:moderating) were considered and not used. These flags are not
+#       annotation CONTENT; they are projection state read by the
+#       effective-view resolver, and they ride the existing record-amendment
+#       overlay machinery (workbench:Annotation with annotationProperty /
+#       annotationValue, PROV attribution on the overlay), exactly like
+#       workbench:userSourceLabel in v1-draft.0.4. No oa: term is redeclared.
+#     - Resolution rule shared by all three: latest overlay by dct:created
+#       wins. Merge behavior is per-axis: recordImportance follows the
+#       surviving record; recordVisibility is discharged when its record is
+#       superseded (the survivor's own visibility governs, so a hidden
+#       duplicate never silently hides the record the user chose to keep);
+#       problemListCuration resolves across a cluster's member records, so it
+#       follows by construction.
+#     - No SHACL change: the overlays reuse the already-shaped string
+#       predicates workbench:annotationProperty and workbench:annotationValue.
+#     - problemListCuration formalizes a term the shipping app already emits
+#       under the draft-term policy; the visibility and importance terms land
+#       together with the app work that emits them.
 #   v1-draft.0.5 (2026-07-15)
 #     - ADDED the notes / flags / follow-ups substrate as W3C WEB ANNOTATIONS
 #       ([NOTES-ANNOTATION-VOCAB]; proposal 2026-07-13-notes-as-web-annotations
@@ -84,8 +113,8 @@
     dct:description "Layer 3 vocabulary for the Cascade Workbench desktop investigation app."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-06-16"^^xsd:date ;
-    dct:modified "2026-07-15"^^xsd:date ;
-    owl:versionInfo "1.0-draft.0.5" ;
+    dct:modified "2026-08-18"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.6" ;
     rdfs:comment "Holds the app-specific workspace objects only: Investigation, ImportedConversation, Hypothesis, Pin, InvestigationNote, plus the append-only record-amendment overlays (Amendment, Annotation, Retraction, Tombstone). The assertion/evidence/verdict grounding model is deliberately NOT here (it is cross-cutting Layer 2 evidence:). Phenotype capture is NOT here (it extends genomics:). Per the Layer 3 graduation rule, any class here that proves useful to other apps should graduate to Layer 2. Draft: not in VOCAB_VERSIONS until v1.0 graduation."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/workbench/v1-draft/> .
 
@@ -376,3 +405,29 @@ workbench:userSourceLabel a owl:DatatypeProperty ; rdfs:label "user source label
     rdfs:comment "The user-chosen FILING label for the SOURCE a record is organized under in the Workbench 'filing cabinet' (the ORGANIZATION axis). It is a filing PREFERENCE attributed to the user, carried on a workbench:Annotation (annotationProperty = \"workbench:userSourceLabel\", annotationValue = the chosen label) whose overlay bears cascade:SelfReported provenance. It MUST NOT alter the objective imported origin clinical:sourceEHR, which is preserved and displayed alongside. The effective source the UI groups records by prefers this label when present, else falls back to the imported origin (clinical:sourceEHR, else the import-batch tag). Open domain (like workbench:verificationStatus) so it can file any record."@en ;
     rdfs:range xsd:string ;
     owl:versionInfo "Added in workbench v1-draft.0.4" .
+
+# ── Properties — Curation axes (effective-view projection state) ────────────
+# Added in workbench v1-draft.0.6. Three flags carried on workbench:Annotation
+# overlays (annotationProperty = the CURIE below, annotationValue = the token),
+# with cascade:SelfReported provenance and PROV attribution
+# (prov:wasAttributedTo, dct:created) on the overlay. The latest overlay by
+# dct:created wins. These are projection state for effective views: they never
+# alter or erase the underlying record, which stays discoverable with
+# receipts. Merge behavior is per-axis and is stated on each property: a mark
+# of salience follows the surviving record, a mark of noise is discharged with
+# the copy it marked.
+
+workbench:problemListCuration a owl:DatatypeProperty ; rdfs:label "problem list curation"@en ;
+    rdfs:comment "The user's ruling on whether a condition cluster belongs on the effective problem list. Closed token set: \"included\" / \"excluded\". Targets a member record of the cluster; resolution is the latest overlay by dct:created across all of the cluster's member records. Distinct from clinical truth: an excluded condition's records remain intact and visible in receipts views."@en ;
+    rdfs:range xsd:string ;
+    owl:versionInfo "Added in workbench v1-draft.0.6" .
+
+workbench:recordVisibility a owl:DatatypeProperty ; rdfs:label "record visibility"@en ;
+    rdfs:comment "A user's non-destructive visibility preference for one record in effective views. Closed token set: \"hidden\" / \"visible\". Hiding is an append-only overlay and unhiding is a later overlay, never a deletion; the record remains in its bucket and in receipts views. Distinct from workbench:Retraction (entered in error, superseded) and workbench:Tombstone (erasure): a hidden record is still asserted as true, the user just does not want it in the way. Discharged when its record is superseded by a duplicate merge: hiding is a statement about the copy that was hidden, and the surviving record's own visibility governs, so a hidden duplicate never silently hides the record the user chose to keep."@en ;
+    rdfs:range xsd:string ;
+    owl:versionInfo "Added in workbench v1-draft.0.6" .
+
+workbench:recordImportance a owl:DatatypeProperty ; rdfs:label "record importance"@en ;
+    rdfs:comment "A user salience flag on one record. Closed token set: \"important\" / \"normal\". Marks the record as a priority retrieval key for downstream queries and agent searches; it carries no further semantics. Follows the surviving record across a duplicate merge: salience is about the fact, not the copy."@en ;
+    rdfs:range xsd:string ;
+    owl:versionInfo "Added in workbench v1-draft.0.6" .
