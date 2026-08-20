@@ -2,7 +2,7 @@
 
 **Purpose.** A vocabulary change is *authored* in `spec/` continuously, but its
 propagation to the six downstream repos (the steps 2–7 of the Vocabulary Change
-Checklist in the workspace `CLAUDE.md`) is **expensive to do one change at a
+Checklist in `CONTRIBUTING.md`) is **expensive to do one change at a
 time**. This ledger lets us accumulate authored-but-not-yet-propagated changes
 and run the full 7-repo sync **in one batch** at a release boundary (e.g. weekly,
 or when a draft vocab is promoted out of `v1-draft`).
@@ -31,7 +31,7 @@ on the CLI shape sync; do it promptly only so `validate` documents the new term.
 ## How to run the batch
 
 1. `cd spec && sh scripts/check-downstream-versions.sh` — see drift across repos.
-2. For each ledger row below, run the per-repo steps (CLAUDE.md checklist 2–7).
+2. For each ledger row below, run the per-repo steps (`CONTRIBUTING.md` cross-repo sequence, steps 2–7).
 3. Tag `vocab/{name}-v{X.Y}`, update each repo's `VOCAB_VERSIONS`, clear the row.
 
 ---
@@ -163,7 +163,7 @@ before this batch fires. Slice V1 of the graph-retrieval sequenced plan
       the-cascade-protocol/cascade-cli#21 (npm test 1034 green; fresh Synthea
       import validates 20/20 clean against the new shapes).
 
-**Batched (do NOT execute now; run at the next batch, per CLAUDE.md checklist 2-7):**
+**Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md` cross-repo sequence, steps 2-7):**
 
 - [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, HTML docs (`docs/clinical/v1/`
       version refs, new property/shape sections, changelog entry) +
