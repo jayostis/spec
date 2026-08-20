@@ -11,6 +11,18 @@
 @prefix ucum: <http://unitsofmeasure.org/> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 
+@prefix vs:       <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+# ============================================================================
+# Changelog
+# ============================================================================
+# v1.0-draft.0.2 (2026-08-20) — Per-term maturity. Every term now carries
+#   vs:term_status (W3C SemWeb Vocabulary Status, originating in FOAF):
+#   "unstable" for draft terms, "archaic" for terms already marked
+#   owl:deprecated. The convention is per-TERM by design, so a vocabulary
+#   can promote individual terms in place without a namespace change;
+#   Cascade previously stated maturity once per vocabulary, in prose no
+#   machine could read. No term definition changed.
+
 # ============================================================================
 # Ontology Metadata
 # ============================================================================
@@ -21,9 +33,10 @@
     dct:description "Unified vocabulary for diabetes and pre-diabetes management, aggregating data from CGMs, glucose meters, insulin delivery systems, and lifestyle tracking devices"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-12-12"^^xsd:date ;
-    owl:versionInfo "1.0-draft" ;
+    dct:modified "2026-08-20"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.2" ;
     rdfs:comment "DRAFT - This vocabulary is under development and subject to change. Domain-specific vocabulary for diabetes wellness tracking. Designed to unify data from multiple wearables and apps into a coherent, analyzable format."@en ;
-    rdfs:seeAlso <https://cascadeprotocol.org/docs/diabetes/v1.0-draft/> .
+    rdfs:seeAlso <https://cascadeprotocol.org/docs/diabetes/v1-draft/> .
 
 # ============================================================================
 # Diabetes Classification
@@ -31,7 +44,8 @@
 
 diabetes:DiabetesType a owl:Class ;
     rdfs:label "Diabetes Type"@en ;
-    rdfs:comment "Classification of diabetes or metabolic condition"@en .
+    rdfs:comment "Classification of diabetes or metabolic condition"@en ;
+    vs:term_status "unstable" .
 
 diabetes:Type1 a diabetes:DiabetesType ;
     rdfs:label "Type 1 Diabetes"@en ;
@@ -65,11 +79,13 @@ diabetes:GlucoseReading a owl:Class ;
     rdfs:label "Glucose Reading"@en ;
     rdfs:comment "Single blood glucose measurement from any source (CGM, finger stick, lab)"@en ;
     rdfs:subClassOf fhir:Observation ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:GlucoseMeasurementType a owl:Class ;
     rdfs:label "Glucose Measurement Type"@en ;
-    rdfs:comment "Classification of glucose measurement method"@en .
+    rdfs:comment "Classification of glucose measurement method"@en ;
+    vs:term_status "unstable" .
 
 diabetes:CGMReading a diabetes:GlucoseMeasurementType ;
     rdfs:label "Continuous Glucose Monitor"@en ;
@@ -92,37 +108,43 @@ diabetes:glucoseValue a owl:DatatypeProperty ;
     rdfs:comment "Glucose concentration (see glucoseUnit for measurement unit)"@en ;
     rdfs:domain diabetes:GlucoseReading ;
     rdfs:range xsd:double ;
-    owl:equivalentProperty loinc:15074-8 .
+    owl:equivalentProperty loinc:15074-8 ;
+    vs:term_status "unstable" .
 
 diabetes:glucoseUnit a owl:DatatypeProperty ;
     rdfs:label "Glucose Unit"@en ;
     rdfs:comment "Unit of measurement: 'mg/dL' (US) or 'mmol/L' (international)"@en ;
     rdfs:domain diabetes:GlucoseReading ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:measurementType a owl:ObjectProperty ;
     rdfs:label "Measurement Type"@en ;
     rdfs:comment "Method used to obtain glucose reading"@en ;
     rdfs:domain diabetes:GlucoseReading ;
-    rdfs:range diabetes:GlucoseMeasurementType .
+    rdfs:range diabetes:GlucoseMeasurementType ;
+    vs:term_status "unstable" .
 
 diabetes:measurementTimestamp a owl:DatatypeProperty ;
     rdfs:label "Measurement Timestamp"@en ;
     rdfs:comment "ISO 8601 timestamp when reading was taken"@en ;
     rdfs:domain diabetes:GlucoseReading ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 diabetes:trendArrow a owl:DatatypeProperty ;
     rdfs:label "Trend Arrow"@en ;
     rdfs:comment "CGM trend indicator: rapidlyFalling, falling, steady, rising, rapidlyRising"@en ;
     rdfs:domain diabetes:GlucoseReading ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:trendRate a owl:DatatypeProperty ;
     rdfs:label "Trend Rate"@en ;
     rdfs:comment "Rate of glucose change (mg/dL/min or mmol/L/min)"@en ;
     rdfs:domain diabetes:GlucoseReading ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # CGM Session
@@ -131,36 +153,42 @@ diabetes:trendRate a owl:DatatypeProperty ;
 diabetes:CGMSession a owl:Class ;
     rdfs:label "CGM Session"@en ;
     rdfs:comment "A continuous glucose monitoring session (typically 10-14 days per sensor)"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:sensorType a owl:DatatypeProperty ;
     rdfs:label "Sensor Type"@en ;
     rdfs:comment "CGM sensor model (e.g., 'Dexcom G7', 'Freestyle Libre 3')"@en ;
     rdfs:domain diabetes:CGMSession ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:sensorSerialNumber a owl:DatatypeProperty ;
     rdfs:label "Sensor Serial Number"@en ;
     rdfs:domain diabetes:CGMSession ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:sessionStart a owl:DatatypeProperty ;
     rdfs:label "Session Start"@en ;
     rdfs:comment "Timestamp when sensor was applied/activated"@en ;
     rdfs:domain diabetes:CGMSession ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 diabetes:sessionEnd a owl:DatatypeProperty ;
     rdfs:label "Session End"@en ;
     rdfs:comment "Timestamp when sensor expired or was removed"@en ;
     rdfs:domain diabetes:CGMSession ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 diabetes:sensorWearLocation a owl:DatatypeProperty ;
     rdfs:label "Sensor Wear Location"@en ;
     rdfs:comment "Body location: abdomen, arm, thigh, etc."@en ;
     rdfs:domain diabetes:CGMSession ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Insulin Delivery
@@ -170,11 +198,13 @@ diabetes:InsulinDose a owl:Class ;
     rdfs:label "Insulin Dose"@en ;
     rdfs:comment "Record of insulin delivery from pump, pen, or injection"@en ;
     rdfs:subClassOf fhir:MedicationAdministration ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:InsulinType a owl:Class ;
     rdfs:label "Insulin Type"@en ;
-    rdfs:comment "Classification of insulin by action profile"@en .
+    rdfs:comment "Classification of insulin by action profile"@en ;
+    vs:term_status "unstable" .
 
 diabetes:RapidActing a diabetes:InsulinType ;
     rdfs:label "Rapid Acting"@en ;
@@ -194,7 +224,8 @@ diabetes:LongActing a diabetes:InsulinType ;
 
 diabetes:DoseType a owl:Class ;
     rdfs:label "Dose Type"@en ;
-    rdfs:comment "Purpose of insulin dose"@en .
+    rdfs:comment "Purpose of insulin dose"@en ;
+    vs:term_status "unstable" .
 
 diabetes:Bolus a diabetes:DoseType ;
     rdfs:label "Bolus"@en ;
@@ -213,35 +244,41 @@ diabetes:insulinUnits a owl:DatatypeProperty ;
     rdfs:label "Insulin Units"@en ;
     rdfs:comment "Amount of insulin delivered in units"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:insulinType a owl:ObjectProperty ;
     rdfs:label "Insulin Type"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range diabetes:InsulinType .
+    rdfs:range diabetes:InsulinType ;
+    vs:term_status "unstable" .
 
 diabetes:doseType a owl:ObjectProperty ;
     rdfs:label "Dose Type"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range diabetes:DoseType .
+    rdfs:range diabetes:DoseType ;
+    vs:term_status "unstable" .
 
 diabetes:insulinBrand a owl:DatatypeProperty ;
     rdfs:label "Insulin Brand"@en ;
     rdfs:comment "Specific insulin product (e.g., 'Humalog', 'Tresiba')"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:deliveryMethod a owl:DatatypeProperty ;
     rdfs:label "Delivery Method"@en ;
     rdfs:comment "How insulin was delivered: pump, pen, syringe"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:deliveryDevice a owl:DatatypeProperty ;
     rdfs:label "Delivery Device"@en ;
     rdfs:comment "Specific device (e.g., 'Tandem t:slim X2', 'Omnipod 5')"@en ;
     rdfs:domain diabetes:InsulinDose ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Carbohydrate/Meal Tracking
@@ -250,15 +287,18 @@ diabetes:deliveryDevice a owl:DatatypeProperty ;
 diabetes:CarbEntry a owl:Class ;
     rdfs:label "Carbohydrate Entry"@en ;
     rdfs:comment "Record of carbohydrate intake for bolus calculation"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:MealEvent a owl:Class ;
     rdfs:label "Meal Event"@en ;
     rdfs:comment "Complete meal record with timing, macros, and context"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:MealType a owl:Class ;
-    rdfs:label "Meal Type"@en .
+    rdfs:label "Meal Type"@en ;
+    vs:term_status "unstable" .
 
 diabetes:Breakfast a diabetes:MealType ;
     rdfs:label "Breakfast"@en .
@@ -276,48 +316,57 @@ diabetes:Snack a diabetes:MealType ;
 diabetes:carbGrams a owl:DatatypeProperty ;
     rdfs:label "Carbohydrate Grams"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:fiberGrams a owl:DatatypeProperty ;
     rdfs:label "Fiber Grams"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:sugarGrams a owl:DatatypeProperty ;
     rdfs:label "Sugar Grams"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:proteinGrams a owl:DatatypeProperty ;
     rdfs:label "Protein Grams"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:fatGrams a owl:DatatypeProperty ;
     rdfs:label "Fat Grams"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:calories a owl:DatatypeProperty ;
     rdfs:label "Calories"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:glycemicIndex a owl:DatatypeProperty ;
     rdfs:label "Glycemic Index"@en ;
     rdfs:comment "GI value (0-100) if known"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:integer .
+    rdfs:range xsd:integer ;
+    vs:term_status "unstable" .
 
 diabetes:foodDescription a owl:DatatypeProperty ;
     rdfs:label "Food Description"@en ;
     rdfs:domain diabetes:CarbEntry ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:mealType a owl:ObjectProperty ;
     rdfs:label "Meal Type"@en ;
     rdfs:domain diabetes:MealEvent ;
-    rdfs:range diabetes:MealType .
+    rdfs:range diabetes:MealType ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Daily Summary - Time in Range Metrics
@@ -326,112 +375,131 @@ diabetes:mealType a owl:ObjectProperty ;
 diabetes:DailyGlucoseSummary a owl:Class ;
     rdfs:label "Daily Glucose Summary"@en ;
     rdfs:comment "Aggregated glucose metrics for a single day following ADA/EASD consensus standards"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:summaryDate a owl:DatatypeProperty ;
     rdfs:label "Summary Date"@en ;
     rdfs:comment "The date this summary covers"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:date .
+    rdfs:range xsd:date ;
+    vs:term_status "unstable" .
 
 # Time in Range metrics (ADA/EASD consensus)
 diabetes:timeInRange a owl:DatatypeProperty ;
     rdfs:label "Time in Range (%)"@en ;
     rdfs:comment "Percentage of time glucose was 70-180 mg/dL (target >70%)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:timeBelowRange a owl:DatatypeProperty ;
     rdfs:label "Time Below Range (%)"@en ;
     rdfs:comment "Percentage of time glucose was <70 mg/dL (target <4%)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:timeAboveRange a owl:DatatypeProperty ;
     rdfs:label "Time Above Range (%)"@en ;
     rdfs:comment "Percentage of time glucose was >180 mg/dL (target <25%)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:timeInTightRange a owl:DatatypeProperty ;
     rdfs:label "Time in Tight Range (%)"@en ;
     rdfs:comment "Percentage of time glucose was 70-140 mg/dL (pregnancy target)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:timeSeverelyLow a owl:DatatypeProperty ;
     rdfs:label "Time Severely Low (%)"@en ;
     rdfs:comment "Percentage of time glucose was <54 mg/dL (target <1%)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:timeSeverelyHigh a owl:DatatypeProperty ;
     rdfs:label "Time Severely High (%)"@en ;
     rdfs:comment "Percentage of time glucose was >250 mg/dL (target <5%)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # Statistical metrics
 diabetes:meanGlucose a owl:DatatypeProperty ;
     rdfs:label "Mean Glucose"@en ;
     rdfs:comment "Average glucose value for the period"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:standardDeviation a owl:DatatypeProperty ;
     rdfs:label "Standard Deviation"@en ;
     rdfs:comment "Glucose variability measure (lower is more stable)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:coefficientOfVariation a owl:DatatypeProperty ;
     rdfs:label "Coefficient of Variation (%)"@en ;
     rdfs:comment "CV = SD/Mean * 100 (target <36% for stable glucose)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:gmi a owl:DatatypeProperty ;
     rdfs:label "Glucose Management Indicator"@en ;
     rdfs:comment "GMI (estimated HbA1c from CGM data): GMI = 3.31 + (0.02392 * mean glucose mg/dL)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:minGlucose a owl:DatatypeProperty ;
     rdfs:label "Minimum Glucose"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:maxGlucose a owl:DatatypeProperty ;
     rdfs:label "Maximum Glucose"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:sensorActivePercentage a owl:DatatypeProperty ;
     rdfs:label "Sensor Active (%)"@en ;
     rdfs:comment "Percentage of day with CGM data available (target >70% for valid metrics)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # Daily totals
 diabetes:totalDailyInsulin a owl:DatatypeProperty ;
     rdfs:label "Total Daily Insulin (units)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:totalBasalInsulin a owl:DatatypeProperty ;
     rdfs:label "Total Basal Insulin (units)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:totalBolusInsulin a owl:DatatypeProperty ;
     rdfs:label "Total Bolus Insulin (units)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:totalCarbs a owl:DatatypeProperty ;
     rdfs:label "Total Carbohydrates (g)"@en ;
     rdfs:domain diabetes:DailyGlucoseSummary ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Pattern Detection
@@ -440,10 +508,12 @@ diabetes:totalCarbs a owl:DatatypeProperty ;
 diabetes:GlucosePattern a owl:Class ;
     rdfs:label "Glucose Pattern"@en ;
     rdfs:comment "Identified recurring pattern in glucose data"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:PatternType a owl:Class ;
-    rdfs:label "Pattern Type"@en .
+    rdfs:label "Pattern Type"@en ;
+    vs:term_status "unstable" .
 
 diabetes:DawnPhenomenon a diabetes:PatternType ;
     rdfs:label "Dawn Phenomenon"@en ;
@@ -468,31 +538,36 @@ diabetes:InsulinSensitivityPattern a diabetes:PatternType ;
 diabetes:patternType a owl:ObjectProperty ;
     rdfs:label "Pattern Type"@en ;
     rdfs:domain diabetes:GlucosePattern ;
-    rdfs:range diabetes:PatternType .
+    rdfs:range diabetes:PatternType ;
+    vs:term_status "unstable" .
 
 diabetes:patternConfidence a owl:DatatypeProperty ;
     rdfs:label "Pattern Confidence"@en ;
     rdfs:comment "Statistical confidence in pattern detection (0.0 to 1.0)"@en ;
     rdfs:domain diabetes:GlucosePattern ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:patternTimeWindow a owl:DatatypeProperty ;
     rdfs:label "Pattern Time Window"@en ;
     rdfs:comment "Time of day pattern typically occurs (e.g., '04:00-07:00')"@en ;
     rdfs:domain diabetes:GlucosePattern ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:patternSeverity a owl:DatatypeProperty ;
     rdfs:label "Pattern Severity"@en ;
     rdfs:comment "Severity level: mild, moderate, severe"@en ;
     rdfs:domain diabetes:GlucosePattern ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:suggestedAction a owl:DatatypeProperty ;
     rdfs:label "Suggested Action"@en ;
     rdfs:comment "Recommended adjustment for discussion with healthcare provider"@en ;
     rdfs:domain diabetes:GlucosePattern ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Hypo/Hyper Events
@@ -502,51 +577,60 @@ diabetes:HypoglycemicEvent a owl:Class ;
     rdfs:label "Hypoglycemic Event"@en ;
     rdfs:comment "Episode of low blood glucose (<70 mg/dL)"@en ;
     rdfs:subClassOf prov:Entity ;
-    owl:sameAs sct:302866003 .
+    owl:sameAs sct:302866003 ;
+    vs:term_status "unstable" .
 
 diabetes:HyperglycemicEvent a owl:Class ;
     rdfs:label "Hyperglycemic Event"@en ;
     rdfs:comment "Episode of high blood glucose (>250 mg/dL)"@en ;
     rdfs:subClassOf prov:Entity ;
-    owl:sameAs sct:80394007 .
+    owl:sameAs sct:80394007 ;
+    vs:term_status "unstable" .
 
 diabetes:eventStart a owl:DatatypeProperty ;
     rdfs:label "Event Start"@en ;
     rdfs:comment "When glucose crossed threshold"@en ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 diabetes:eventEnd a owl:DatatypeProperty ;
     rdfs:label "Event End"@en ;
     rdfs:comment "When glucose returned to range"@en ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 diabetes:eventDurationMinutes a owl:DatatypeProperty ;
     rdfs:label "Event Duration (minutes)"@en ;
-    rdfs:range xsd:integer .
+    rdfs:range xsd:integer ;
+    vs:term_status "unstable" .
 
 diabetes:nadir a owl:DatatypeProperty ;
     rdfs:label "Nadir"@en ;
     rdfs:comment "Lowest glucose value during hypoglycemic event"@en ;
     rdfs:domain diabetes:HypoglycemicEvent ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:peak a owl:DatatypeProperty ;
     rdfs:label "Peak"@en ;
     rdfs:comment "Highest glucose value during hyperglycemic event"@en ;
     rdfs:domain diabetes:HyperglycemicEvent ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:requiresAssistance a owl:DatatypeProperty ;
     rdfs:label "Requires Assistance"@en ;
     rdfs:comment "Whether third-party assistance was needed (Level 3 severe hypo)"@en ;
     rdfs:domain diabetes:HypoglycemicEvent ;
-    rdfs:range xsd:boolean .
+    rdfs:range xsd:boolean ;
+    vs:term_status "unstable" .
 
 diabetes:treatmentCarbs a owl:DatatypeProperty ;
     rdfs:label "Treatment Carbs"@en ;
     rdfs:comment "Carbohydrates consumed to treat hypoglycemia"@en ;
     rdfs:domain diabetes:HypoglycemicEvent ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Lab Results
@@ -556,32 +640,37 @@ diabetes:LabResult a owl:Class ;
     rdfs:label "Lab Result"@en ;
     rdfs:comment "Clinical laboratory test result"@en ;
     rdfs:subClassOf fhir:Observation ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:HbA1cResult a owl:Class ;
     rdfs:label "HbA1c Result"@en ;
     rdfs:comment "Hemoglobin A1c test result (3-month glucose average)"@en ;
-    rdfs:subClassOf diabetes:LabResult .
+    rdfs:subClassOf diabetes:LabResult ;
+    vs:term_status "unstable" .
 
 diabetes:hba1cValue a owl:DatatypeProperty ;
     rdfs:label "HbA1c Value (%)"@en ;
     rdfs:comment "HbA1c in percentage (NGSP/DCCT standard)"@en ;
     rdfs:domain diabetes:HbA1cResult ;
     rdfs:range xsd:double ;
-    owl:equivalentProperty loinc:4548-4 .
+    owl:equivalentProperty loinc:4548-4 ;
+    vs:term_status "unstable" .
 
 diabetes:hba1cMmolMol a owl:DatatypeProperty ;
     rdfs:label "HbA1c (mmol/mol)"@en ;
     rdfs:comment "HbA1c in IFCC units"@en ;
     rdfs:domain diabetes:HbA1cResult ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:fastingGlucose a owl:DatatypeProperty ;
     rdfs:label "Fasting Glucose"@en ;
     rdfs:comment "Fasting plasma glucose in mg/dL"@en ;
     rdfs:domain diabetes:LabResult ;
     rdfs:range xsd:double ;
-    owl:equivalentProperty loinc:1558-6 .
+    owl:equivalentProperty loinc:1558-6 ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Diabetes Profile
@@ -590,80 +679,93 @@ diabetes:fastingGlucose a owl:DatatypeProperty ;
 diabetes:DiabetesProfile a owl:Class ;
     rdfs:label "Diabetes Profile"@en ;
     rdfs:comment "User's diabetes-specific health profile and treatment settings"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:diabetesType a owl:ObjectProperty ;
     rdfs:label "Diabetes Type"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range diabetes:DiabetesType .
+    rdfs:range diabetes:DiabetesType ;
+    vs:term_status "unstable" .
 
 diabetes:diagnosisDate a owl:DatatypeProperty ;
     rdfs:label "Diagnosis Date"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:date .
+    rdfs:range xsd:date ;
+    vs:term_status "unstable" .
 
 diabetes:diagnosisAge a owl:DatatypeProperty ;
     rdfs:label "Diagnosis Age"@en ;
     rdfs:comment "Age at diagnosis in years"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:integer .
+    rdfs:range xsd:integer ;
+    vs:term_status "unstable" .
 
 # Target ranges (personalizable per user/provider)
 diabetes:targetRangeLow a owl:DatatypeProperty ;
     rdfs:label "Target Range Low"@en ;
     rdfs:comment "Lower bound of target range in mg/dL (default 70)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:targetRangeHigh a owl:DatatypeProperty ;
     rdfs:label "Target Range High"@en ;
     rdfs:comment "Upper bound of target range in mg/dL (default 180)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:hypoglycemiaThreshold a owl:DatatypeProperty ;
     rdfs:label "Hypoglycemia Threshold"@en ;
     rdfs:comment "Alert threshold for low glucose in mg/dL (default 70)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:hyperglycemiaThreshold a owl:DatatypeProperty ;
     rdfs:label "Hyperglycemia Threshold"@en ;
     rdfs:comment "Alert threshold for high glucose in mg/dL (default 250)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # Insulin settings
 diabetes:carbRatio a owl:DatatypeProperty ;
     rdfs:label "Carb Ratio"@en ;
     rdfs:comment "Grams of carbs covered by 1 unit of insulin (I:C ratio)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:correctionFactor a owl:DatatypeProperty ;
     rdfs:label "Correction Factor"@en ;
     rdfs:comment "Expected glucose drop per unit of insulin (ISF) in mg/dL"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:insulinOnBoardDuration a owl:DatatypeProperty ;
     rdfs:label "Insulin on Board Duration"@en ;
     rdfs:comment "Active insulin time in hours (typically 3-5)"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # Device information
 diabetes:activeCGM a owl:DatatypeProperty ;
     rdfs:label "Active CGM"@en ;
     rdfs:comment "Currently used CGM system"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:activeInsulinPump a owl:DatatypeProperty ;
     rdfs:label "Active Insulin Pump"@en ;
     rdfs:comment "Currently used insulin pump"@en ;
     rdfs:domain diabetes:DiabetesProfile ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Activity Correlation
@@ -672,41 +774,48 @@ diabetes:activeInsulinPump a owl:DatatypeProperty ;
 diabetes:ActivityCorrelation a owl:Class ;
     rdfs:label "Activity Correlation"@en ;
     rdfs:comment "Correlation between physical activity and glucose response"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:activityType a owl:DatatypeProperty ;
     rdfs:label "Activity Type"@en ;
     rdfs:comment "Type of exercise (walking, running, cycling, strength, etc.)"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:activityDurationMinutes a owl:DatatypeProperty ;
     rdfs:label "Activity Duration"@en ;
     rdfs:comment "Duration of activity in minutes"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:integer .
+    rdfs:range xsd:integer ;
+    vs:term_status "unstable" .
 
 diabetes:activityIntensity a owl:DatatypeProperty ;
     rdfs:label "Activity Intensity"@en ;
     rdfs:comment "Intensity level: low, moderate, high, vigorous"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:preActivityGlucose a owl:DatatypeProperty ;
     rdfs:label "Pre-Activity Glucose"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:postActivityGlucose a owl:DatatypeProperty ;
     rdfs:label "Post-Activity Glucose"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:glucoseChangeRate a owl:DatatypeProperty ;
     rdfs:label "Glucose Change Rate"@en ;
     rdfs:comment "Average glucose change per minute during activity"@en ;
     rdfs:domain diabetes:ActivityCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Sleep Correlation
@@ -715,36 +824,42 @@ diabetes:glucoseChangeRate a owl:DatatypeProperty ;
 diabetes:SleepCorrelation a owl:Class ;
     rdfs:label "Sleep Correlation"@en ;
     rdfs:comment "Correlation between sleep and glucose patterns"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:sleepDurationHours a owl:DatatypeProperty ;
     rdfs:label "Sleep Duration"@en ;
     rdfs:comment "Total sleep time in hours"@en ;
     rdfs:domain diabetes:SleepCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:sleepQualityScore a owl:DatatypeProperty ;
     rdfs:label "Sleep Quality Score"@en ;
     rdfs:comment "Sleep quality from wearable (0-100)"@en ;
     rdfs:domain diabetes:SleepCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:overnightMeanGlucose a owl:DatatypeProperty ;
     rdfs:label "Overnight Mean Glucose"@en ;
     rdfs:domain diabetes:SleepCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:overnightGlucoseSD a owl:DatatypeProperty ;
     rdfs:label "Overnight Glucose SD"@en ;
     rdfs:comment "Glucose variability during sleep"@en ;
     rdfs:domain diabetes:SleepCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 diabetes:wakingGlucose a owl:DatatypeProperty ;
     rdfs:label "Waking Glucose"@en ;
     rdfs:comment "First glucose reading upon waking"@en ;
     rdfs:domain diabetes:SleepCorrelation ;
-    rdfs:range xsd:double .
+    rdfs:range xsd:double ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Device Data Sources
@@ -753,33 +868,39 @@ diabetes:wakingGlucose a owl:DatatypeProperty ;
 diabetes:DeviceDataSource a owl:Class ;
     rdfs:label "Device Data Source"@en ;
     rdfs:comment "Registered device or app providing diabetes-related data"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:subClassOf prov:Entity ;
+    vs:term_status "unstable" .
 
 diabetes:deviceManufacturer a owl:DatatypeProperty ;
     rdfs:label "Device Manufacturer"@en ;
     rdfs:domain diabetes:DeviceDataSource ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:deviceModel a owl:DatatypeProperty ;
     rdfs:label "Device Model"@en ;
     rdfs:domain diabetes:DeviceDataSource ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:deviceSerialNumber a owl:DatatypeProperty ;
     rdfs:label "Device Serial Number"@en ;
     rdfs:domain diabetes:DeviceDataSource ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:firmwareVersion a owl:DatatypeProperty ;
     rdfs:label "Firmware Version"@en ;
     rdfs:domain diabetes:DeviceDataSource ;
-    rdfs:range xsd:string .
+    rdfs:range xsd:string ;
+    vs:term_status "unstable" .
 
 diabetes:lastSyncTimestamp a owl:DatatypeProperty ;
     rdfs:label "Last Sync"@en ;
     rdfs:comment "When data was last synced from this device"@en ;
     rdfs:domain diabetes:DeviceDataSource ;
-    rdfs:range xsd:dateTime .
+    rdfs:range xsd:dateTime ;
+    vs:term_status "unstable" .
 
 # ============================================================================
 # Healthcare Standards Alignment Reference
