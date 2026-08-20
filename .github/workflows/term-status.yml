@@ -1,0 +1,44 @@
+name: term-status
+
+# Enforces per-term maturity on the draft vocabularies: every term declares
+# vs:term_status (W3C SemWeb Vocabulary Status, originating in FOAF), the value
+# is one of the four that ontology defines, and a term marked owl:deprecated is
+# marked archaic rather than something that contradicts it.
+#
+# Without this job the annotation is only a convention, and the convention has
+# already failed once: the pass that introduced it silently skipped 96 of 411
+# terms -- every term preceded by a section comment -- and reported success.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'ontologies/**'
+      - 'scripts/check-term-status.py'
+      - 'scripts/test-check-term-status.sh'
+      - 'scripts/requirements.txt'
+      - '.github/workflows/term-status.yml'
+  workflow_dispatch:
+
+jobs:
+  term-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # The regression suite runs the check against the repository AND against
+      # scratch copies with known defects reintroduced, so a check that has
+      # stopped being able to fail is caught here rather than in a consumer.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-term-status.sh
+
+      - name: Per-term status check
+        run: python3 scripts/check-term-status.py

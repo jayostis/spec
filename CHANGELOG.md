@@ -6,6 +6,26 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-08-20: Draft vocabularies carry per-term maturity (advisory, diabetes, evidence, genomics, workbench)
+
+Cascade stated maturity once per vocabulary, in prose a machine could not read: an ontology-level `owl:versionInfo "1.0-draft"` and an `rdfs:comment` saying the vocabulary is subject to change. That tells a consumer nothing about which individual terms are settled, so the only safe reading of a draft vocabulary was to treat all of it as provisional, including the parts that had not moved in three revisions.
+
+The ratified answer already exists and is not ours. [W3C SemWeb Vocabulary Status](http://www.w3.org/2003/06/sw-vocab-status/ns#), which originated in FOAF, defines `vs:term_status` with four values: `unstable`, `testing`, `stable`, `archaic`. Its own description states the design reason for the granularity, that indicating status at the term level rather than the vocabulary level makes fine-grained improvement easier. That is exactly the guarantee a `/v1#` namespace makes: the vocabulary evolves in place, and a term is promoted without minting a new namespace. This repository already used the matching standard at the other end of the lifecycle, `owl:deprecated`, 21 times.
+
+All 411 terms across the five draft vocabularies now carry `vs:term_status`. Terms are `unstable`, which is what a draft term is; the five terms already marked `owl:deprecated` are `archaic`. No term definition, domain, range, label or comment changed, and no triple was removed: the annotation was verified by diffing the parsed N-Triples of every file before and after, which must show the added status triples and nothing else.
+
+**The status is per term precisely so it can stop being uniform.** A blanket `unstable` across a draft vocabulary carries no more information than the prose it replaces. What it buys is the mechanism: promoting `evidence:Assertion` to `testing` is now a one-triple change a consumer can query, rather than a graduation event for the whole vocabulary. Vocabularies should promote terms as they settle, and the value of this change is only realised when they do.
+
+`owl:versionInfo` remains the vocabulary-level draft marker and is unchanged in meaning. The two answer different questions, and where both speak they must agree: a term marked `owl:deprecated` must be `archaic`, which `scripts/check-term-status.py` enforces, because two machine-readable maturity signals that contradict each other are worse than one.
+
+The check is gated in CI with negative controls, for a specific reason. The pass that added these annotations silently skipped 96 of 411 terms, every term that happened to be preceded by a section comment, and reported success. It was caught by auditing the parsed graph, never by the inserter's own count. A tool's report of what it did is not evidence that it did it.
+
+Also corrected here: `rdfs:seeAlso` on `advisory`, `diabetes` and `genomics` pointed at documentation paths (`/docs/advisory/v1.0-draft/`, `/docs/diabetes/v1.0-draft/`, `/docs/genomics/v1/`) that were renamed away and had been returning 404. All five drafts now point at their published `/docs/{vocab}/v1-draft/` page.
+
+Per-vocab: advisory 1.0-draft.0.2, diabetes 1.0-draft.0.2, evidence 1.0-draft.0.3, genomics 1.0-draft.0.5, workbench 1.0-draft.0.7. None of these vocabularies is in `VOCAB_VERSIONS`, so no downstream version registry changes.
+
+---
+
 ## 2026-08-14: Four rulings — check the unchecked, keep what was dropped, canonicalize identity inputs (core v3.6, health v2.7, clinical v1.15)
 
 Four independent findings, authored together because three of them touch the same two property shapes and the fourth is what makes those shapes reachable by real converted data. All of it is additive and strictly widening: every graph that validated before validates now, at the same severity, with one deliberate new finding at `sh:Warning` only.
