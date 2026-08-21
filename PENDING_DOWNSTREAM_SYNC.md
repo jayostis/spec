@@ -84,11 +84,11 @@ and `vocab/evidence-v1-draft.0.2` are applied on merge.
   individuals are deprecated, kept one release.
 - **Code sync (already done in lockstep, not batched):**
   the consuming application's contracts package (invariant + migration) and
-  `packages/claims` `reify()`; Workbench grounding-gate fixtures exercise the
+  the consuming application's claim-reification path; its grounding fixtures exercise the
   new shapes against the real validator.
 - **Downstream:**
   - [x] cascadeprotocol.org — `sync-from-spec.sh`, HTML + `cascade-protocol-schemas.md` (#2)
-  - [x] conformance — facet fixtures ported from the grounding-gate set (#2)
+  - [x] conformance — facet fixtures ported from the consuming application's grounding fixture set (#2)
   - [x] cascade-cli — embedded `evidence` shapes via `sync-shapes-from-spec.sh` (cascade-cli#16)
   - [x] sdk-typescript / sdk-python — facet predicates (sdk-typescript#2 / sdk-python#1)
   - [x] cascade-agent — query patterns (#13)
