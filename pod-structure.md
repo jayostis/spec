@@ -387,7 +387,7 @@ Each stored file is described by a `cascade:Attachment` in the Turtle of whichev
 
 Two questions are named here so that their absence is a decision and not an oversight:
 
-- **Encryption at rest.** An implementation MAY encrypt attachment files by whatever means it already encrypts a Pod. This specification states nothing about the mechanism, so nothing here has to be revised when one is ratified.
+- **Encryption at rest.** Attachment files MUST receive the same at-rest protection the implementation applies to the Pod's record files. Attachments hold the densest sensitive content in a Pod (rendered reports, clinical note documents), so an implementation that protects `.ttl` files and leaves `attachments/` in the clear does not conform. The protection mechanism itself remains implementation-defined, so nothing here has to be revised when one is ratified.
 - **Sync.** How an `attachments/` directory participates in Pod synchronization is unspecified. Content addressing makes the naive answer safe in one direction (a file's content never changes under its name), which is why deferring the rest is tolerable.
 
 ---
