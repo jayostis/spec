@@ -1,8 +1,8 @@
 # Cascade Protocol Pod Structure Specification
 
 **Status:** Draft
-**Version:** 1.0
-**Date:** 2026-02-19
+**Version:** 1.1
+**Date:** 2026-08-27
 **Authors:** Cascade Agentic Labs LLC
 **Website:** https://cascadeprotocol.org
 
@@ -330,6 +330,66 @@ wellness/
 
 This nested pattern is used by POTS Check for individual test results that need their own URIs and access control.
 
+### 4.3 attachments/ -- Content-Addressed Binary Storage
+
+**Path:** `/attachments/`
+**Vocabulary:** `cascade:` (`https://ns.cascadeprotocol.org/core/v1#`), core v3.7
+**Status:** OPTIONAL. A Pod with no binary documents has no `attachments/` directory, and a reader MUST treat its absence as "no attachments", never as an error.
+
+Clinical records routinely point at a document that is not RDF: the PDF a `DiagnosticReport` was rendered as, the scanned page behind a `DocumentReference`. This directory is where those bytes live.
+
+**The bytes are files, not literals.** FHIR permits either, through `Attachment.data` (inline base64) or `Attachment.url`. A Pod takes the second, because a Pod is not a message: every consumer parses the Turtle files in full to answer any question, so an unbounded base64 literal is paid for by readers that will never look at the attachment. The Turtle carries a small metadata node and the bytes are an ordinary file.
+
+#### Layout
+
+```
+attachments/
+  sha-256/
+    3f786850e387550fdab836ed7e6dc881de23001b1f6d1a3f...
+    a94a8fe5ccb19ba61c4c0873d391e987982fbbd3b8b5f1e9...
+  .acl
+```
+
+```
+attachments/{algorithm}/{digest}
+```
+
+- `{algorithm}` is the token from the [IANA Named Information Hash Algorithm Registry](https://www.rfc-editor.org/rfc/rfc6920) that the digest was computed with. New implementations MUST write `sha-256`. The algorithm is a directory level rather than a filename prefix so that adopting a stronger hash is a new directory, not a re-parse of every name.
+- `{digest}` is the digest of the file's own bytes, lowercase hexadecimal, with **no extension**. The media type is stated in RDF; a media type in a filename is a second claim about the same bytes that nothing verifies.
+
+**The file's name IS its digest**, which is what makes the store checkable: a consumer hashes what it read and compares it with where it read it from, and nothing has to be trusted to keep name and content in agreement. Two consequences follow with no mechanism behind them: the same document arriving from two sources is stored once, and re-importing is idempotent without a deduplication pass.
+
+Writers MUST NOT write a file here whose name is not the digest of its contents. Readers SHOULD verify a digest before relying on an attachment, and MUST treat a mismatch as a missing attachment rather than as the document the metadata describes.
+
+#### The metadata node
+
+Each stored file is described by a `cascade:Attachment` in the Turtle of whichever container references it, and is linked from the record it renders with `cascade:hasAttachment`:
+
+```turtle
+@prefix cascade: <https://ns.cascadeprotocol.org/core/v1#> .
+
+<#report-2026-03-04>
+    cascade:hasAttachment <#attachment-3f786850> .
+
+<#attachment-3f786850>
+    a cascade:Attachment ;
+    cascade:attachmentPath "attachments/sha-256/3f786850e387550fdab836ed7e6dc881de23001b1f6d1a3f" ;
+    cascade:contentHash "3f786850e387550fdab836ed7e6dc881de23001b1f6d1a3f" ;
+    cascade:hashAlgorithm "sha-256" ;
+    cascade:attachmentMediaType "application/pdf" ;
+    cascade:byteSize 148213 ;
+    cascade:attachmentTitle "Complete Blood Count -- Final Report" .
+```
+
+`cascade:attachmentPath` MUST be relative to the Pod root. An absolute path or a URL breaks the moment a Pod is copied or re-rooted, which Pods routinely are, and a `..` segment makes an attachment reference a way to read a file the Pod does not contain. `cascade:AttachmentShape` in `core.shapes.ttl` rejects all three.
+
+#### Deliberately implementation-defined in this release
+
+Two questions are named here so that their absence is a decision and not an oversight:
+
+- **Encryption at rest.** Attachment files MUST receive the same at-rest protection the implementation applies to the Pod's record files. Attachments hold the densest sensitive content in a Pod (rendered reports, clinical note documents), so an implementation that protects `.ttl` files and leaves `attachments/` in the clear does not conform. The protection mechanism itself remains implementation-defined, so nothing here has to be revised when one is ratified.
+- **Sync.** How an `attachments/` directory participates in Pod synchronization is unspecified. Content addressing makes the naive answer safe in one direction (a file's content never changes under its name), which is why deferring the rest is tolerable.
+
 ---
 
 ## 5. Domain-Specific Extensions
@@ -484,7 +544,17 @@ Any directory acting as an LDP Container SHOULD include an `index.ttl` file that
 
 Container index files are RECOMMENDED for directories containing individual records. They are REQUIRED for the Pod root (`/index.ttl`).
 
-### 7.5 SHACL Shapes Files
+### 7.5 Attachment Files (Content-Addressed)
+
+Files under `attachments/` are the one place in a Pod where the filename is not chosen. It is the digest of the file's own bytes, in lowercase hexadecimal, with no extension:
+
+```
+attachments/{algorithm}/{digest}
+```
+
+This is a deliberate exception to sections 7.1 and 7.2, and the reason is that the name is a claim the bytes can be checked against. A descriptive name, or an extension, would be a second claim about the same file that nothing verifies. Everything a human or a renderer needs to know about the file (its media type, its title, its size) is stated in RDF on the `cascade:Attachment` node that points at it. See section 4.3.
+
+### 7.6 SHACL Shapes Files
 
 SHACL validation shapes files SHOULD follow the naming convention `{vocabulary}.shapes.ttl`:
 
@@ -549,6 +619,8 @@ Per-container ACLs are generated for each unique top-level directory derived fro
 - `/wellness/.acl`
 
 Per-container ACLs enable granular sharing. For example, a user could grant a healthcare provider read access to `/clinical/` while keeping `/wellness/` owner-only.
+
+`/attachments/` is a top-level directory under this rule and SHOULD carry its own ACL. Note that granting read access to `/clinical/` while withholding it from `/attachments/` leaves the recipient with records that reference documents they cannot open; granting the reverse exposes the documents themselves, which routinely contain more identifying detail than the record that points at them. Neither is wrong, but the pairing is a decision and not a default.
 
 ### 8.3 Profile ACL (Public Read)
 
@@ -779,6 +851,12 @@ CascadeCheckup-Export-20260219T100000Z/
 |   |-- visit-prep-notes.ttl            # checkup:VisitPrepNotes
 |   |-- visit-issues.ttl                # checkup:VisitIssue
 |   |-- suggested-questions.ttl         # checkup:SuggestedQuestion
+|   |-- .acl                            # Container ACL (owner-only)
+|
+|-- attachments/                        # Content-addressed binary documents
+|   |-- sha-256/
+|   |   |-- 3f786850e387550fdab836ed...  # Bytes; filename IS the digest
+|   |   |-- a94a8fe5ccb19ba61c4c0873...
 |   |-- .acl                            # Container ACL (owner-only)
 |
 |-- index.ttl                           # Root LDP container listing

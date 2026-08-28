@@ -2,9 +2,9 @@
 # Maintained in spec/. Downstream repos copy this file and update it
 # as they implement support for each vocabulary version.
 # Format: {vocab}={major}.{minor}
-core=3.6
-health=2.7
-clinical=1.15
-coverage=1.4
+core=3.7
+health=2.8
+clinical=1.16
+coverage=1.5
 checkup=3.3
 pots=1.4

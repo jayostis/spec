@@ -21,6 +21,7 @@
     "coveragePlanName": "coverage:planName",
     "coveragePlanType": "coverage:planType",
     "coverageCoverageType": "coverage:coverageType",
+    "coverageStatus": "coverage:status",
     "effectiveStart": {
       "@id": "coverage:effectiveStart",
       "@type": "xsd:date"
