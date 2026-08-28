@@ -229,6 +229,15 @@
 
     "date": { "@id": "cascade:date", "@type": "xsd:dateTime" },
     "sampleCount": { "@id": "cascade:sampleCount", "@type": "xsd:integer" },
-    "coreLoincCode": { "@id": "cascade:loincCode", "@type": "@id" }
+    "coreLoincCode": { "@id": "cascade:loincCode", "@type": "@id" },
+
+    "Attachment": "cascade:Attachment",
+    "hasAttachment": { "@id": "cascade:hasAttachment", "@type": "@id", "@container": "@set" },
+    "attachmentPath": "cascade:attachmentPath",
+    "attachmentMediaType": "cascade:attachmentMediaType",
+    "contentHash": "cascade:contentHash",
+    "hashAlgorithm": "cascade:hashAlgorithm",
+    "byteSize": { "@id": "cascade:byteSize", "@type": "xsd:integer" },
+    "attachmentTitle": "cascade:attachmentTitle"
   }
 }

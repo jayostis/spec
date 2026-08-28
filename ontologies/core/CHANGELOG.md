@@ -1,5 +1,62 @@
 # Core Vocabulary Changelog
 
+## v3.7 - 2026-08-27
+
+A Pod gets somewhere to keep the documents its records point at.
+
+- Added `cascade:Attachment` (`owl:Class`, `rdfs:subClassOf prov:Entity`) and
+  seven properties: `cascade:hasAttachment` (`owl:ObjectProperty`, range
+  `cascade:Attachment`, domain deliberately absent), `cascade:attachmentPath`,
+  `cascade:attachmentMediaType`, `cascade:contentHash`,
+  `cascade:hashAlgorithm`, `cascade:byteSize`, `cascade:attachmentTitle`. The
+  class mirrors the FHIR R4 `Attachment` datatype and every property cites the
+  element it mirrors by canonical URL.
+- **The bytes are a file, not a literal.** FHIR permits either, via
+  `Attachment.data` (inline base64) or `Attachment.url`. A Pod is not a message:
+  its Turtle files are parse-critical, read in full by every consumer to answer
+  any question, so an unbounded base64 literal is paid for by readers that will
+  never open the attachment. The Turtle carries a small metadata node; the bytes
+  live under `attachments/{algorithm}/{digest}`, normative in `pod-structure.md`
+  section 4.3. The retained `sources/` directory already establishes that a Pod
+  can hold non-Turtle content.
+- **The file name is the digest.** Content addressing here is not a storage
+  optimisation, it is what makes the metadata checkable: a consumer hashes what
+  it read and compares it with where it read it from, so nothing has to be
+  trusted to keep name and content in agreement. Cross-source deduplication and
+  idempotent re-import follow from that with no mechanism behind them. The name
+  carries the digest and nothing else — an extension or a media type in the name
+  would be a second, unverified claim about the same bytes.
+- **The hash algorithm is named, and is not FHIR's.** `Attachment.hash` fixes
+  SHA-1 and base64 in the specification and neither is followed. SHA-1 is
+  collision-broken, and a collision in a content-addressed store is a mechanism
+  for one document to silently replace another. `cascade:hashAlgorithm` carries
+  an explicit [RFC 6920](https://www.rfc-editor.org/rfc/rfc6920) registry token,
+  and `sha-256` is required of new implementations. The digest is lowercase hex
+  rather than base64 because it is also a filename: base64's alphabet contains
+  `/` and is case-sensitive.
+- **Implementation-defined this release, deliberately:** encryption at rest for
+  attachment files, and how the directory participates in Pod sync. Both are
+  real and both are deferred rather than forgotten. An implementation may
+  encrypt these files by whatever means it already encrypts a Pod; this
+  vocabulary states nothing about it, so nothing here is revised when a ratified
+  answer arrives.
+- SHACL (core.shapes.ttl v1.7): `cascade:AttachmentShape` requires path, digest
+  and algorithm at `sh:Violation` — the three facts without which the node
+  cannot do its job, and the third is what makes the second checkable rather
+  than decorative. The path pattern is stated positively, as `/`-separated
+  segments beginning with an alphanumeric, which excludes absolute paths, URLs
+  and `..` segments by construction; it is not written as an exclusion because
+  SHACL evaluates `sh:pattern` with XPath `fn:matches`, whose XSD 1.1 regular
+  expressions have no lookahead. `cascade:AttachmentMediaTypeShape` warns on a
+  missing media type; `cascade:HasAttachmentEdgeShape` is open-world
+  (`sh:targetSubjectsOf`, `sh:Warning`, no `minCount`, no `sh:class`).
+- Compatibility: purely additive. Both node shapes evaluate only
+  `cascade:Attachment` nodes, a class no pod written before v3.7 contains, so
+  every existing pod validates exactly as it did. Nothing removed, renamed or
+  deprecated.
+- JSON-LD: eight terms added to `contexts/v1/core.jsonld` and
+  `contexts/v1/cascade.jsonld`.
+
 ## v3.6 - 2026-08-14
 
 Data absence gets a ratified reason, and a content-derived identifier gets a

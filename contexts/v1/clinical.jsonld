@@ -44,6 +44,9 @@
     "sourceBundleId": "clinical:sourceBundleId",
     "fhirResourceId": "clinical:fhirResourceId",
     "fhirResourceType": "clinical:fhirResourceType",
+    "documentReferenceStatus": "clinical:documentReferenceStatus",
+    "documentAuthorName": { "@id": "clinical:documentAuthorName", "@container": "@set" },
+    "authenticatorName": "clinical:authenticatorName",
     "documentDate": "clinical:documentDate",
     "encounterDate": "clinical:encounterDate",
     "displayName": "clinical:displayName",
@@ -168,6 +171,7 @@
     "performingLab": "clinical:performingLab",
     "observationStatus": "clinical:observationStatus",
     "sourceRecordId": "clinical:sourceRecordId",
+    "businessIdentifier": { "@id": "clinical:businessIdentifier", "@container": "@set" },
     "panelMembership": {
       "@id": "clinical:panelMembership",
       "@type": "@id"
@@ -344,11 +348,30 @@
     "occupationTitle": "clinical:occupationTitle",
 
     "encounterClass": "clinical:encounterClass",
+    "encounterClassDisplay": "clinical:encounterClassDisplay",
+    "encounterClassSystem": {
+      "@id": "clinical:encounterClassSystem",
+      "@type": "xsd:anyURI"
+    },
     "encounterStatus": "clinical:encounterStatus",
     "encounterType": "clinical:encounterType",
     "encounterStart": "clinical:encounterStart",
     "encounterEnd": "clinical:encounterEnd",
     "facilityName": "clinical:facilityName",
+    "encounterReason": { "@id": "clinical:encounterReason", "@container": "@set" },
+    "admitSource": "clinical:admitSource",
+    "dischargeDisposition": "clinical:dischargeDisposition",
+
+    "EncounterParticipant": "clinical:EncounterParticipant",
+    "hasParticipant": {
+      "@id": "clinical:hasParticipant",
+      "@type": "@id",
+      "@container": "@set"
+    },
+    "participantName": "clinical:participantName",
+    "participantRole": "clinical:participantRole",
+    "participantRoleCode": { "@id": "clinical:participantRoleCode", "@container": "@set" },
+    "participantSpecialty": "clinical:participantSpecialty",
 
     "hasEncounter": {
       "@id": "clinical:hasEncounter",

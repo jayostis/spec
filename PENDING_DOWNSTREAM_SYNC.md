@@ -532,6 +532,95 @@ drift checker showing those swift rows is honest, not a missed sync.
 
 ---
 
+## Pending batch — core v3.7 / health v2.8 / clinical v1.16 / coverage v1.5 (authored 2026-08-27)
+
+Field-coverage remediation, authored in one pass. Tags `vocab/core-v3.7`,
+`vocab/health-v2.8`, `vocab/clinical-v1.16`, `vocab/coverage-v1.5`. Additive and
+strictly widening; every new finding on a predicate existing pods carry is at
+`sh:Warning`. See `CHANGELOG.md` for the full statement.
+
+**What was authored — 24 terms:**
+
+- `clinical` 1.15 to 1.16 — **15 terms** (14 properties, 1 class).
+  Encounter: `encounterReason` (repeatable), `admitSource`,
+  `dischargeDisposition`, `encounterClassDisplay`, `encounterClassSystem`,
+  and the participation structure `EncounterParticipant` (class) +
+  `hasParticipant` + `participantName` + `participantRole` +
+  `participantRoleCode` (repeatable) + `participantSpecialty`.
+  Identity: `businessIdentifier` (domain-free, repeatable).
+  Documents: `documentReferenceStatus`, `documentAuthorName` (repeatable),
+  `authenticatorName`.
+  Two domains DROPPED: `providerName` (was `clinical:CoverageRecord`),
+  `verificationStatus` (was `clinical:Condition`).
+  One property DEPRECATED: `observationStatus`, superseded by `clinical:status`.
+  `clinical.shapes.ttl` 1.15 to 1.16, including new
+  `clinical:EncounterParticipantShape`.
+- `core` 3.6 to 3.7 — **8 terms** (7 properties, 1 class): `Attachment`,
+  `hasAttachment`, `attachmentPath`, `attachmentMediaType`, `contentHash`,
+  `hashAlgorithm`, `byteSize`, `attachmentTitle`. Pod layout
+  `attachments/{algorithm}/{digest}` is normative in `pod-structure.md`
+  section 4.3 (that document goes to 1.1; new sections 4.3 and 7.5).
+  `core.shapes.ttl` 1.6 to 1.7: `AttachmentShape`,
+  `AttachmentMediaTypeShape`, `HasAttachmentEdgeShape`.
+- `coverage` 1.4 to 1.5 — **1 term**: `coverage:status` (FHIR `Coverage.status`,
+  required binding to `fm-status`). `coverage.shapes.ttl` 1.1 to 1.2: value at
+  `sh:Violation`, presence deliberately not required this version.
+- `health` 2.7 to 2.8 — **0 terms**; SHACL only. `health.shapes.ttl` 1.4 to 1.5
+  binds `clinical:status` on `LabResultRecordShape` (8 codes) and
+  `AllergyRecordShape` (3 codes), and `clinical:verificationStatus` on
+  `AllergyRecordShape` (4 codes). All three `sh:Warning`.
+
+**Synced NOW (this train):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `core=3.7`,
+      `health=2.8`, `clinical=1.16`, `coverage=1.5`. JSON-LD: 24 terms across
+      `contexts/v1/{core,clinical,coverage,cascade}.jsonld`.
+      `check-shape-targets.py` PASS 3/3 (T 14, I 14, C 29 examined);
+      regression suite 21/21; `check-term-status.py` PASS.
+
+**Steps 2–7, all pending:**
+
+- [ ] `cascadeprotocol.org` — `scripts/sync-from-spec.sh`, then HTML docs +
+      `cascade-protocol-schemas.md` for all four vocabularies. The pod-layout
+      page needs the new `attachments/` section, which is a doc change beyond
+      what the sync script copies.
+- [ ] `conformance` — fixtures for: an encounter with reason, hospitalization,
+      class display/system, two participants in different roles, and two
+      business identifiers; a `clinical:EncounterParticipant`; a document with
+      distinct `status` and `documentReferenceStatus`, two authors and an
+      authenticator; the five `clinical:status` value sets (one PASS and one
+      warning-triggering case each); a `coverage:status` VALID and INVALID
+      pair; and a `cascade:Attachment` set covering the three Violation
+      constraints plus an absolute path, a `..` path, an uppercase digest and a
+      missing media type. Re-pin `scripts/SPEC_PIN`, tag the release.
+- [ ] `cascade-cli` — `scripts/sync-shapes-from-spec.sh`, `VOCAB_VERSIONS`, then
+      converter adoption: emit the nine encounter facts and the participation
+      nodes; move business identifiers off `clinical:sourceRecordId` onto
+      `clinical:businessIdentifier` (see the MIGRATION note below); emit
+      `DocumentReference.status`, `.author[]` and `.authenticator`;
+      emit `Coverage.status`. Reverse converters need the same terms or the
+      round trip loses them.
+- [ ] `sdk-typescript` — models + predicates + generated JSON-LD context for all
+      24 terms; `VOCAB_VERSIONS`.
+- [ ] `sdk-python` — namespaces + predicates (snake and camel) for all 24 terms;
+      `VOCAB_VERSIONS`.
+- [ ] `cascade-agent` — query patterns: a visit's reason and discharge
+      disposition are now answerable; participant queries must traverse
+      `clinical:hasParticipant` rather than reading a single
+      `clinical:providerName`; a document's authors are `documentAuthorName`
+      and its signer is `authenticatorName`; "is this document current" reads
+      `documentReferenceStatus`, not `clinical:status`. `VOCAB_VERSIONS`.
+
+**MIGRATION, the one thing in this batch that is not purely additive in
+practice.** `clinical:sourceRecordId` now states that it holds the
+server-assigned logical id only. A converter that has been writing a business
+identifier into it must move that value to `clinical:businessIdentifier`. The
+two predicates are not interchangeable and a consumer cannot tell them apart
+after the fact, so the move belongs in the same change as the emission, not a
+later one.
+
+---
+
 ## Open items
 
 ### 1. `clinical:sourceSystemOID` (planned) — NOT yet authored, deferred
