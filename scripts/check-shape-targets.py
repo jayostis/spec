@@ -193,32 +193,68 @@ def assert_target_closure(classes, direct, targets):
     return examined, findings
 
 
+def node_closure(shape, shapes):
+    """Every shape reachable from `shape` by following sh:node transitively.
+
+    Transitive because sh:node chains: if A names B and B names C, a node
+    conforming to A must conform to C, so C's constraints do reach A's targets.
+    """
+    seen, stack = set(), [shape]
+    while stack:
+        node = stack.pop()
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(shapes.objects(node, SH.node))
+    return seen
+
+
 def assert_constraint_equivalence(classes, direct, targets, shapes):
-    """I: the constraint set must not depend on the target set expanding."""
+    """I: the constraint set must not depend on the target set expanding.
+
+    Checked once per (class, superclass, SHAPE TARGETING THE SUPERCLASS), not
+    once per (class, superclass). The distinction matters as soon as a class is
+    targeted by more than one shape, which is the normal arrangement once a
+    constraint has to be published at a severity softer than sh:Violation (see
+    S5 in validation/index.md: such a constraint cannot live on an sh:node
+    referent, so it goes on a second shape that targets the family directly).
+
+    The weaker per-pair form was unsound in exactly that case: a second shape
+    naming both the class and its superclass satisfied the pair while saying
+    nothing about whether the FIRST shape's constraints reach the subclass. It
+    would have reported PASS for clinical:ProgressNote with its
+    sh:node clinical:ClinicalDocumentShape deleted, because
+    clinical:DocumentStatusShape happens to target both.
+    """
     examined, findings = 0, []
     for cls in sorted(classes, key=str):
         if cls not in targets:
             continue
+        cls_closure = set()
+        for shape in targets[cls]:
+            cls_closure |= node_closure(shape, shapes)
         for sup in sorted(proper_superclasses(cls, direct), key=str):
             if sup not in targets:
                 continue
-            examined += 1
-            super_shapes = targets[sup]
-            satisfied = False
-            for shape in targets[cls]:
-                if shape in super_shapes:
-                    satisfied = True  # one shape targets both
-                    break
-                referenced = set(shapes.objects(shape, SH.node))
-                if referenced & super_shapes:
-                    satisfied = True  # explicit sh:node reference
-                    break
-            if not satisfied:
+            for super_shape in sorted(targets[sup], key=str):
+                examined += 1
+                # Either that shape targets the subclass too, or some shape
+                # targeting the subclass reaches it through sh:node.
+                if super_shape in targets[cls] or super_shape in cls_closure:
+                    continue
                 findings.append(
                     "%s is targeted, and so is its superclass %s, but no shape "
-                    "targeting %s reaches %s's constraints via sh:node "
-                    "(entailing validators would apply them, others would not)"
-                    % (qname(cls), qname(sup), qname(cls), qname(sup))
+                    "targeting %s reaches %s via sh:node and %s does not target "
+                    "%s either (entailing validators would apply its "
+                    "constraints, others would not)"
+                    % (
+                        qname(cls),
+                        qname(sup),
+                        qname(cls),
+                        qname(super_shape),
+                        qname(super_shape),
+                        qname(cls),
+                    )
                 )
     return examined, findings
 

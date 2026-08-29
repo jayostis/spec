@@ -114,11 +114,18 @@ DIR="$(scratch t)"
 grep -v 'sh:targetClass clinical:ConsultationNote' "$SPEC_ROOT/$CLIN" > "$DIR/$CLIN.tmp"
 mv "$DIR/$CLIN.tmp" "$DIR/$CLIN"
 
-if [ "$(grep -c 'sh:targetClass clinical:ConsultationNote' "$DIR/$CLIN")" -eq 0 ] &&
-   [ "$(grep -c 'sh:targetClass clinical:ConsultationNote' "$SPEC_ROOT/$CLIN")" -eq 1 ]; then
-  pass "mutation applied (1 target line removed)"
+# The class may legitimately be targeted by more than one shape -- since
+# clinical v1.17 the soft status bindings target the whole document family
+# alongside each subtype's own shape -- so the mutation is checked as "every
+# occurrence removed, and there was at least one", not as an exact count. An
+# exact count here made this control fail for a reason that had nothing to do
+# with the defect under test.
+BEFORE_T="$(grep -c 'sh:targetClass clinical:ConsultationNote' "$SPEC_ROOT/$CLIN")"
+AFTER_T="$(grep -c 'sh:targetClass clinical:ConsultationNote' "$DIR/$CLIN")"
+if [ "$BEFORE_T" -gt 0 ] && [ "$AFTER_T" -eq 0 ]; then
+  pass "mutation applied ($BEFORE_T target line(s) removed)"
 else
-  fail "mutation did not apply as expected" "check the sh:targetClass line in $CLIN"
+  fail "mutation did not apply as expected" "target lines $BEFORE_T -> $AFTER_T in $CLIN"
 fi
 
 OUT_T="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"

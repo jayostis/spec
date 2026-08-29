@@ -1,9 +1,19 @@
 name: shapes
 
-# Enforces the Validation Profile (validation/index.md) on every change to a
-# vocabulary or its shapes: no shape published here may depend on RDFS
-# entailment to reach the classes it constrains. Without this job the rule is
-# only a document, and the gap it forbids has already been authored twice.
+# Two structural rules about this repository's own SHACL, enforced on every
+# change to a vocabulary or its shapes. Neither can see the other's defect, so
+# they are separate jobs.
+#
+#  1. ENTAILMENT INDEPENDENCE (validation/index.md): no shape published here may
+#     depend on RDFS entailment to reach the classes it constrains. Without this
+#     job the rule is only a document, and the gap it forbids has already been
+#     authored twice.
+#
+#  2. NESTED-SHAPE SEVERITY: no shape reached by sh:node or sh:qualifiedValueShape
+#     may carry a constraint softer than sh:Violation, because SHACL conformance
+#     is an EMPTY result set and a nested sh:Warning is therefore re-reported as
+#     a Violation on the referring shape. clinical v1.16 shipped that defect on
+#     six document classes; clinical v1.17 fixed it and added the check.
 
 on:
   push:
@@ -13,6 +23,9 @@ on:
       - 'ontologies/**'
       - 'scripts/check-shape-targets.py'
       - 'scripts/test-check-shape-targets.sh'
+      - 'scripts/check-nested-severity.py'
+      - 'scripts/test-check-nested-severity.sh'
+      - 'scripts/nested-severity-baseline.json'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
   workflow_dispatch:
@@ -38,3 +51,25 @@ jobs:
 
       - name: Entailment-independence check
         run: python3 scripts/check-shape-targets.py
+
+  nested-shape-severity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # Negative controls reintroduce the clinical v1.16 authoring into a scratch
+      # copy and require a named failure, and they test the baseline in BOTH
+      # directions: a new site must fail, and a baselined site that has been
+      # fixed must fail too, so the list cannot silently re-absorb it.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-nested-severity.sh
+
+      - name: Nested-shape severity check
+        run: python3 scripts/check-nested-severity.py

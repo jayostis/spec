@@ -20,6 +20,7 @@
     "ClinicalGenerated": "cascade:ClinicalGenerated",
     "DeviceGenerated": "cascade:DeviceGenerated",
     "SelfReported": "cascade:SelfReported",
+    "PatientReported": "cascade:PatientReported",
     "ConsumerWellness": "cascade:ConsumerWellness",
     "EHRVerified": "cascade:EHRVerified",
     "ScannedDocument": "cascade:ScannedDocument",

@@ -1,0 +1,122 @@
+{
+  "$comment": "Enumerated pre-existing nested-shape severity escalations, for scripts/check-nested-severity.py. This file is a GATE INPUT, not a filter: the check still examines and reports every sh:node / sh:qualifiedValueShape reference. The run fails when a site appears that is not listed here AND when a listed site stops appearing, so the list can only shrink, and shrinking it is an explicit committed edit. Each entry names the vocabulary that owns the fix. Sites are keyed by referring shape (a blank-node property shape is named by its owning IRI shape plus its sh:path) plus the parameter and the referenced shape; a site that changes SHAPE is a new fact and must fail the gate. Nothing here is acceptable in the long run -- each entry is a place where a constraint published at sh:Warning or sh:Info is reported to a consumer at the referring constraint's severity, which is sh:Violation unless declared otherwise.",
+  "$rule": "SHACL defines conformance as an empty validation result and that definition does not consult severity, so a nested sh:Warning makes the value node non-conforming and the referring sh:node constraint fires at its own severity. The cure is to move the soft constraint onto a shape that reaches its classes by sh:targetClass, as clinical v1.17 did. Declaring sh:severity on the reference is NOT the cure: severity attaches to a shape rather than to one nested result, so it demotes the whole referenced shape, structural violations included.",
+  "$established": "2026-08-28, clinical v1.17 (spec). The six clinical:ClinicalDocumentShape sites this check was written for are fixed, not baselined.",
+  "entries": [
+    {
+      "site": "checkup:DailyCheckInShape sh:node health:SelfReportShape",
+      "ownedBy": "spec (checkup + health)",
+      "detail": "Shape-inheritance escalation, the exact twin of the clinical:ClinicalDocumentShape defect: health:SelfReportShape carries sh:Info constraints and is reached by sh:node, so a checkup:DailyCheckIn is REJECTED for an Info-severity finding that a health:SelfReport is merely told about. Cure is the clinical v1.17 one: move the soft constraints onto a shape targeting both classes."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasAllergy] sh:node checkup:AllergySummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation. The referenced section shape carries sh:Warning and sh:Info constraints; the referring property shape declares its own severity, so every soft finding inside a section is re-reported on the intake form at that outer severity."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasCondition] sh:node checkup:ConditionSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasDailyCheckIn] sh:node checkup:DailyCheckInShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; the referenced shape is itself a baselined site (it reaches health:SelfReportShape by sh:node), so this one nests two levels."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasDiagnosticResult] sh:node checkup:DiagnosticTestResultShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasDiscussionTopic] sh:node checkup:DiscussionTopicShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasFamilyHistory] sh:node checkup:FamilyHistoryEntryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasImmunization] sh:node checkup:ImmunizationSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasInsurance] sh:node checkup:InsuranceInfoShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasLabResult] sh:node checkup:LabResultSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasMedication] sh:node checkup:MedicationSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; the referring property shape declares sh:Warning, so an sh:Info inside checkup:MedicationSummaryShape is raised to a Warning on the intake form."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasPatientProfile] sh:node checkup:PatientProfileShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Worst of the checkup set: the referring property shape declares sh:Violation, so any sh:Warning or sh:Info inside checkup:PatientProfileShape REJECTS the whole intake form, and the reader is given an opaque sh:NodeConstraintComponent naming no field."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasProcedure] sh:node checkup:ProcedureSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasQuestionnaireResponse] sh:node checkup:IntakeQuestionnaireResponseShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; the referenced shape is itself a baselined site (checkup:responseItem), so this one nests two levels."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasScreening] sh:node checkup:ScreeningStatusShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasSupplement] sh:node checkup:SupplementSummaryShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasVisitIssue] sh:node checkup:VisitIssueShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeFormDataShape [checkup:hasVitalsTrend] sh:node checkup:VitalSignsTrendShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation; see the checkup:hasAllergy entry."
+    },
+    {
+      "site": "checkup:IntakeQuestionnaireResponseShape [checkup:responseItem] sh:node checkup:ResponseItemShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Value-node escalation into the recursive response-item structure; checkup:ResponseItemShape carries sh:Info constraints."
+    },
+    {
+      "site": "checkup:ResponseItemShape [checkup:childItem] sh:node checkup:ResponseItemShape",
+      "ownedBy": "spec (checkup)",
+      "detail": "Self-recursive value-node escalation: an sh:Info on any descendant answer propagates up the whole nesting chain as a finding on every ancestor."
+    },
+    {
+      "site": "genomics:CopyNumberVariantShape sh:node genomics:VariantShape",
+      "ownedBy": "spec (genomics, v1-draft)",
+      "detail": "Shape-inheritance escalation in a DRAFT vocabulary: genomics:VariantShape carries sh:Warning and sh:Info constraints, so a copy-number variant is rejected for findings a plain variant is only told about. Draft status is why this is baselined rather than fixed here, and is a reason to fix it before the vocabulary is ratified, not after."
+    },
+    {
+      "site": "health:HealthProfileShape [health:hasBPStatistics] sh:node health:BPStatisticsShape",
+      "ownedBy": "spec (health)",
+      "detail": "Value-node escalation: health:BPStatisticsShape carries sh:Warning and sh:Info constraints, so a soft finding on a blood-pressure statistic is re-reported on the health profile at the referring constraint's severity."
+    },
+    {
+      "site": "health:HealthProfileShape [health:hasHRVStatistics] sh:node health:HRVStatisticsShape",
+      "ownedBy": "spec (health)",
+      "detail": "Value-node escalation; see the health:hasBPStatistics entry."
+    }
+  ]
+}
