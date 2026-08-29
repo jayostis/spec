@@ -70,6 +70,23 @@ sh scripts/test-check-shape-targets.sh          # the rule's own regression suit
 
 `rdfs:subClassOf` itself stays. It is what makes `rdfs:domain` / `rdfs:range` true and what the check uses to work out which classes need an explicit target. It is simply not a validation mechanism.
 
+### A shape reached by `sh:node` may carry ONLY `sh:Violation`
+
+Rule S5 in `validation/index.md`. SHACL conformance is an **empty result set**, and that definition does not read severities: a nested `sh:Warning` makes the value node non-conforming, so the referring `sh:node` constraint fires at *its* severity, which is `sh:Violation`. A Warning published on a shape that anything reaches by `sh:node` is therefore delivered to every referring class as a rejection — and often as an opaque `sh:NodeConstraintComponent` naming no field.
+
+This shipped. clinical v1.16 put two Warning-severity value sets on `clinical:ClinicalDocumentShape`, and all six document subtypes rejected values the release said were advisory. clinical v1.17 fixed it by moving them onto shapes that reach the same classes by `sh:targetClass`.
+
+**Declaring `sh:severity` next to the `sh:node` is not the fix.** Severity belongs to a shape, not to one nested result, so it demotes the whole referenced shape including its structural violations.
+
+```sh
+python3 scripts/check-nested-severity.py        # the rule
+sh scripts/test-check-nested-severity.sh        # its regression suite
+```
+
+`scripts/nested-severity-baseline.json` holds the pre-existing sites (checkup, health, draft genomics). It can only shrink: the check fails on an unlisted site AND on a listed site that no longer occurs. Do not add to it to make a build green — the entry is a committed admission that a consumer is being handed a rejection where the vocabulary promised a warning.
+
+Note what neither check does: **spec runs no SHACL validator**, so a regression in an `sh:pattern` or an `sh:in` member is invisible here. Behavioural verification lives in the `conformance` repository.
+
 ### Version Bumping
 
 When modifying an ontology:
@@ -91,6 +108,7 @@ Before committing any change to an ontology (`.ttl`) file, you MUST:
 - [ ] Update JSON-LD context (`contexts/v1/{name}.jsonld`) if new terms need `@type` / `@id` mappings
 - [ ] Update `VOCAB_VERSIONS` file for this vocabulary — stage it with `git add VOCAB_VERSIONS`
 - [ ] Run `python3 scripts/check-shape-targets.py` and get exit 0 (the `shapes` CI job runs it, and its regression suite, on every PR touching `ontologies/`)
+- [ ] Run `python3 scripts/check-nested-severity.py` and get exit 0 — same CI job. Required whenever you add or move an `sh:severity`, and whenever you add an `sh:node`
 - [ ] Tag the commit: `git tag vocab/{name}-v{X.Y}` after committing
 
 After committing, complete the downstream update sequence (in order):
