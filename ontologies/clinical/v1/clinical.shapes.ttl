@@ -97,7 +97,7 @@
 #
 #     GUARD. scripts/check-nested-severity.py fails any sh:node or
 #     sh:qualifiedValueShape reference into a shape carrying sh:Warning or
-#     sh:Info, against a baseline in scripts/nested-severity-baseline.json that
+#     sh:Info, against a baseline in scripts/known-severity-escalations.json that
 #     can only shrink. No existing check could see this class: it is not an
 #     entailment question, so check-shape-targets.py is silent on it, and spec
 #     runs no SHACL validator (see the root backlog on that).

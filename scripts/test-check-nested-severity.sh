@@ -46,7 +46,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 CLIN="ontologies/clinical/v1/clinical.shapes.ttl"
-BASE="scripts/nested-severity-baseline.json"
+BASE="scripts/known-severity-escalations.json"
 
 # Build a scratch copy of the shapes tree plus the baseline, which a case may
 # mutate freely.

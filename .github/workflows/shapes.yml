@@ -34,7 +34,7 @@ on:
       - 'scripts/test-check-shape-targets.sh'
       - 'scripts/check-nested-severity.py'
       - 'scripts/test-check-nested-severity.sh'
-      - 'scripts/nested-severity-baseline.json'
+      - 'scripts/known-severity-escalations.json'
       - 'scripts/check-class-coverage.py'
       - 'scripts/test-check-class-coverage.sh'
       - 'scripts/known-unshaped-classes.json'
