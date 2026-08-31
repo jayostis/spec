@@ -665,14 +665,28 @@ from the org repository.
       obligation is no longer conditional on something having been added. A companion
       check (jayostis/spec#6) fails any record-bearing class that no shape targets, so
       the shaped-class half of this cannot recur silently.
-- [ ] **`conformance` — `fixtures/coverage-001.json` still asserts the deprecated class**
-      (jayostis/conformance#1). `reference-patient-pod/clinical/insurance.ttl` migrated to
-      `coverage:InsurancePlan`; the fixture did not. Same subject UUID
-      (`urn:uuid:c0vr-0001-aaaa-bbbb-ccccddddeeee`), contradictory classes, in one
-      repository. **jayostis/conformance PR #4 is open and retypes it**, so this box may
-      be tickable shortly; it is unticked here because it was open on the day this row
-      landed. Ticking it also means removing the `UNSHAPED` entry from
-      `KNOWN_FAILURES.json`, which clinical v1.18 has now made false.
+- [x] **`conformance` — the fixture is migrated.** DONE, jayostis/conformance#1, PR #4
+      merged 2026-08-31 as `bae2f8f`. `fixtures/coverage-001.json` asserted
+      `clinical:CoverageRecord` while `reference-patient-pod/clinical/insurance.ttl` in the
+      same repository had migrated to `coverage:InsurancePlan` — same subject UUID
+      (`urn:uuid:c0vr-0001-aaaa-bbbb-ccccddddeeee`), contradictory classes. The fixture is
+      now `coverage:InsurancePlan` and the `UNSHAPED` entry has been removed from
+      `KNOWN_FAILURES.json`.
+
+      **This closes one gap and opens a smaller one: no fixture anywhere now asserts
+      `clinical:CoverageRecord`, so the shape clinical v1.18 just added is exercised by
+      nothing.** Deprecated-and-retained means pods in that spelling still exist and will
+      keep being read, so the shape is right to exist — but the corpus no longer proves it
+      works. A legacy-read fixture, deliberately retained and labelled as one, is what the
+      new `CONTRIBUTING.md` deprecation checklist asks for and what this now needs. Not
+      yet filed.
+
+      Three references in `conformance` went stale with that merge and still describe the
+      old state: `CLAUDE.md:129` lists the class as a known gap "asserted by
+      `coverage-001`" (false on both halves now — the fixture migrated and `spec` has
+      shaped the class); `README.md:171`'s `UNSHAPED` table still counts it among nine;
+      and `reference-patient-pod/README.md:70` still names `CoverageRecord` in its class
+      column. Also not yet filed.
 - [ ] **`sdk-typescript` — the SDK cannot emit `coverage:InsurancePlan` at all**
       (jayostis/sdk-typescript#26). `TYPE_MAPPING` resolves the `insurance` pod directory
       to `clinical:CoverageRecord`, and `TYPE_TO_DIR` sends BOTH the `CoverageRecord` and
