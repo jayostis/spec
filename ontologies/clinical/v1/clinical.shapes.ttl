@@ -14,6 +14,17 @@
 # different data sources (EHR, device, patient-reported).
 #
 # Changelog:
+# v1.19 (2026-08-30): Added clinical:CoverageTypeVocabularyShape, checking the
+#     VALUE of clinical:coverageType against the value set FHIR R4 binds
+#     Coverage.type to, at sh:Warning. The list is
+#     coverage:CoverageTypeVocabularyShape's, copied unchanged, because
+#     clinical:coverageType and coverage:coverageType are the deprecated and the
+#     current spelling of one field. Corrects v1.18, which left the value
+#     unconstrained on the grounds that the ontology comment and the corpus
+#     disagreed -- the disagreement had already been settled by coverage v1.4,
+#     which lists the corpus's value "primary" by name, and v1.18 had not looked
+#     there. Three of the comment's five values are accepted nowhere in this
+#     specification at all.
 # v1.18 (2026-08-30): Added clinical:CoverageRecordShape, targeting the
 #     deprecated-and-retained clinical:CoverageRecord. Until now that class was
 #     the only deprecated class in this repository with no shape, so every
@@ -2478,25 +2489,21 @@ clinical:CoverageRecordShape a sh:NodeShape ;
         sh:severity sh:Violation
     ] ;
 
-    # Required: coverageType — PRESENCE ONLY. THE VALUE IS DELIBERATELY NOT
-    # ENUMERATED, and this is the first of the three departures from
+    # Required: coverageType. PRESENCE is required here; the VALUE is checked
+    # separately, at sh:Warning, by clinical:CoverageTypeVocabularyShape below.
+    # The split exists because one sh:property block carries one severity and
+    # these two facts do not share one -- the same reason
+    # coverage:CoverageTypeVocabularyShape is split out of
     # coverage:InsurancePlanShape.
     #
-    # There are two incompatible value sets in play and the data satisfies
-    # neither cleanly. clinical.ttl's own rdfs:comment lists "medical, dental,
-    # vision, prescription, mental_health"; the EHR-imported records actually
-    # carry "primary", which is the FHIR Coverage.order sense (which plan pays
-    # first) rather than the Coverage.type sense (what is covered). coverage.ttl
-    # documents that same conflation and RETAINS both spellings for backward
-    # compatibility.
-    #
-    # An sh:in built from the ontology comment would therefore reject the real
-    # corpus, and one built from the corpus would contradict the ontology. Since
-    # SHACL conformance is an empty result set and does not read severities, a
-    # value list at sh:Warning would reject it just as surely — that is rule S5,
-    # and demoting it is not available. Presence is checked; the value is left to
-    # coverage:CoverageTypeVocabularyShape, which governs the spelling that new
-    # data is written in and is where this belongs.
+    # WHICH VALUE SET, AND WHY NOT THE ONE IN clinical.ttl. The rdfs:comment on
+    # clinical:coverageType says "medical, dental, vision, prescription,
+    # mental_health". Three of those five -- medical, prescription,
+    # mental_health -- are accepted nowhere else in this specification: not by
+    # FHIR's coverage-type value set, not by coverage:CoverageTypeVocabularyShape,
+    # not by any other shape or ontology here. That comment is an unenforced
+    # prose line written when the class was created and never reconciled with the
+    # vocabulary that superseded it. It is not the authority and is not followed.
     sh:property [
         sh:path clinical:coverageType ;
         sh:datatype xsd:string ;
@@ -2504,7 +2511,7 @@ clinical:CoverageRecordShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:minLength 1 ;
         sh:name "Coverage Type"@en ;
-        sh:message "Coverage type is required; its value is not constrained here because the deprecated corpus carries the FHIR Coverage.order spelling"@en ;
+        sh:message "Coverage type is required"@en ;
         sh:severity sh:Violation
     ] ;
 
@@ -2653,6 +2660,66 @@ clinical:CoverageRecordShape a sh:NodeShape ;
         sh:pattern "^[0-9]+\\.[0-9]+$" ;
         sh:name "Schema Version"@en ;
         sh:message "Schema version must be in format major.minor"@en
+    ] .
+
+# ============================================================================
+# Shape: Coverage Type vocabulary, deprecated spelling (advisory) -- v1.19
+# ============================================================================
+#
+# Split out of clinical:CoverageRecordShape so that the REQUIREMENT (a coverage
+# type is present) and the RECOMMENDATION (it comes from the value set FHIR
+# names) can carry different severities, which a single sh:property cannot do.
+#
+# The list is coverage:CoverageTypeVocabularyShape's, copied unchanged, and
+# deliberately so: clinical:coverageType and coverage:coverageType are the
+# deprecated and the current spelling of ONE field, and a record should not be
+# judged differently for which spelling it happens to be written in.
+#
+# WHY THIS LIST AND NOT THE ONE IN clinical.ttl. v1.18 left this value
+# unconstrained, reasoning that the ontology comment ("medical, dental, vision,
+# prescription, mental_health") and the corpus ("primary") disagreed and neither
+# could be preferred without evidence. That was wrong, and the evidence was
+# already in this repository: coverage v1.4 ratified a value set for this exact
+# field, grounded in the FHIR binding, and it lists "primary" BY NAME as a
+# retained Cascade value. Meanwhile "medical", "prescription" and
+# "mental_health" appear nowhere in this specification as accepted values of
+# anything. The disagreement was already settled; v1.18 had not looked in the
+# right file.
+#
+# Severity is sh:Warning because the FHIR binding is EXTENSIBLE: alternate codes
+# MAY be used where the value set does not cover the concept
+# (https://hl7.org/fhir/R4/terminologies.html#extensible). A payer's local code
+# is worth flagging for review and is not grounds for rejecting the record. That
+# is the rule coverage v1.4 established, and this accepts the same consequence it
+# did: because SHACL conformance is an empty result set and does not read
+# severity, an out-of-set value does make the record non-conforming. Applying the
+# rule to only one of the two spellings would have been the inconsistency.
+#
+# S5: this shape reaches its class by sh:targetClass and nothing references it
+# with sh:node, which is what makes a sh:Warning safe to publish on it.
+
+clinical:CoverageTypeVocabularyShape a sh:NodeShape ;
+    sh:targetClass clinical:CoverageRecord ;
+    rdfs:label "Coverage Type Vocabulary Shape (deprecated spelling)"@en ;
+    rdfs:comment "Advisory check that clinical:coverageType comes from the value set FHIR R4 binds Coverage.type to. Warning severity, because that binding is extensible. The list is coverage:CoverageTypeVocabularyShape's, unchanged: the two properties are the deprecated and current spellings of one field."@en ;
+
+    sh:property [
+        sh:path clinical:coverageType ;
+        sh:in (
+            # Retained Cascade values (v1.0-v1.3). "primary" and "secondary" are
+            # the FHIR Coverage.order sense rather than Coverage.type; the
+            # conflation is historical and both are kept for compatibility.
+            "primary" "secondary" "dental" "vision"
+            # v3-ActCode coverage types.
+            "EHCPOL" "HSAPOL" "AUTOPOL" "COL" "UNINSMOT" "PUBLICPOL"
+            "DENTPRG" "DISEASEPRG" "CANPRG" "ENDRENAL" "HIVAIDS" "MANDPOL"
+            "MENTPRG" "SAFNET" "SUBPRG" "SUBSIDIZ" "SUBSIDMC" "SUBSUPP"
+            "WCBPOL" "DENTAL" "DISEASE" "DRUGPOL" "HIP" "LTC" "MCPOL"
+            "POS" "HMO" "PPO" "MENTPOL" "SUBPOL" "VISPOL"
+        ) ;
+        sh:name "Coverage Type Vocabulary"@en ;
+        sh:message "Coverage type should come from the value set FHIR R4 binds Coverage.type to (http://hl7.org/fhir/ValueSet/coverage-type), or one of the retained Cascade values primary, secondary, dental, vision. That binding is extensible, so a payer-local code is acceptable where no listed code applies."@en ;
+        sh:severity sh:Warning
     ] .
 
 # ============================================================================

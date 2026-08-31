@@ -13,8 +13,8 @@
 #
 # clinical:CoverageRecord lived its whole life that way. clinical v1.18 shaped
 # it, so this suite cannot assert the live defect directly -- instead case 3
-# REMOVES clinical:CoverageRecordShape from a scratch copy and requires the
-# check to name the class, which is what proves it would have caught it.
+# REMOVES every shape targeting the class from a scratch copy and requires the
+# check to name it, which is what proves it would have caught it.
 #
 # Every assertion is paired with a negative control, and the baseline machinery
 # is tested in BOTH directions: a newly unshaped class must fail, and a
@@ -99,24 +99,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. THE DEFINING CASE. Remove the shape clinical v1.18 added and require the
-#    check to report the class it was written for. This is the only assertion
-#    that proves the check would have caught the live defect.
+# 3. THE DEFINING CASE. Remove every shape clinical v1.18 and v1.19 added and
+#    require the check to report the class they were written for. This is the
+#    only assertion that proves the check would have caught the live defect.
 # ---------------------------------------------------------------------------
 echo ""
 echo "3. Reintroduce the pre-v1.18 state: clinical:CoverageRecord unshaped"
 
 DIR="$(scratch pre-v118)"
-# Delete the shape block: from its subject line to the terminating period that
-# closes the node shape, which is the line consisting of "    ] ." at its end.
-"$PYTHON" - "$DIR/$CLIN_SHAPES" <<'PY'
+# Delete EVERY shape targeting the class, not one shape by name. Two target it
+# as of v1.19 (clinical:CoverageRecordShape and
+# clinical:CoverageTypeVocabularyShape), and a by-name deletion silently stopped
+# reproducing the pre-v1.18 state the moment the second one landed -- which is
+# how this suite caught its own staleness. Keyed on the TARGET so it keeps
+# working however the shapes are later split, renamed or merged.
+"$PYTHON" - "$DIR/$CLIN_SHAPES" <<'DELSHAPE'
 import re, sys
 path = sys.argv[1]
-text = open(path, encoding="utf-8").read()
-start = text.index("clinical:CoverageRecordShape a sh:NodeShape")
-end = text.index("\n\n", text.index("sh:message \"Schema version must be in format major.minor\"@en\n    ] .", start))
-open(path, "w", encoding="utf-8").write(text[:start] + text[end:])
-PY
+lines = open(path, encoding="utf-8").read().split("\n")
+out, i, removed = [], 0, 0
+while i < len(lines):
+    if re.match(r"^clinical:\S+ a sh:NodeShape", lines[i]):
+        end = i
+        while end < len(lines) and lines[end].strip() != "] .":
+            end += 1
+        block = lines[i:end + 1]
+        if any("sh:targetClass clinical:CoverageRecord" in b for b in block):
+            removed += 1
+            i = end + 1
+            continue
+    out.append(lines[i])
+    i += 1
+if removed == 0:
+    sys.exit("no shape targeting clinical:CoverageRecord was found to delete")
+open(path, "w", encoding="utf-8").write("\n".join(out))
+DELSHAPE
 
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
 STATUS=$?

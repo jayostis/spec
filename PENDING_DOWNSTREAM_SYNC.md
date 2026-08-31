@@ -653,13 +653,15 @@ from the org repository.
 
 ### What each repository owes
 
-- [x] **`spec` — a shape for the retained class.** DONE, clinical v1.18 (2026-08-30),
-      `clinical:CoverageRecordShape` in `clinical.shapes.ttl` (jayostis/spec#7).
+- [x] **`spec` — a shape for the retained class.** DONE, clinical v1.18 + v1.19
+      (2026-08-30), `clinical:CoverageRecordShape` and
+      `clinical:CoverageTypeVocabularyShape` in `clinical.shapes.ttl`
+      (jayostis/spec#7).
       `clinical:CoverageRecord` was the only deprecated class in this repository targeted
       by no shape, so every record in that spelling validated `conforms: true` because
       nothing looked at it. clinical v1.13's four deprecated classes all kept their
       shapes; this one never had one to keep. **This bump is itself unpropagated — the
-      six downstream steps below the fold have not run for clinical 1.17 → 1.18.**
+      six downstream steps below the fold have not run for clinical 1.17 → 1.19.**
 - [x] **`spec` — the process gap.** DONE, jayostis/spec#9: `CONTRIBUTING.md` now states
       what a deprecation obliges, separately from an addition, and Step 1's shapes
       obligation is no longer conditional on something having been added. A companion

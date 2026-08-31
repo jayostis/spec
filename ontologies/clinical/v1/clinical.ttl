@@ -22,7 +22,7 @@
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-12-26"^^xsd:date ;
     dct:modified "2026-08-30"^^xsd:date ;
-    owl:versionInfo "1.18" ;
+    owl:versionInfo "1.19" ;
     rdfs:comment "Domain-specific vocabulary for clinical documentation and structured records imported from patient portals (MyChart, Epic, etc.). Contains EHR-verified clinical data."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/clinical/v1.0/> .
 
@@ -1421,6 +1421,38 @@ clinical:isActive a owl:DatatypeProperty ;
 # ============================================================================
 # Changelog
 # ============================================================================
+#
+# Version 1.19 (2026-08-30)
+# - NO new terms. One SHACL constraint, correcting a judgement v1.18 got wrong
+#   one release earlier; clinical.ttl itself changes only in this changelog, its
+#   dct:modified and its owl:versionInfo.
+# - SHACL. clinical:CoverageTypeVocabularyShape now checks the VALUE of
+#   clinical:coverageType against the value set FHIR R4 binds Coverage.type to,
+#   at sh:Warning, in a shape split out of clinical:CoverageRecordShape so the
+#   requirement (present) and the recommendation (from the value set) can carry
+#   different severities. The list is coverage:CoverageTypeVocabularyShape's,
+#   copied unchanged.
+# - WHAT v1.18 GOT WRONG. It left the value unconstrained, reasoning that the
+#   rdfs:comment on clinical:coverageType ("medical, dental, vision,
+#   prescription, mental_health") and the corpus ("primary") disagreed and
+#   neither could be preferred without evidence. The evidence was already in this
+#   repository and v1.18 did not look for it: coverage v1.4 ratified a value set
+#   for this exact field, argued from the FHIR binding strength, and it lists
+#   "primary" BY NAME as a retained Cascade value. Of the comment's five values,
+#   "medical", "prescription" and "mental_health" are accepted nowhere in this
+#   specification -- not by FHIR's value set, not by any shape, not by any other
+#   ontology. The comment is an unenforced prose line written when the class was
+#   created and never reconciled with the vocabulary that superseded it.
+# - The rdfs:comment on clinical:coverageType is left as it stands. It is wrong
+#   and is now contradicted by a shape, which is the visible form of the
+#   disagreement; correcting the prose is a term change and belongs in a release
+#   that is making one.
+# - CONSEQUENCE, stated plainly: a record whose coverageType follows the
+#   ontology comment rather than the ratified list now reports a warning, and
+#   because SHACL conformance is an empty result set and does not read severity,
+#   that record is non-conforming. This is the same consequence coverage v1.4
+#   accepted for the current spelling. Applying the rule to only one of the two
+#   spellings of one field would have been the inconsistency.
 #
 # Version 1.18 (2026-08-30)
 # - NO new terms, and no term changes meaning. This version adds one SHACL
