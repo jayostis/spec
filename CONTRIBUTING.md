@@ -136,7 +136,7 @@ Before committing any change to an ontology (`.ttl`) file:
 - [ ] Update `VOCAB_VERSIONS` and stage it explicitly: `git add VOCAB_VERSIONS`
 - [ ] `python3 scripts/check-shape-targets.py` exits 0
 - [ ] `python3 scripts/check-nested-severity.py` exits 0
-- [ ] `python3 scripts/check-class-coverage.py` exits 0 -- a new class declaring `rdfs:subClassOf prov:Entity` or `prov:Activity` must be given a shape, or added to `scripts/class-coverage-baseline.json` with an attribution saying who owes it. Baselining is an admission, not a fix: a class in that file is one whose records SHACL reports `conforms: true` over having examined nothing.
+- [ ] `python3 scripts/check-class-coverage.py` exits 0 -- a new class declaring `rdfs:subClassOf prov:Entity` or `prov:Activity` must be given a shape, or added to `scripts/known-unshaped-classes.json` with an attribution saying who owes it. Baselining is an admission, not a fix: a class in that file is one whose records SHACL reports `conforms: true` over having examined nothing.
 - [ ] After committing, tag it: `git tag vocab/{name}-v{X.Y}`
 
 ### Steps 2 through 7 -- downstream, in this order

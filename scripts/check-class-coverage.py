@@ -77,7 +77,7 @@ baseline entry, and the ratchet with it, without writing a single constraint.
 
 THE BASELINE
 
-scripts/class-coverage-baseline.json enumerates the unshaped classes that predate
+scripts/known-unshaped-classes.json enumerates the unshaped classes that predate
 this check. It is a GATE INPUT, not a filter: every class is still examined and
 counted. The run fails when
 
@@ -126,7 +126,7 @@ PROV = Namespace("http://www.w3.org/ns/prov#")
 CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
 
 ONTOLOGY_GLOB = "ontologies/*/v1*/*.ttl"
-BASELINE = "scripts/class-coverage-baseline.json"
+BASELINE = "scripts/known-unshaped-classes.json"
 
 # The PROV superclasses that declare a class record-bearing. A class asserting
 # either has said its instances are data someone stores, which is exactly the

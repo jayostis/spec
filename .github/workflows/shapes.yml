@@ -37,7 +37,7 @@ on:
       - 'scripts/nested-severity-baseline.json'
       - 'scripts/check-class-coverage.py'
       - 'scripts/test-check-class-coverage.sh'
-      - 'scripts/class-coverage-baseline.json'
+      - 'scripts/known-unshaped-classes.json'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
   workflow_dispatch:

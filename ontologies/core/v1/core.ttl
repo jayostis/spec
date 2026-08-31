@@ -856,7 +856,7 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 #   was written. That check asserts a record-bearing class must be judged by some
 #   shape, and it reads exactly this axiom to decide what bears records, so all
 #   eleven terms were reported unshaped and recorded as debt in
-#   scripts/class-coverage-baseline.json. It was debt that could never be
+#   scripts/known-unshaped-classes.json. It was debt that could never be
 #   discharged: a code-list member has nothing for a shape to constrain. The
 #   eleven entries are removed with this axiom, returning that file to the 34 it
 #   held before the check's scope was widened.

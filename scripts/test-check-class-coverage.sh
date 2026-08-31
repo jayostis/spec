@@ -47,7 +47,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 CLIN_SHAPES="ontologies/clinical/v1/clinical.shapes.ttl"
 CLIN_TTL="ontologies/clinical/v1/clinical.ttl"
-BASE="scripts/class-coverage-baseline.json"
+BASE="scripts/known-unshaped-classes.json"
 
 # Build a scratch copy of the ontology tree plus the baseline, which a case may
 # mutate freely.
