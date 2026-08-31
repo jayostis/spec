@@ -6,7 +6,7 @@
 
 # ============================================================================
 # Cascade Protocol — Coverage Vocabulary SHACL Validation Shapes
-# Version: 1.3 (coverage v1.6, 2026-08-28)
+# Version: 1.4 (coverage v1.7, 2026-08-31)
 #
 # This header is not read by any gate, which is how it sat at "1.0 (Phase 4,
 # 2026-02-18)" through the 1.1 and 1.2 revisions recorded in the changelog at
@@ -265,6 +265,26 @@ coverage:InsurancePlanShape a sh:NodeShape ;
         sh:pattern "^[0-9]+\\.[0-9]+$" ;
         sh:name "Schema Version"@en ;
         sh:message "Schema version must be in format major.minor"@en
+    ] ;
+
+    # Optional: source linkage back to the record this was converted from.
+    #
+    # No minCount: coverage:sourceRecordId is domain-free by declaration, and a
+    # plan sourced from patient self-report has no originating record to name.
+    # sh:maxCount 1 because it holds ONE thing -- the source system's identifier
+    # for the record this was converted from.
+    #
+    # This is a transcription of the constraint health:sourceRecordId and
+    # clinical:sourceRecordId already carry, not a new judgement: same datatype,
+    # same cardinality, same severity. sh:name follows clinical.shapes.ttl and
+    # coverage.ttl's own rdfs:label, both of which read "Source Record ID";
+    # health.shapes.ttl's five copies read "Source Record Identifier".
+    sh:property [
+        sh:path coverage:sourceRecordId ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:name "Source Record ID"@en ;
+        sh:severity sh:Violation
     ] .
 
 # ============================================================================
@@ -313,6 +333,32 @@ coverage:CoverageTypeVocabularyShape a sh:NodeShape ;
 # ============================================================================
 # Changelog
 # ============================================================================
+#
+# Version 1.4 (2026-08-31) — coverage v1.7
+# - coverage:InsurancePlanShape constrains coverage:sourceRecordId: xsd:string,
+#   sh:maxCount 1, sh:Violation, no minCount. The property has been declared in
+#   coverage.ttl since v1.3 and no shape anywhere declared an sh:path for it, so
+#   a record carrying it had that field judged by nothing -- and unlike an
+#   unshaped CLASS, which check-class-coverage.py catches, an unshaped PREDICATE
+#   on a shaped class is caught by no gate this repository runs.
+# - The class it bites on is the one actually using the property.
+#   coverage:sourceRecordId was authored for coverage:ClaimRecord and
+#   coverage:BenefitStatement, which remain unshaped; but conformance's
+#   coverage-001 and reference-patient-pod/clinical/insurance.ttl both carry it
+#   on a coverage:InsurancePlan, which is legal (the declaration is domain-free)
+#   and was unconstrained.
+# - Not a new judgement. Same datatype, cardinality and severity as the six
+#   copies health.shapes.ttl and clinical.shapes.ttl already carry for their own
+#   sourceRecordId spellings; coverage.ttl already declared the range.
+# - COMPATIBILITY. Cannot reject a record that was conformant: every pod record
+#   carrying this property carries exactly one xsd:string value. It moves the
+#   field from unexamined to examined, so a malformed one can now be rejected.
+# - STILL OPEN, deliberately out of scope: cascade:sourceRecordId (in core.ttl)
+#   has the identical defect -- declared, shaped nowhere -- and is live today on
+#   a VALID conformance fixture (jayostis/spec#18). No gate catches an unshaped
+#   PREDICATE on a shaped class, which is why both were found by hand
+#   (jayostis/spec#19). Shapes for coverage:ClaimRecord and
+#   coverage:BenefitStatement remain unwritten.
 #
 # Version 1.3 (2026-08-28) — coverage v1.6
 # - coverage:InsurancePlanShape's cascade:dataProvenance sh:in list gains
