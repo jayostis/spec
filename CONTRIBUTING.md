@@ -115,7 +115,7 @@ Tag format for a ratified vocabulary version: `vocab/{name}-v{X.Y}`, for example
 
 1. Branch from `main`.
 2. Make the change, and complete the in-repo checklist below in the same PR.
-3. Run the two commands under "What must be green" and confirm both exit 0.
+3. Run the commands under "What must be green" and confirm all six exit 0.
 4. Push and open a PR. `.github/PULL_REQUEST_TEMPLATE.md` fills in with the checklist; keep the items and tick them.
 5. Say in the PR body which downstream repositories you are able to update and which you are not. A contributor who cannot open PRs against all seven should still say so, so a maintainer can carry the rest rather than discovering the gap later.
 6. One maintainer approval is required for vocabulary changes. Documentation-only changes need one review.
