@@ -661,7 +661,15 @@ from the org repository.
       by no shape, so every record in that spelling validated `conforms: true` because
       nothing looked at it. clinical v1.13's four deprecated classes all kept their
       shapes; this one never had one to keep. **This bump is itself unpropagated — the
-      six downstream steps below the fold have not run for clinical 1.17 → 1.19.**
+      six downstream steps below the fold have not run for clinical 1.17 → 1.19,
+      nor for core 3.8 → 3.9, which landed in the same change (jayostis/spec#12):
+      `cascade:DataProvenance` dropped `rdfs:subClassOf prov:Entity`, an axiom that
+      classified eleven provenance code-list terms as record data they never hold.
+      No term is added, removed or renamed and no shape changes verdict, so the
+      downstream obligation is a `VOCAB_VERSIONS` line in each repo rather than
+      code — verified against `conformance`, `cascade-cli` and `sdk-typescript`,
+      none of which reference `prov:Entity` outside vendored copies of these
+      ontologies.**
 - [x] **`spec` — the process gap.** DONE, jayostis/spec#9: `CONTRIBUTING.md` now states
       what a deprecation obliges, separately from an addition, and Step 1's shapes
       obligation is no longer conditional on something having been added. A companion
