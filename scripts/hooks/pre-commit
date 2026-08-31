@@ -7,6 +7,15 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+# The escape hatch the failure message at the foot of this file offers. It was
+# advertised from the day this hook was written and never implemented, so the
+# only way past a false positive was --no-verify, which disables every hook
+# rather than this one.
+if [[ "${SKIP_VERSION_CHECK:-}" == "1" ]]; then
+  echo "pre-commit: SKIP_VERSION_CHECK=1 — vocabulary version checks skipped."
+  exit 0
+fi
+
 # Find all staged ontology TTL files (not shapes)
 STAGED_TTLS=$(git diff --cached --name-only | grep -E '^ontologies/.+/v[0-9]+/[^.]+\.ttl$' | grep -v '\.shapes\.ttl$' || true)
 
@@ -42,11 +51,20 @@ for ttl_file in $STAGED_TTLS; do
 
   echo "  ✅ $vocab: $head_version → $staged_version"
 
-  # Check dct:modified was updated
-  staged_modified=$(git show :"$ttl_file" 2>/dev/null | grep 'dct:modified' | head -1 || true)
-  head_modified=$(git show HEAD:"$ttl_file" 2>/dev/null | grep 'dct:modified' | head -1 || true)
-  if [[ "$staged_modified" == "$head_modified" ]] && [[ "$head_version" != "NEW_FILE" ]]; then
-    ERRORS+=("$ttl_file: dct:modified not updated. Set it to today's date.")
+  # Check dct:modified is TODAY'S DATE.
+  #
+  # This asks whether the date is right, not whether it CHANGED. The previous
+  # comparison against HEAD's value could not tell a forgotten date from an
+  # already-correct one, so a second release authored on the same day was
+  # blocked for having the right answer — and the only way to satisfy the hook
+  # was to write a date that was wrong. The error message always said "set it to
+  # today's date"; this checks that.
+  today=$(date +%F)
+  staged_modified=$(git show :"$ttl_file" 2>/dev/null | grep 'dct:modified'     | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)
+  if [[ -z "$staged_modified" ]]; then
+    ERRORS+=("$ttl_file: dct:modified not found. Add it before committing.")
+  elif [[ "$staged_modified" != "$today" ]]; then
+    ERRORS+=("$ttl_file: dct:modified is $staged_modified, not today ($today). Set it to today's date.")
   fi
 
   # Check SHACL shapes file is also staged
