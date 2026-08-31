@@ -1,12 +1,62 @@
 {
-  "$comment": "Enumerated record-bearing classes that no shape targets, for scripts/check-class-coverage.py. This file is a GATE INPUT, not a filter: the check still examines and counts every class declaring rdfs:subClassOf prov:Entity or prov:Activity. The run fails when an unshaped class appears that is not listed here AND when a listed class stops being unshaped, so the list can only shrink, and shrinking it is an explicit committed edit. Each entry names the vocabulary that owns the fix. Nothing here is acceptable in the long run -- each entry is a class whose records SHACL reports conforms:true over while having examined nothing, a verdict indistinguishable from one that was earned.",
-  "$rule": "A class declaring rdfs:subClassOf prov:Entity or prov:Activity has said its instances are record data. If no shape names it in sh:targetClass then those records are judged by nothing. The cure is a shape with an explicit sh:targetClass -- never a subclass axiom, which SHACL does not resolve over a pod's data graph (see validation/index.md). Where a class turns out NOT to hold record data, the cure is instead to reconsider the PROV superclass, which is the thing declaring that it does.",
-  "$established": "2026-08-30, clinical v1.18 (spec). clinical:CoverageRecord, the class this check was written for, is FIXED rather than baselined: it is shaped by clinical:CoverageRecordShape in the same change. The regression suite deletes that shape from a scratch copy and requires the check to name the class, which is what proves this would have caught it.",
+  "$comment": "Enumerated record-bearing classes that no shape targets, for scripts/check-class-coverage.py. This file is a GATE INPUT, not a filter: the check still examines and counts every class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity. The run fails when an unshaped class appears that is not listed here, when a listed class has since been shaped, and when a listed class no longer exists -- the last two reported separately, because a shape someone wrote and a class someone deleted are different events with different remediations. So the list can only shrink, and shrinking it is an explicit committed edit. Each entry names the vocabulary that owns the fix. Nothing here is acceptable in the long run -- each entry is a class whose records SHACL reports conforms:true over while having examined nothing, a verdict indistinguishable from one that was earned.",
+  "$rule": "A class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity has said its instances are record data. If no shape names it in sh:targetClass -- and carries at least one constraint beside that target, since a bare sh:targetClass asks nothing -- then those records are judged by nothing. The chain is walked transitively because a parent's shape does NOT reach a child: SHACL does not resolve subclass axioms over a pod's data graph (see validation/index.md), which is the same rule that makes the cure an explicit sh:targetClass rather than a subclass axiom. Where a class turns out NOT to hold record data, the cure is instead to reconsider the PROV superclass, which is the thing declaring that it does.",
+  "$established": "2026-08-30, clinical v1.18 (spec). clinical:CoverageRecord, the class this check was written for, is FIXED rather than baselined: it is shaped by clinical:CoverageRecordShape in the same change. The regression suite deletes that shape from a scratch copy and requires the check to name the class, which is what proves this would have caught it. REVISED 2026-08-30 (PR #10 review): the check's scope was one rdfs:subClassOf step deep and is now the full chain, and a bare sh:targetClass carrying no constraint no longer counts as coverage. The scope change revealed 11 further unshaped classes that were always in the population the rule describes and were simply not being looked at; they are baselined here rather than shaped, and are marked established-by-widening so it stays visible that they are pre-existing gaps rather than new ones. Ten of the eleven are the cascade:DataProvenance value terms and are the SAME defect that entry already records, now counted once per term.",
   "entries": [
+    {
+      "class": "cascade:AIAsserted",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:AIExtracted",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance by way of cascade:ClinicalGenerated. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:ClinicalGenerated",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:ConsumerGenerated",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:ConsumerWellness",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance by way of cascade:ConsumerGenerated. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
     {
       "class": "cascade:DataProvenance",
       "ownedBy": "spec (core)",
       "detail": "PROBABLY THE SUPERCLASS, NOT THE SHAPE. This is the classification whose INDIVIDUALS are cascade:ClinicalGenerated, cascade:EHRVerified, cascade:PatientReported and the rest; no pod record is ever typed cascade:DataProvenance, so there is nothing for a shape to judge. Its rdfs:subClassOf prov:Entity is what puts it in this check's population and is the declaration worth revisiting. Resolve it one way or the other rather than shaping it: a shape targeting a value enumeration would be the wrong fix."
+    },
+    {
+      "class": "cascade:DeviceGenerated",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:EHRVerified",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance by way of cascade:ClinicalGenerated. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:PatientReported",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:ScannedDocument",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance by way of cascade:ClinicalGenerated. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
+    },
+    {
+      "class": "cascade:SelfReported",
+      "ownedBy": "spec (core)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. SAME DEFECT AS cascade:DataProvenance, not a separate one. This is one of the provenance VALUES -- the terms cascade:dataProvenance ranges over -- promoted from individuals to owl:Class, so it inherits prov:Entity through cascade:DataProvenance. No pod record is ever typed with it, so there is nothing for a shape to judge, and a shape targeting a value enumeration would be the wrong fix. Resolving cascade:DataProvenance's own rdfs:subClassOf prov:Entity clears this entry and the other nine with it."
     },
     {
       "class": "checkup:AttentionItem",
@@ -137,6 +187,11 @@
       "class": "diabetes:GlucoseReading",
       "ownedBy": "spec (diabetes, v1-draft)",
       "detail": "Draft vocabulary; see diabetes:ActivityCorrelation. The highest-volume record type in the vocabulary, and a clinically load-bearing one."
+    },
+    {
+      "class": "diabetes:HbA1cResult",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. This is the worked example for that scope hole -- rdfs:subClassOf diabetes:LabResult, which is rdfs:subClassOf prov:Entity -- and unlike the cascade: entries beside it, it is a genuine record class with its own properties (diabetes:hba1cValue, diabetes:hba1cMmolMol) and needs a real shape. Note diabetes:LabResult's own shape would not reach it even once written: SHACL does not resolve rdfs:subClassOf over a pod's data graph, so this class needs its own sh:targetClass. Draft vocabulary; see diabetes:ActivityCorrelation for why the set is baselined rather than blocking."
     },
     {
       "class": "diabetes:HyperglycemicEvent",

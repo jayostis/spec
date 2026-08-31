@@ -2443,9 +2443,36 @@ clinical:ParsedIndicationReferenceEdgeShape a sh:PropertyShape ;
 # constrain it to what the vocabulary intends. This shape governs a spelling that
 # is only READ: the records it judges were written years ago by an import path
 # that no longer runs, and it cannot ask them to change. So where the two
-# disagree, this one follows the data that exists. Three places where it does,
-# each marked below: the effective-period datatype, the coverageType value set,
-# and the absence of a status property.
+# disagree, this one follows the data that exists. TWO places where it does, each
+# marked below at the constraint it applies to:
+#
+#   FIRST DEPARTURE   clinical:relationship  — this vocabulary's five values, not
+#                     the seven-code HL7 SubscriberPolicyholder set.
+#   SECOND DEPARTURE  clinical:effectivePeriodStart / effectivePeriodEnd — the
+#                     xsd:dateTime the importer emitted is accepted alongside the
+#                     declared xsd:date range.
+#
+# A THIRD DIVERGENCE HAS NO CONSTRAINT TO BE MARKED AT, so it is recorded here.
+# coverage:InsurancePlanShape binds coverage:status to the four FHIR R4 fm-status
+# codes at sh:Violation. This shape binds nothing, because the deprecated spelling
+# has no status property to bind: clinical:status is cross-class and carries no
+# rdfs:domain, none of the ten properties clinical.ttl does domain to
+# clinical:CoverageRecord is a status, and coverage:status itself did not exist
+# until coverage v1.5 — long after this class was deprecated. There is nothing
+# here to relax and nothing to enforce. Adding a status binding would be inventing
+# a field for a corpus that never had one.
+#
+# WHAT IS NOT A DEPARTURE, though earlier revisions of this header said so:
+#
+#   clinical:coverageType is judged by coverage:CoverageTypeVocabularyShape's
+#   value set, copied UNCHANGED, since v1.19 — see
+#   clinical:CoverageTypeVocabularyShape below. v1.18 listed it as a departure;
+#   that was the failure to look which v1.19 corrected, and the two spellings of
+#   the field are now judged identically, which is the opposite of a departure.
+#
+#   clinical:payorName is an EXTRA property this spelling carries and coverage:
+#   never gave a distinct name to. Constraining a field the other shape does not
+#   have is not a place the two disagree about a shared field.
 #
 # NOT sh:closed. Records in this spelling also carry health:sourceRecordId and
 # other cross-vocabulary predicates; closing the shape would reject them.
@@ -2542,8 +2569,8 @@ clinical:CoverageRecordShape a sh:NodeShape ;
         sh:severity sh:Warning
     ] ;
 
-    # Warning: relationship. This is the deprecated spelling of what
-    # coverage:subscriberRelationship carries. The list here is clinical.ttl's
+    # Warning: relationship — FIRST DEPARTURE. This is the deprecated spelling of
+    # what coverage:subscriberRelationship carries. The list here is clinical.ttl's
     # five values, NOT the seven-code HL7 SubscriberPolicyholder set that
     # coverage v1.4 completed: this vocabulary never accepted "common" or
     # "injured", so no record in this spelling can carry one, and adding them
@@ -2620,11 +2647,13 @@ clinical:CoverageRecordShape a sh:NodeShape ;
         sh:severity sh:Info
     ] ;
 
-    # Info: payorName — THIRD DEPARTURE, by omission from the migrated spelling
-    # rather than from this one. coverage: has no payor property distinct from
-    # coverage:providerName, which is sh:maxCount 1, so records migrating to
-    # InsurancePlan retain this predicate under its original clinical: name.
-    # It is therefore live in both spellings and constrained here in both.
+    # Info: payorName — NOT A DEPARTURE, despite what this comment said through
+    # v1.19. coverage: has no payor property distinct from coverage:providerName,
+    # which is sh:maxCount 1, so records migrating to InsurancePlan retain this
+    # predicate under its original clinical: name. That makes it an EXTRA property
+    # live in both spellings and constrained here for both — not a place where the
+    # two shapes judge one shared field differently, which is what the numbered
+    # departures above are.
     sh:property [
         sh:path clinical:payorName ;
         sh:datatype xsd:string ;

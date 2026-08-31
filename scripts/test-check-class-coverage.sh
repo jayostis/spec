@@ -205,7 +205,12 @@ cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 
 clinical:ScratchTestRecordShape a sh:NodeShape ;
     sh:targetClass clinical:ScratchTestRecord ;
-    rdfs:label "Scratch Test Record Shape"@en .
+    rdfs:label "Scratch Test Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
 EOF
 
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
@@ -257,7 +262,12 @@ cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 
 clinical:ImagingStudyShape a sh:NodeShape ;
     sh:targetClass clinical:ImagingStudy ;
-    rdfs:label "Imaging Study Shape"@en .
+    rdfs:label "Imaging Study Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
 EOF
 
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
@@ -345,6 +355,234 @@ if [ $STATUS -eq 2 ]; then
   pass "check errors (exit 2) on a root with ontologies but no shapes"
 else
   fail "expected exit 2 on a root with no shapes, got $STATUS" "$OUT"
+fi
+
+# ---------------------------------------------------------------------------
+# 12. A shape that names a class in sh:targetClass but carries NO constraint
+#     does not make that class covered. A bare target plus an rdfs:label still
+#     returns conforms:true over every record having examined nothing, which is
+#     verbatim the defect this check exists to catch -- so accepting it would
+#     let a contributor clear a baseline entry, and the ratchet, without
+#     writing a single constraint.
+# ---------------------------------------------------------------------------
+echo ""
+echo "12. A constraint-free shape does not count as coverage"
+
+DIR="$(scratch empty-shape)"
+cat >> "$DIR/$CLIN_TTL" <<'EOF'
+
+clinical:ScratchHollowRecord a owl:Class ;
+    rdfs:label "Scratch Hollow Record"@en ;
+    rdfs:subClassOf prov:Entity .
+EOF
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ScratchHollowRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchHollowRecord ;
+    rdfs:label "Scratch Hollow Record Shape"@en .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "a class targeted only by a constraint-free shape fails (exit $STATUS)"
+else
+  fail "a constraint-free shape was accepted as coverage" "$OUT"
+fi
+if echo "$OUT" | grep -q "clinical:ScratchHollowRecord"; then
+  pass "names clinical:ScratchHollowRecord"
+else
+  fail "failed without naming clinical:ScratchHollowRecord" "$OUT"
+fi
+
+# Negative control: the SAME shape with one sh:property added must pass, so the
+# failure above is the absent constraint and not merely the new class.
+DIR="$(scratch empty-shape-control)"
+cat >> "$DIR/$CLIN_TTL" <<'EOF'
+
+clinical:ScratchHollowRecord a owl:Class ;
+    rdfs:label "Scratch Hollow Record"@en ;
+    rdfs:subClassOf prov:Entity .
+EOF
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ScratchHollowRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchHollowRecord ;
+    rdfs:label "Scratch Hollow Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -eq 0 ]; then
+  pass "negative control: the same shape carrying one constraint passes"
+else
+  fail "negative control failed, so case 12 proves nothing" "$OUT"
+fi
+
+# ---------------------------------------------------------------------------
+# 13. A class reaching prov:Entity through an INTERMEDIATE Cascade class is in
+#     scope. Subclassing a record class is a normal idiom here -- the six
+#     clinical: document subtypes, six health: data classes and
+#     diabetes:HbA1cResult all do it -- and such a class has inherited exactly
+#     the declaration this check keys on, so no vocabulary judgement is needed.
+#     The parent is shaped and the child is not, which isolates the child.
+# ---------------------------------------------------------------------------
+echo ""
+echo "13. Transitive scope: a class whose ANCESTOR is prov-rooted is in scope"
+
+DIR="$(scratch transitive)"
+cat >> "$DIR/$CLIN_TTL" <<'EOF'
+
+clinical:ScratchParentRecord a owl:Class ;
+    rdfs:label "Scratch Parent Record"@en ;
+    rdfs:subClassOf prov:Entity .
+
+clinical:ScratchChildRecord a owl:Class ;
+    rdfs:label "Scratch Child Record"@en ;
+    rdfs:subClassOf clinical:ScratchParentRecord .
+EOF
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ScratchParentRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchParentRecord ;
+    rdfs:label "Scratch Parent Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "a transitively prov-rooted unshaped class fails (exit $STATUS)"
+else
+  fail "a transitively prov-rooted unshaped class PASSED" "$OUT"
+fi
+if echo "$OUT" | grep -q "clinical:ScratchChildRecord"; then
+  pass "names clinical:ScratchChildRecord"
+else
+  fail "failed without naming clinical:ScratchChildRecord" "$OUT"
+fi
+# The parent IS shaped, so it must not be reported. Without this the case would
+# pass for the wrong reason the moment the parent's shape stopped counting.
+if echo "$OUT" | grep -qE "clinical:ScratchParentRecord$"; then
+  fail "reported the shaped parent as unshaped" "$OUT"
+else
+  pass "does not report the shaped parent"
+fi
+
+# Negative control for case 13: shape the child too and the same tree passes.
+DIR="$(scratch transitive-control)"
+cat >> "$DIR/$CLIN_TTL" <<'EOF'
+
+clinical:ScratchParentRecord a owl:Class ;
+    rdfs:label "Scratch Parent Record"@en ;
+    rdfs:subClassOf prov:Entity .
+
+clinical:ScratchChildRecord a owl:Class ;
+    rdfs:label "Scratch Child Record"@en ;
+    rdfs:subClassOf clinical:ScratchParentRecord .
+EOF
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ScratchParentRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchParentRecord ;
+    rdfs:label "Scratch Parent Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+
+clinical:ScratchChildRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchChildRecord ;
+    rdfs:label "Scratch Child Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -eq 0 ]; then
+  pass "negative control: shaping the child passes"
+else
+  fail "negative control failed, so case 13 proves nothing" "$OUT"
+fi
+
+# ---------------------------------------------------------------------------
+# 14. A baselined class that has been REMOVED from the ontology is a different
+#     event from one that has been SHAPED, and must not be reported as the
+#     latter. Both empty the entry, but "remove the entry, the class is shaped"
+#     sends the reader looking for a shape nobody ever wrote.
+# ---------------------------------------------------------------------------
+echo ""
+echo "14. A baselined class that no longer exists is reported as removed"
+
+DIR="$(scratch removed-class)"
+"$PYTHON" - "$DIR/ontologies/coverage/v1/coverage.ttl" <<'DELCLASS'
+import re, sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+block = re.search(r"^coverage:DenialNotice a owl:Class ;.*?\.\n", text, re.S | re.M)
+if not block:
+    sys.exit("coverage:DenialNotice declaration not found to delete")
+open(path, "w", encoding="utf-8").write(text[:block.start()] + text[block.end():])
+DELCLASS
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "a baselined class that was deleted fails (exit $STATUS)"
+else
+  fail "deleting a baselined class did not fail the check" "$OUT"
+fi
+if echo "$OUT" | grep -q "no longer exist"; then
+  pass "reports it as no longer existing"
+else
+  fail "did not distinguish a removed class from a shaped one" "$OUT"
+fi
+if echo "$OUT" | grep -q "no longer unshaped"; then
+  fail "reported a REMOVED class as 'no longer unshaped'" "$OUT"
+else
+  pass "does not claim the removed class was shaped"
+fi
+
+# Negative control for case 14: the SHAPED case keeps its own wording, so the
+# two remediations stay distinguishable in both directions.
+DIR="$(scratch removed-class-control)"
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ImagingStudyShape a sh:NodeShape ;
+    sh:targetClass clinical:ImagingStudy ;
+    rdfs:label "Imaging Study Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if echo "$OUT" | grep -q "no longer unshaped"; then
+  pass "a baselined class that WAS shaped still reports as shaped"
+else
+  fail "the shaped case lost its own wording" "$OUT"
+fi
+if echo "$OUT" | grep -q "no longer exist"; then
+  fail "reported a SHAPED class as no longer existing" "$OUT"
+else
+  pass "does not claim the shaped class was removed"
 fi
 
 # ---------------------------------------------------------------------------
