@@ -6,6 +6,22 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-08-31: A declared property no shape had an `sh:path` for (coverage v1.7)
+
+One `sh:property` block. `coverage:sourceRecordId` has been declared since coverage v1.3 and constrained by nothing since, so a record carrying it had that field judged by nothing — the predicate-level form of the defect clinical v1.18 fixed at class level.
+
+**It went unseen because it had nowhere to live.** The property was authored for `coverage:ClaimRecord` and `coverage:BenefitStatement`, and a property constraint lives inside a class's node shape, so with neither class shaped there was no node shape to put it in. The gap sat inside a larger one. What made it visible is that a *different* class started carrying the property: the declaration is deliberately domain-free, so `coverage:InsurancePlan` — which does have shapes — may carry it and does, in `conformance`'s `coverage-001` and in `reference-patient-pod/clinical/insurance.ttl`.
+
+**This is transcription, not design.** `health:sourceRecordId` and `clinical:sourceRecordId` already carry the identical constraint six times over — `xsd:string`, `sh:maxCount 1`, `sh:Violation` — and `coverage.ttl` already declared the range. `sh:name` follows clinical's `"Source Record ID"`, which is also the property's own `rdfs:label`; health's five copies read `"Source Record Identifier"` and the two spellings were never reconciled. No `minCount`: a plan sourced from patient self-report has no originating record to name.
+
+**No gate in this repository could have caught it, and that is the finding.** All three shape checks are class- or entailment-level. `check-class-coverage.py` comes closest and still cannot see it: `coverage:InsurancePlan` *is* shaped, so the class passes while one of its fields goes unjudged. A predicate-level equivalent — every declared property is named by some `sh:path`, against a baseline that can only shrink — is the check this release argues for and does not write.
+
+**Two neighbouring gaps are left open on purpose, and named here so they stay visible.** `cascade:sourceRecordId` (in `core.ttl`) has the identical defect — declared, shaped nowhere — and is live *today* on a VALID conformance fixture, `fixtures/core/source-identity-namespace.VALID.ttl`, where a shaped `health:LabResultRecord` carries it. Of the four namespaced spellings of this one concept, two were unjudged and this release fixes one. Separately, `coverage:ClaimRecord` and `coverage:BenefitStatement` are `owl:Class` with no `rdfs:subClassOf` at all — alone among coverage's record classes, where `InsurancePlan`, `Deductible`, `CopaySchedule` and `DenialNotice` are `prov:Entity` and `AppealRecord` is `prov:Activity`. Since `check-class-coverage.py`'s population is the PROV chain, the two classes this property was authored for are not merely unshaped, they are invisible to the gate that exists to find unshaped classes, and they are absent from `known-unshaped-classes.json` for that reason rather than by exemption.
+
+**Compatibility.** Not widening, and deliberately so: records move from unexamined to examined, so a malformed one can now be rejected. It cannot reject a record that was conformant — every pod record carrying this property carries exactly one `xsd:string` value. Verified locally with pyshacl 0.30.1: two values report `sh:MaxCountConstraintComponent` on `coverage:sourceRecordId` where the shapes at `main` reported `conforms: true`, a non-string reports `sh:DatatypeConstraintComponent`, one value and no value both conform, and `coverage-001`'s expected output still conforms. `spec` runs no validator in CI, so the durable form of that is a negative fixture in `conformance`, recorded in the ledger.
+
+---
+
 ## 2026-08-30: A class nobody was checking, and the process that let it go unchecked (clinical v1.18, v1.19, core v3.9)
 
 One deprecation, followed all the way down. `clinical:CoverageRecord` was superseded by `coverage:InsurancePlan` and retained for EHR-imported data, and six months later nothing anywhere judged it, nothing tracked that fact, and no rule existed that would have noticed. Four changes, in the order the problem is actually shaped: the missing shape, the missing check, the missing process step, and the missing ledger row.

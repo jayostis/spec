@@ -621,6 +621,75 @@ later one.
 
 ---
 
+## Pending batch — coverage v1.7 (authored 2026-08-31)
+
+SHACL only, **0 terms**. Tag `vocab/coverage-v1.7`. `coverage.shapes.ttl` 1.3 to
+1.4: `coverage:InsurancePlanShape` constrains `coverage:sourceRecordId`
+(`xsd:string`, `sh:maxCount 1`, `sh:Violation`, no `minCount`). The property has
+been declared since coverage v1.3 and no shape anywhere declared an `sh:path`
+for it. Closes jayostis/spec#11. See `CHANGELOG.md`.
+
+**Not widening.** Records move from unexamined to examined, so a malformed one
+can now be rejected. It cannot reject a record that was conformant: every pod
+record carrying this property carries exactly one `xsd:string` value.
+
+**Synced NOW (per the seam table — a released vocab gained a shape, so
+`cascade-cli` re-syncs promptly so `cascade validate` documents the constraint):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `coverage=1.7`.
+- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` (embedded `coverage.shapes.ttl`)
+      + `VOCAB_VERSIONS` `coverage=1.7`. **NOT DONE.**
+
+**Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md`
+cross-repo sequence, steps 2-7):**
+
+- [ ] `conformance` — **owes the negative fixture that proves the constraint
+      bites**: a `coverage:InsurancePlan` carrying two `coverage:sourceRecordId`
+      values, expected to report `sh:MaxCountConstraintComponent` on that path.
+      `spec` runs no SHACL validator, so until this exists the constraint is
+      asserted by nothing in CI. Verified by hand at authoring time with
+      pyshacl 0.30.1 (red against `main`'s shapes, green against these), which
+      is evidence and not a test.
+- [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, coverage v1 shape docs +
+      changelog entry.
+- [ ] `sdk-typescript` — **not merely a version bump.** The SDK writes
+      `sourceRecordId` as `health:sourceRecordId` for every record type
+      (`src/models/common.ts`, `src/terms/clinical-summary.ts`), so a Coverage
+      record does not emit `coverage:sourceRecordId` at all today and this
+      constraint is unreachable from the SDK. That is the-cascade-protocol
+      /sdk-typescript#26, still open. Its `assertCovered`
+      (`tests/support/shacl.ts`, on `epic/fixture-verification`) refuses to
+      return a verdict for a predicate no vendored shape declares an `sh:path`
+      for; this release is what stops that refusal firing on
+      `coverage:sourceRecordId` once #26 makes the SDK write it. Sequence: this
+      row first, then #26.
+- [ ] `sdk-python` — **not examined.** Recorded as unknown, not clear.
+- [ ] `cascade-agent` — **not examined.** Recorded as unknown, not clear.
+
+**Two neighbouring gaps this deliberately did NOT close** (scoped out in #11,
+recorded here so they do not vanish):
+
+- `cascade:sourceRecordId` (in `core.ttl`) has the identical defect —
+  declared, shaped nowhere — and is live *today* on a VALID conformance
+  fixture, `fixtures/core/source-identity-namespace.VALID.ttl`, where a shaped
+  `health:LabResultRecord` carries it. Of four namespaced spellings of this one
+  concept, two were unjudged; this closes one.
+- `coverage:ClaimRecord` and `coverage:BenefitStatement` — the classes the
+  property was authored for — remain unshaped, and are **invisible to
+  `check-class-coverage.py`**: both are `owl:Class` with no `rdfs:subClassOf`
+  at all, so they never enter the PROV-derived population that check walks.
+  They are absent from `known-unshaped-classes.json` for that reason rather
+  than by exemption. `conformance`'s `KNOWN_FAILURES.json` carries them as
+  `UNSHAPED, ownedBy: spec`. The cure is the one the baseline file's own
+  `$rule` names: reconsider the superclass, which is the thing that would
+  declare these hold record data.
+- Neither is in `contexts/v1/coverage.jsonld` either: that file has no
+  `sourceRecordId` mapping at all, where `cascade`, `clinical` and `health`
+  contexts each do. No new term was added here so the context needed no edit,
+  but the omission is real and predates this change.
+
+---
+
 ## Deprecation — `clinical:CoverageRecord` → `coverage:InsurancePlan` (ENTERED RETROACTIVELY 2026-08-30)
 
 **This row is late by roughly six months, and that is the finding it records.** The
