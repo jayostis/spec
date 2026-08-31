@@ -21,8 +21,8 @@
     dct:description "Vocabulary for clinical documents, narratives, and structured notes imported from EHR systems via Apple HealthKit"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-12-26"^^xsd:date ;
-    dct:modified "2026-08-28"^^xsd:date ;
-    owl:versionInfo "1.17" ;
+    dct:modified "2026-08-30"^^xsd:date ;
+    owl:versionInfo "1.18" ;
     rdfs:comment "Domain-specific vocabulary for clinical documentation and structured records imported from patient portals (MyChart, Epic, etc.). Contains EHR-verified clinical data."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/clinical/v1.0/> .
 
@@ -1421,6 +1421,46 @@ clinical:isActive a owl:DatatypeProperty ;
 # ============================================================================
 # Changelog
 # ============================================================================
+#
+# Version 1.18 (2026-08-30)
+# - NO new terms, and no term changes meaning. This version adds one SHACL
+#   shape; clinical.ttl itself changes only in this changelog, its dct:modified
+#   and its owl:versionInfo.
+# - SHACL. clinical:CoverageRecordShape now targets clinical:CoverageRecord.
+#   The class has been deprecated-and-RETAINED since the coverage vocabulary
+#   arrived, and until now was the only deprecated class in this repository with
+#   no shape at all. Every record in that spelling — which is all EHR-imported
+#   coverage data written before the migration to coverage:InsurancePlan —
+#   validated conforms:true because nothing looked at it, a vacuous pass being
+#   indistinguishable from a real one. conformance/KNOWN_FAILURES.json has
+#   carried this as "UNSHAPED, ownedBy: spec" against fixture coverage-001.
+# - This restores the treatment v1.13 gave its own four deprecated classes
+#   (clinical:LabResult, clinical:Condition, clinical:Allergy,
+#   clinical:Immunization), all of which kept their shapes on the same
+#   "retained, still the pod export path's sole emitter" reasoning. Both
+#   spellings of a retained class are judged.
+# - STRICTLY WIDENING IS NOT THE RIGHT FRAME HERE, and the distinction matters:
+#   this shape can only turn records from unexamined to examined, so a
+#   previously "conforming" CoverageRecord CAN now report a violation. That is
+#   the point. Nothing that was ever actually checked changes verdict, and no
+#   other shape is touched.
+# - The shape mirrors coverage:InsurancePlanShape's severities and cardinalities
+#   except in three documented places where the retained corpus demonstrably
+#   differs from what the migrated spelling assumes: clinical:coverageType's
+#   value is NOT enumerated (the ontology comment lists medical/dental/vision/
+#   prescription/mental_health while the real records carry "primary", the FHIR
+#   Coverage.order sense — an sh:in built from either rejects a real corpus, and
+#   rule S5 means a sh:Warning would reject it just as surely);
+#   clinical:effectivePeriodStart and clinical:effectivePeriodEnd accept
+#   xsd:dateTime alongside their declared xsd:date range, because the importer
+#   emitted midnight-UTC placeholders and a shape judging retained data must
+#   judge the data that was written; and clinical:relationship enumerates
+#   clinical.ttl's five values rather than the seven-code HL7
+#   SubscriberPolicyholder set coverage v1.4 completed, because no record in
+#   this spelling can carry the two codes this vocabulary never accepted.
+# - The declared rdfs:range on the two period properties is deliberately NOT
+#   corrected. Changing a range is a vocabulary change with its own bump and
+#   downstream sync; a shape must not do it quietly.
 #
 # Version 1.17 (2026-08-28)
 # - NO new terms, and no term changes meaning. This version is a SHACL severity
