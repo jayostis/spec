@@ -1,10 +1,15 @@
 # Cascade Protocol Pod Structure Specification
 
 **Status:** Draft
-**Version:** 1.2
+**Version:** 1.3
 **Date:** 2026-08-31
 **Authors:** Cascade Agentic Labs LLC
 **Website:** https://cascadeprotocol.org
+**Vocabulary versions:** core v3.8, health v2.8, clinical v1.17, coverage v1.6
+
+> **v1.1 correction.** Every `solid:forClass` registration and every file/class table in this document has been checked against the published ontologies and against the [reference patient pod](/reference-patient-pod/README.md). Fourteen class names were corrected: they named classes that no Cascade ontology defines and no implementation writes, inside registration examples an implementer would copy. Two remaining names (`clinical:ScreeningResult`, `clinical:DiagnosticResult`) have no ratified equivalent and are marked rather than invented.
+
+> **v1.3 reconciliation.** This document had forked: the copy in the `spec` repository and the published copy each carried a revision the other lacked. This version merges them and is now identical in both places. From the published side, the v1.1 correction above and sections 3.5–3.6. From the `spec` side: section 4.3 (`attachments/`, content-addressed binary storage, core v3.7), section 7.5 (attachment file naming), the v1.2 "Digest and encryption" rules (an attachment's digest commits to its **plaintext** bytes, and encrypting or decrypting a Pod never renames one), the Workbench `notes/` and `annotations/` containers, and the `/attachments/` ACL guidance. `spec/pod-structure.md` is the authoritative copy; the published copy is synced from it.
 
 ---
 
@@ -86,10 +91,14 @@ A conformant Pod reader MUST discover data locations using the following sequenc
       |
       v
 3. Follow solid:publicTypeIndex --> settings/publicTypeIndex.ttl
-   Follow solid:privateTypeIndex --> settings/privateTypeIndex.ttl
+   Follow pim:preferencesFile  --> settings/preferences
       |
       v
-4. For each solid:TypeRegistration, resolve solid:instance
+4. From settings/preferences, follow solid:privateTypeIndex
+   --> settings/privateTypeIndex.ttl
+      |
+      v
+5. For each solid:TypeRegistration, resolve solid:instance
    or solid:instanceContainer to locate data files
 ```
 
@@ -124,6 +133,7 @@ The `.well-known/solid` file is the entry point for Pod discovery. A Solid clien
   "pod_root": "/",
   "profile": "/profile/card.ttl#me",
   "storage": "/",
+  "preferencesFile": "/settings/preferences",
   "publicTypeIndex": "/settings/publicTypeIndex.ttl",
   "privateTypeIndex": "/settings/privateTypeIndex.ttl"
 }
@@ -137,8 +147,9 @@ The `.well-known/solid` file is the entry point for Pod discovery. A Solid clien
 | `pod_root` | Path | Root path of the Pod. MUST be `"/"` for standalone Pods |
 | `profile` | URI | Path to the WebID profile document, including fragment identifier |
 | `storage` | Path | Root storage container. MUST be `"/"` for standalone Pods |
+| `preferencesFile` | Path | Path to the private preferences file (holds `solid:privateTypeIndex`) |
 | `publicTypeIndex` | Path | Path to the public type index document |
-| `privateTypeIndex` | Path | Path to the private type index document |
+| `privateTypeIndex` | Path | Shortcut path to the private type index (also reachable via `preferencesFile`) |
 
 ### 3.2 profile/card.ttl
 
@@ -146,39 +157,56 @@ The `.well-known/solid` file is the entry point for Pod discovery. A Solid clien
 **Format:** Turtle (RDF)
 **Status:** REQUIRED
 
-The WebID profile card identifies the Pod owner and links to discovery resources. The `<#me>` fragment identifier serves as the WebID.
+The WebID profile card identifies the Pod owner and links to discovery resources. The `<#me>` fragment identifier serves as the WebID. The document itself MUST be declared as a `foaf:PersonalProfileDocument`.
 
 ```turtle
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix solid: <http://www.w3.org/ns/solid/terms#> .
-@prefix cascade: <https://ns.cascadeprotocol.org/core/v1#> .
 @prefix pim: <http://www.w3.org/ns/pim/space#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix cascade: <https://ns.cascadeprotocol.org/core/v1#> .
+
+</profile/card.ttl> a foaf:PersonalProfileDocument ;
+    foaf:primaryTopic <#me> .
 
 <#me>
     a foaf:Person ;
     foaf:name "Cascade Protocol User" ;
+    pim:storage </> ;
+    pim:preferencesFile </settings/preferences> ;
     solid:publicTypeIndex </settings/publicTypeIndex.ttl> ;
-    solid:privateTypeIndex </settings/privateTypeIndex.ttl> ;
-    pim:storage </> .
+    rdfs:seeAlso </profile/extended.ttl> ;
+    cascade:schemaVersion "1.3" .
 ```
+
+**Required triples on the document node (`</profile/card.ttl>`):**
+
+| Predicate | Object | Notes |
+|-----------|--------|-------|
+| `a` | `foaf:PersonalProfileDocument` | REQUIRED per Solid WebID spec |
+| `foaf:primaryTopic` | `<#me>` | REQUIRED per Solid WebID spec |
 
 **Required triples for `<#me>`:**
 
 | Predicate | Object | Notes |
 |-----------|--------|-------|
 | `a` | `foaf:Person` | REQUIRED |
-| `solid:publicTypeIndex` | URI | REQUIRED. Path to the public type index |
-| `solid:privateTypeIndex` | URI | REQUIRED. Path to the private type index |
 | `pim:storage` | URI | REQUIRED. Root storage container |
+| `pim:preferencesFile` | URI | REQUIRED. Path to private preferences file |
+| `solid:publicTypeIndex` | URI | REQUIRED. Path to the public type index |
 
 **Optional triples:**
 
 | Predicate | Object | Notes |
 |-----------|--------|-------|
 | `foaf:name` | Literal | RECOMMENDED. Display name for the Pod owner |
+| `rdfs:seeAlso` | URI | RECOMMENDED. Link to private extended profile (e.g., `profile/extended.ttl`) |
+| `cascade:schemaVersion` | Literal | RECOMMENDED. Cascade Protocol schema version |
 | `cascade:potsTestContainer` | URI | Domain-specific pointer (POTS Check app) |
 
-A Pod exporter SHOULD use a generic display name (e.g., `"Cascade Protocol User"`) rather than the patient's real name in the profile card, unless the user has explicitly consented to include identifying information. The profile card is intended for Solid server identity, not as a clinical demographics record.
+**Important:** `solid:privateTypeIndex` MUST NOT appear on `<#me>` in `card.ttl`. It belongs in `settings/preferences` (see Section 3.5), which is owner-private. Placing it in the publicly-readable `card.ttl` exposes the private type index location to unauthenticated readers.
+
+A Pod exporter SHOULD use a generic display name (e.g., `"Cascade Protocol User"`) rather than the patient's real name in the profile card, unless the user has explicitly consented to include identifying information. PHI (date of birth, address, phone, email) MUST NOT appear in `card.ttl`. It belongs in `profile/extended.ttl` (see Section 3.6).
 
 ### 3.3 settings/publicTypeIndex.ttl
 
@@ -196,19 +224,19 @@ The public type index registers data locations that are visible to other authent
 
 <#medications>
     a solid:TypeRegistration ;
-    solid:forClass clinical:MedicationRecord ;
+    solid:forClass clinical:Medication ;
     solid:instance </clinical/medications.ttl> ;
     dct:title "Medication Records" .
 
 <#conditions>
     a solid:TypeRegistration ;
-    solid:forClass clinical:ConditionRecord ;
+    solid:forClass health:ConditionRecord ;
     solid:instance </clinical/conditions.ttl> ;
     dct:title "Condition Records" .
 
 <#heart-rate>
     a solid:TypeRegistration ;
-    solid:forClass health:HeartRateStatistics ;
+    solid:forClass health:HeartRateData ;
     solid:instance </wellness/heart-rate.ttl> ;
     dct:title "Heart Rate Data" .
 ```
@@ -230,7 +258,7 @@ The private type index registers data locations visible only to the Pod owner. T
 
 <#all-health-data>
     a solid:TypeRegistration ;
-    solid:forClass cascade:HealthData ;
+    solid:forClass cascade:HealthRecord ;
     solid:instance </> ;
     dct:title "All Health Data" ;
     dct:description "Complete health data from this Pod" .
@@ -242,7 +270,60 @@ The private type index registers data locations visible only to the Pod owner. T
 - Broad, catch-all registrations and sensitive data types SHOULD be registered in the private type index.
 - A data type MAY appear in both indexes with different access scopes.
 
-### 3.5 index.ttl (Root LDP Container)
+### 3.5 settings/preferences
+
+**Path:** `/settings/preferences`
+**Format:** Turtle (RDF)
+**Status:** REQUIRED
+**Access:** Owner-only (MUST be protected by an ACL; MUST NOT be publicly readable)
+
+The preferences file is the root of the Pod owner's private configuration. It holds the pointer to the private type index and links to the extended profile document containing PHI.
+
+```turtle
+@prefix pim: <http://www.w3.org/ns/pim/space#> .
+@prefix solid: <http://www.w3.org/ns/solid/terms#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<> a pim:ConfigurationFile .
+
+<#me>
+    solid:privateTypeIndex </settings/privateTypeIndex.ttl> ;
+    rdfs:seeAlso </profile/extended.ttl> .
+```
+
+By placing `solid:privateTypeIndex` here rather than in `card.ttl`, the private type index location is hidden from unauthenticated readers. Agents that have been granted owner-level access can follow `pim:preferencesFile` from `card.ttl` to locate this file.
+
+### 3.6 profile/extended.ttl
+
+**Path:** `/profile/extended.ttl`
+**Format:** Turtle (RDF)
+**Status:** RECOMMENDED
+**Access:** Owner-only (MUST NOT be publicly readable)
+
+The extended profile holds PHI that must not appear in the publicly-readable `card.ttl`. This is the Solid extended profile convention (linked via `rdfs:seeAlso` from `card.ttl`).
+
+```turtle
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix cascade: <https://ns.cascadeprotocol.org/core/v1#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<#me>
+    cascade:dateOfBirth "1990-01-01"^^xsd:date ;
+    cascade:biologicalSex "M" ;
+    vcard:hasTelephone "+1-555-000-0000" ;
+    vcard:hasEmail "user@example.com" ;
+    cascade:address [
+        cascade:addressLine "123 Main St" ;
+        cascade:addressCity "Seattle" ;
+        cascade:addressState "WA" ;
+        cascade:addressPostalCode "98101" ;
+    ] .
+```
+
+Note: the `profile/health.ttl` file (written by the Cascade Swift SDK) serves a similar purpose but contains a richer Cascade-specific health profile (emergency contacts, pharmacy, advance directives, computed demographics). Both files MAY coexist, each linked from `card.ttl` via separate `rdfs:seeAlso` triples.
+
+### 3.7 index.ttl (Root LDP Container)
 
 **Path:** `/index.ttl`
 **Format:** Turtle (RDF)
@@ -282,20 +363,24 @@ The following directories are the RECOMMENDED defaults for organizing health dat
 
 | File | RDF Class | Description |
 |------|-----------|-------------|
-| `medications.ttl` | `clinical:MedicationRecord` | Active and historical medications with dosages |
-| `conditions.ttl` | `clinical:ConditionRecord` | Diagnosed medical conditions |
-| `allergies.ttl` | `clinical:AllergyRecord` | Allergies and adverse reactions |
-| `lab-results.ttl` | `clinical:LabResult` | Laboratory test results with reference ranges |
-| `immunizations.ttl` | `clinical:ImmunizationRecord` | Vaccination records |
+| `medications.ttl` | `clinical:Medication` | Active and historical medications with dosages |
+| `conditions.ttl` | `health:ConditionRecord` | Diagnosed medical conditions |
+| `allergies.ttl` | `health:AllergyRecord` | Allergies and adverse reactions |
+| `lab-results.ttl` | `health:LabResultRecord` | Laboratory test results with reference ranges |
+| `immunizations.ttl` | `health:ImmunizationRecord` | Vaccination records |
 | `vital-signs.ttl` | `clinical:VitalSign` | Clinical vital sign measurements and trends |
 | `patient-profile.ttl` | `cascade:PatientProfile` | Demographics, contact information |
 | `insurance.ttl` | `coverage:InsurancePlan` | Insurance plan details |
 | `procedures.ttl` | `clinical:Procedure` | Medical procedures |
-| `family-history.ttl` | `clinical:FamilyHistoryRecord` | Family medical history |
-| `screenings.ttl` | `clinical:ScreeningResult` | Health screening results |
-| `diagnostic-results.ttl` | `clinical:DiagnosticResult` | Diagnostic test results |
+| `family-history.ttl` | `health:FamilyHistoryRecord` | Family medical history |
+| `screenings.ttl` | `clinical:ScreeningResult` ⚠ | Health screening results |
+| `diagnostic-results.ttl` | `clinical:DiagnosticResult` ⚠ | Diagnostic test results |
 
 Each file contains all records of its type as an aggregate. For example, `medications.ttl` contains all medication records in a single file, not one file per medication.
+
+> ⚠ **`clinical:ScreeningResult` and `clinical:DiagnosticResult` are not ratified vocabulary.** Neither has an `owl:Class` definition in any Cascade ontology, and no implementation writes either file. They are listed here as a planned layout, not as a type an implementer should register today. Register a type only if the class it names exists in a published `.ttl`.
+
+> **On the class names in this table.** Conditions, allergies, lab results, immunizations and family history are typed in the `health:` namespace, not `clinical:`, even though they live under `/clinical/`. That is what every import path emits and what health v2.5 defines and shapes. The directory reflects provenance, not the vocabulary a record is typed in — read `cascade:dataProvenance` for provenance. `clinical:Condition`, `clinical:Allergy`, `clinical:LabResult` and `clinical:Immunization` also exist and are deprecated as of clinical v1.13; a reader must accept both spellings.
 
 ### 4.2 wellness/ -- Wellness/Device Data
 
@@ -307,13 +392,15 @@ Each file contains all records of its type as an aggregate. For example, `medica
 
 | File | RDF Class | Description |
 |------|-----------|-------------|
-| `heart-rate.ttl` | `health:HeartRateStatistics` | Resting and walking heart rate history |
-| `blood-pressure.ttl` | `health:BPStatistics` | Blood pressure readings and history |
-| `activity.ttl` | `health:ActivitySnapshot` | Daily activity summaries (steps, calories, exercise) |
-| `sleep.ttl` | `health:SleepStatistics` | Sleep duration and quality statistics |
-| `hrv.ttl` | `health:HRVStatistics` | Heart rate variability data |
-| `body-measurements.ttl` | `health:BodyMeasurement` | VO2 max, body mass, height, temperature, SpO2, glucose |
-| `supplements.ttl` | `health:Supplement` | Supplement and vitamin tracking |
+| `heart-rate.ttl` | `health:HeartRateData` | Resting and walking heart rate history |
+| `blood-pressure.ttl` | `health:BloodPressureData` | Blood pressure readings and history |
+| `activity.ttl` | `health:ActivityData` | Daily activity summaries (steps, calories, exercise) |
+| `sleep.ttl` | `health:SleepData` | Sleep duration and quality statistics |
+| `hrv.ttl` | `health:HRVData` | Heart rate variability data |
+| `body-measurements.ttl` | `health:BodyMeasurements` | VO2 max, body mass, height, temperature, SpO2, glucose |
+| `supplements.ttl` | `clinical:Supplement` | Supplement and vitamin tracking |
+
+> **The six container classes are `rdfs:subClassOf health:HealthProfile`** as of health v2.5, which is what makes the `rdfs:domain health:HealthProfile` on the history properties (`health:restingHeartRateHistory` and siblings) true, and what brings a container resource under `health:HealthProfileShape`. Note that `supplements.ttl` is the one file in this directory typed outside the `health:` namespace: supplements are `clinical:Supplement`, which carries the regulatory-status and evidence-strength vocabulary they need.
 
 **Nested container pattern (for per-record storage):**
 
@@ -400,6 +487,7 @@ Two questions are named here so that their absence is a decision and not an over
 - **Encryption at rest.** Attachment files MUST receive the same at-rest protection the implementation applies to the Pod's record files. How this interacts with the file's name is not implementation-defined and is settled under "Digest and encryption" above. Attachments hold the densest sensitive content in a Pod (rendered reports, clinical note documents), so an implementation that protects `.ttl` files and leaves `attachments/` in the clear does not conform. The protection mechanism itself remains implementation-defined, so nothing here has to be revised when one is ratified.
 - **Sync.** How an `attachments/` directory participates in Pod synchronization is unspecified. Content addressing makes the naive answer safe in one direction (a file's content never changes under its name), which is why deferring the rest is tolerable.
 
+
 ---
 
 ## 5. Domain-Specific Extensions
@@ -438,7 +526,7 @@ wellness/
   diagnostics/
     pots-checks/
       index.ttl               # LDP Container listing test results
-      test-{id}.ttl            # Individual pots:POTSTest results
+      test-{id}.ttl            # Individual pots:POTSCheckResult results
 ```
 
 **Cascade Workbench** adds these directories (vocabulary: `workbench/v1-draft`):
@@ -505,7 +593,7 @@ The default pattern for data storage is one aggregate file per data type within 
 - `wellness/heart-rate.ttl` -- all heart rate observations
 - `adherence/daily-check-ins.ttl` -- all daily check-in records
 
-The data-type portion of the filename MUST be lowercase and hyphen-separated. It SHOULD match the RDF class name in lowercase-hyphenated form (e.g., `MedicationRecord` becomes `medications.ttl`, `HeartRateStatistics` becomes `heart-rate.ttl`).
+The data-type portion of the filename MUST be lowercase and hyphen-separated. It SHOULD match the RDF class name in lowercase-hyphenated form (e.g., `Medication` becomes `medications.ttl`, `HeartRateData` becomes `heart-rate.ttl`).
 
 ### 7.2 Individual Records ({id}.ttl)
 
@@ -763,7 +851,7 @@ A conformant Pod reader SHOULD use type indexes as the primary discovery mechani
 
 ```
 1. Read settings/publicTypeIndex.ttl
-2. Find: <#medications> solid:forClass clinical:MedicationRecord ;
+2. Find: <#medications> solid:forClass clinical:Medication ;
                         solid:instance </clinical/medications.ttl> .
 3. Fetch /clinical/medications.ttl
 ```
@@ -820,36 +908,39 @@ CascadeCheckup-Export-20260219T100000Z/
 |-- .acl                                # Root ACL (owner-only)
 |
 |-- profile/
-|   |-- card.ttl                        # WebID profile card
-|   |-- .acl                            # Profile ACL (public read for card.ttl)
+|   |-- card.ttl                        # WebID profile card (public — identity + discovery links)
+|   |-- extended.ttl                    # Extended profile (owner-only — PHI: DOB, address, phone, email)
+|   |-- health.ttl                      # Health profile (owner-only — full Cascade PatientProfile)
+|   |-- .acl                            # Profile ACL (public read for card.ttl only)
 |
 |-- settings/
+|   |-- preferences                     # Private preferences (owner-only — links privateTypeIndex)
 |   |-- publicTypeIndex.ttl             # Public type registrations
 |   |-- privateTypeIndex.ttl            # Private type registrations
 |   |-- .acl                            # Settings ACL (owner-only)
 |
 |-- clinical/
-|   |-- medications.ttl                 # clinical:MedicationRecord
-|   |-- conditions.ttl                  # clinical:ConditionRecord
-|   |-- allergies.ttl                   # clinical:AllergyRecord
-|   |-- lab-results.ttl                 # clinical:LabResult
-|   |-- immunizations.ttl               # clinical:ImmunizationRecord
+|   |-- medications.ttl                 # clinical:Medication
+|   |-- conditions.ttl                  # health:ConditionRecord
+|   |-- allergies.ttl                   # health:AllergyRecord
+|   |-- lab-results.ttl                 # health:LabResultRecord
+|   |-- immunizations.ttl               # health:ImmunizationRecord
 |   |-- vital-signs.ttl                 # clinical:VitalSign
 |   |-- patient-profile.ttl             # cascade:PatientProfile
 |   |-- insurance.ttl                   # coverage:InsurancePlan
-|   |-- family-history.ttl              # clinical:FamilyHistoryRecord
+|   |-- family-history.ttl              # health:FamilyHistoryRecord
 |   |-- screenings.ttl                  # clinical:ScreeningResult
 |   |-- diagnostic-results.ttl          # clinical:DiagnosticResult
 |   |-- .acl                            # Container ACL (owner-only)
 |
 |-- wellness/
-|   |-- heart-rate.ttl                  # health:HeartRateStatistics
-|   |-- blood-pressure.ttl              # health:BPStatistics
-|   |-- activity.ttl                    # health:ActivitySnapshot
-|   |-- sleep.ttl                       # health:SleepStatistics
-|   |-- hrv.ttl                         # health:HRVStatistics
-|   |-- body-measurements.ttl           # health:BodyMeasurement
-|   |-- supplements.ttl                 # health:Supplement
+|   |-- heart-rate.ttl                  # health:HeartRateData
+|   |-- blood-pressure.ttl              # health:BloodPressureData
+|   |-- activity.ttl                    # health:ActivityData
+|   |-- sleep.ttl                       # health:SleepData
+|   |-- hrv.ttl                         # health:HRVData
+|   |-- body-measurements.ttl           # health:BodyMeasurements
+|   |-- supplements.ttl                 # clinical:Supplement
 |   |-- .acl                            # Container ACL (owner-only)
 |
 |-- adherence/
@@ -886,9 +977,11 @@ Cascade-Pod-Export-20260219T100000Z/
 |
 |-- profile/
 |   |-- card.ttl
+|   |-- extended.ttl
 |   |-- .acl
 |
 |-- settings/
+|   |-- preferences
 |   |-- publicTypeIndex.ttl
 |   |-- privateTypeIndex.ttl
 |   |-- .acl
@@ -947,31 +1040,31 @@ Each type registration in a type index follows this pattern:
 
 <#medications>
     a solid:TypeRegistration ;
-    solid:forClass clinical:MedicationRecord ;
+    solid:forClass clinical:Medication ;
     solid:instance </clinical/medications.ttl> ;
     dct:title "Medication Records" .
 
 <#conditions>
     a solid:TypeRegistration ;
-    solid:forClass clinical:ConditionRecord ;
+    solid:forClass health:ConditionRecord ;
     solid:instance </clinical/conditions.ttl> ;
     dct:title "Condition Records" .
 
 <#allergies>
     a solid:TypeRegistration ;
-    solid:forClass clinical:AllergyRecord ;
+    solid:forClass health:AllergyRecord ;
     solid:instance </clinical/allergies.ttl> ;
     dct:title "Allergy Records" .
 
 <#lab-results>
     a solid:TypeRegistration ;
-    solid:forClass clinical:LabResult ;
+    solid:forClass health:LabResultRecord ;
     solid:instance </clinical/lab-results.ttl> ;
     dct:title "Lab Results" .
 
 <#immunizations>
     a solid:TypeRegistration ;
-    solid:forClass clinical:ImmunizationRecord ;
+    solid:forClass health:ImmunizationRecord ;
     solid:instance </clinical/immunizations.ttl> ;
     dct:title "Immunization Records" .
 
@@ -995,7 +1088,7 @@ Each type registration in a type index follows this pattern:
 
 <#family-history>
     a solid:TypeRegistration ;
-    solid:forClass clinical:FamilyHistoryRecord ;
+    solid:forClass health:FamilyHistoryRecord ;
     solid:instance </clinical/family-history.ttl> ;
     dct:title "Family History" .
 
@@ -1015,43 +1108,43 @@ Each type registration in a type index follows this pattern:
 
 <#heart-rate>
     a solid:TypeRegistration ;
-    solid:forClass health:HeartRateStatistics ;
+    solid:forClass health:HeartRateData ;
     solid:instance </wellness/heart-rate.ttl> ;
     dct:title "Heart Rate Data" .
 
 <#blood-pressure>
     a solid:TypeRegistration ;
-    solid:forClass health:BPStatistics ;
+    solid:forClass health:BloodPressureData ;
     solid:instance </wellness/blood-pressure.ttl> ;
     dct:title "Blood Pressure Data" .
 
 <#activity>
     a solid:TypeRegistration ;
-    solid:forClass health:ActivitySnapshot ;
+    solid:forClass health:ActivityData ;
     solid:instance </wellness/activity.ttl> ;
     dct:title "Activity Data" .
 
 <#sleep>
     a solid:TypeRegistration ;
-    solid:forClass health:SleepStatistics ;
+    solid:forClass health:SleepData ;
     solid:instance </wellness/sleep.ttl> ;
     dct:title "Sleep Data" .
 
 <#hrv>
     a solid:TypeRegistration ;
-    solid:forClass health:HRVStatistics ;
+    solid:forClass health:HRVData ;
     solid:instance </wellness/hrv.ttl> ;
     dct:title "Heart Rate Variability" .
 
 <#body-measurements>
     a solid:TypeRegistration ;
-    solid:forClass health:BodyMeasurement ;
+    solid:forClass health:BodyMeasurements ;
     solid:instance </wellness/body-measurements.ttl> ;
     dct:title "Body Measurements" .
 
 <#supplements>
     a solid:TypeRegistration ;
-    solid:forClass health:Supplement ;
+    solid:forClass clinical:Supplement ;
     solid:instance </wellness/supplements.ttl> ;
     dct:title "Supplements" .
 ```
@@ -1080,7 +1173,7 @@ Each type registration in a type index follows this pattern:
 # POTS Check-specific registrations
 <#pots-tests>
     a solid:TypeRegistration ;
-    solid:forClass pots:POTSTest ;
+    solid:forClass pots:POTSCheckResult ;
     solid:instanceContainer </wellness/diagnostics/pots-checks/> ;
     dct:title "POTS Test Results" ;
     dct:description "NASA Lean Test results for POTS screening" .

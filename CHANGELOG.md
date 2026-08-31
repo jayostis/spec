@@ -6,6 +6,16 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-08-31: The Pod structure spec had forked, and neither copy was whole (pod-structure 1.3)
+
+No vocabulary change. `pod-structure.md` goes to 1.3, and this entry records a reconciliation rather than new design.
+
+**The document existed in two versions that had each received a real revision the other lacked.** The copy here was the only one to get section 4.3 (`attachments/`, core v3.7), section 7.5, and the v1.2 digest-and-encryption rules. The published copy at `cascadeprotocol.org/docs/spec/` was the only one to get the 2026-08-03 correction pass, which checked every `solid:forClass` registration and file/class table against the published ontologies and the reference patient pod and fixed fourteen phantom class names — so the copy in this repository, the authority, went on prescribing `clinical:MedicationRecord`, `cascade:HealthData`, `health:HeartRateStatistics`, `pots:POTSTest` and their siblings, names no Cascade ontology defines and no implementation writes, in registration examples an implementer would copy. Both copies said `Version: 1.1`. The published copy also documented `settings/preferences` and `profile/extended.ttl` — real, implemented structure (the reference pod contains both) that this copy never mentioned, including the rule that `solid:privateTypeIndex` MUST NOT appear in the publicly-readable `card.ttl`.
+
+**v1.3 is the merge, verified rather than assumed.** Every disputed class name was checked against the ontology files in this repository and against the reference pod before choosing a side; the published copy's names won everywhere the two disagreed, and its warning that `clinical:ScreeningResult` / `clinical:DiagnosticResult` remain unratified is kept. From this side, v1.3 keeps sections 4.3 and 7.5, the digest rules, the Workbench `notes/` and `annotations/` containers, and the `/attachments/` ACL guidance. The two files are now byte-identical, `spec/` remains the authority, and the published copy is brought under `sync-from-spec.sh` so the fork cannot recur silently.
+
+---
+
 ## 2026-08-31: Which bytes an attachment's digest commits to (pod-structure 1.2)
 
 No vocabulary change: no term is added, removed or renamed, and no shape moves. One prose amendment to `pod-structure.md`, which goes to 1.2.
