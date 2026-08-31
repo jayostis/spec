@@ -666,8 +666,10 @@ cross-repo sequence, steps 2-7):**
 - [ ] `sdk-python` — **not examined.** Recorded as unknown, not clear.
 - [ ] `cascade-agent` — **not examined.** Recorded as unknown, not clear.
 
-**Two neighbouring gaps this deliberately did NOT close** (scoped out in #11,
-recorded here so they do not vanish):
+**Two neighbouring gaps this deliberately did NOT close**, recorded here so they do
+not vanish. The first now carries its own issue, #18; the second does not yet. #19
+is the gate that would have surfaced both without anyone reading the neighbouring
+lines:
 
 - `cascade:sourceRecordId` (in `core.ttl`) has the identical defect —
   declared, shaped nowhere — and is live *today* on a VALID conformance

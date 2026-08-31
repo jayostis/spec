@@ -353,9 +353,11 @@ coverage:CoverageTypeVocabularyShape a sh:NodeShape ;
 # - COMPATIBILITY. Cannot reject a record that was conformant: every pod record
 #   carrying this property carries exactly one xsd:string value. It moves the
 #   field from unexamined to examined, so a malformed one can now be rejected.
-# - STILL OPEN, deliberately out of scope (jayostis/spec#11): cascade:sourceRecordId
-#   (in core.ttl) has the identical defect -- declared, shaped nowhere -- and is
-#   live today on a VALID conformance fixture. Shapes for coverage:ClaimRecord and
+# - STILL OPEN, deliberately out of scope: cascade:sourceRecordId (in core.ttl)
+#   has the identical defect -- declared, shaped nowhere -- and is live today on
+#   a VALID conformance fixture (jayostis/spec#18). No gate catches an unshaped
+#   PREDICATE on a shaped class, which is why both were found by hand
+#   (jayostis/spec#19). Shapes for coverage:ClaimRecord and
 #   coverage:BenefitStatement remain unwritten.
 #
 # Version 1.3 (2026-08-28) — coverage v1.6
