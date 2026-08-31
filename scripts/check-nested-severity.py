@@ -39,7 +39,7 @@ entailment question that check covers -- neither one can see the other's defect.
 
 THE BASELINE
 
-scripts/nested-severity-baseline.json enumerates the sites that predate this
+scripts/known-severity-escalations.json enumerates the sites that predate this
 check. It is a GATE INPUT, not a filter: every site is still examined and
 reported. The run fails when
 
@@ -76,7 +76,7 @@ SH = Namespace("http://www.w3.org/ns/shacl#")
 CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
 
 SHAPES_GLOB = "ontologies/*/v1*/*.shapes.ttl"
-BASELINE = "scripts/nested-severity-baseline.json"
+BASELINE = "scripts/known-severity-escalations.json"
 
 # The constraint parameters whose value is a SHAPE the focus/value node must
 # CONFORM TO. These are the ones that collapse a nested result set to a boolean

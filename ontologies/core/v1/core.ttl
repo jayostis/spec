@@ -19,8 +19,8 @@
     dct:description "Core vocabulary for schema versioning, data provenance, identity management, and patient demographics across all Cascade Protocol applications"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
-    dct:modified "2026-08-28"^^xsd:date ;
-    owl:versionInfo "3.8" ;
+    dct:modified "2026-08-30"^^xsd:date ;
+    owl:versionInfo "3.9" ;
     rdfs:comment "This vocabulary defines cross-cutting concepts used by all Cascade Protocol health data applications: schema versioning, data provenance, patient demographics (PatientProfile), and supporting identity classes (Address, PharmacyInfo, AdvanceDirectives). Domain-specific vocabularies (e.g., pots:, ecg:, glucose:) import this core vocabulary."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/core/v1.0/> .
 
@@ -28,10 +28,26 @@
 # Data Provenance Classes
 # ============================================================================
 
+# NO PROV SUPERCLASS, DELIBERATELY (core v3.9). This is a CLASSIFICATION -- the
+# code list cascade:dataProvenance ranges over -- and not a record class. Through
+# core v3.8 it declared rdfs:subClassOf prov:Entity, which in this specification
+# asserts that instances of a class are stored record data. That was false of it
+# and, by inheritance, of all ten value terms below: nothing is ever typed
+# cascade:ClinicalGenerated, it is only ever the OBJECT of cascade:dataProvenance
+# (179 uses in the reference pod, every one as a value, none as a type).
+#
+# The claim cost something once scripts/check-class-coverage.py began reading it:
+# all eleven terms were reported as record classes with no shape and baselined as
+# debt that can never be discharged, because there is nothing about a code-list
+# member for a shape to constrain. Removing the axiom is a correction, not a
+# suppression -- see jayostis/spec#12.
+#
+# cascade:dataProvenance's rdfs:range cascade:DataProvenance is unaffected and
+# still true: the range says the value comes from this classification, which
+# holds whether or not the classification is itself a prov:Entity.
 cascade:DataProvenance a owl:Class ;
     rdfs:label "Data Provenance"@en ;
-    rdfs:comment "Classification of how health data was generated or collected"@en ;
-    rdfs:subClassOf prov:Entity .
+    rdfs:comment "Classification of how health data was generated or collected"@en .
 
 # --- Broad DataProvenance Categories (promoted from individuals to classes) ---
 
@@ -826,6 +842,47 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 
 # ============================================================================
 # Changelog
+#
+# Version 3.9 (2026-08-30)
+# - NO new terms, and no term changes meaning. ONE axiom is REMOVED:
+#   cascade:DataProvenance no longer declares rdfs:subClassOf prov:Entity.
+# - WHY. That axiom asserts, in this specification, that instances of a class are
+#   stored record data. cascade:DataProvenance is a CLASSIFICATION -- the code
+#   list cascade:dataProvenance ranges over -- so the claim was false of it, and
+#   by inheritance false of all ten value terms beneath it. Nothing is ever typed
+#   with one: across the reference patient pod they appear 179 times, every one as
+#   the OBJECT of cascade:dataProvenance and not once as a type.
+# - WHAT IT COST. Nothing measured the claim until scripts/check-class-coverage.py
+#   was written. That check asserts a record-bearing class must be judged by some
+#   shape, and it reads exactly this axiom to decide what bears records, so all
+#   eleven terms were reported unshaped and recorded as debt in
+#   scripts/known-unshaped-classes.json. It was debt that could never be
+#   discharged: a code-list member has nothing for a shape to constrain. The
+#   eleven entries are removed with this axiom, returning that file to the 34 it
+#   held before the check's scope was widened.
+# - WHAT IS UNAFFECTED. cascade:dataProvenance's rdfs:range cascade:DataProvenance
+#   is unchanged and still true -- the range says the value comes from this
+#   classification, which holds regardless of the classification's own superclass.
+#   The ten value terms keep their declarations, labels, comments and
+#   owl:disjointWith axioms. No shape anywhere constrains on prov:Entity, and the
+#   three sh:in enumerations that list these terms match on IRI and never consult
+#   a superclass, so no record changes verdict.
+# - This does not reopen whether these terms should be owl:Class rather than
+#   owl:NamedIndividual. That promotion was deliberate and three shapes depend on
+#   the IRIs; see jayostis/spec#12.
+#
+# Version 3.8 (2026-08-28)
+# - RECONSTRUCTED 2026-08-30: this release shipped with no changelog entry, which
+#   was noticed while authoring 3.9. Recorded from the release commit (c856eb8)
+#   and the term's own owl:versionInfo rather than from memory.
+# - Defined cascade:PatientReported, a direct subclass of cascade:DataProvenance.
+#   Seventeen SHACL constraints across the clinical, health and coverage shapes
+#   had accepted the value since their first release and the health vocabulary's
+#   provenance guidance told consumers to key on it, but the term itself was never
+#   defined -- so any consumer deriving the provenance set from this ontology
+#   rejected a value every shape permits. Direct subclass rather than under
+#   ClinicalGenerated or ConsumerGenerated: a patient's reported history reaches a
+#   record through either setting, so the parent must not assert one.
 #
 # Version 3.7 (2026-08-27)
 # - Defined pod attachments: one class and seven properties for binary

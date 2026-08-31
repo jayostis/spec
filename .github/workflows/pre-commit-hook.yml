@@ -1,0 +1,47 @@
+name: pre-commit-hook
+
+# Runs the regression suite for scripts/hooks/pre-commit.
+#
+# The hook is the gate that keeps a TTL bump, its dct:modified date and the
+# VOCAB_VERSIONS ledger moving together. When it lets one of those through, the
+# result is downstream drift that check-downstream-versions.sh later reports as
+# a mystery -- so a bug here is a bug in the version discipline of every repo
+# that reads VOCAB_VERSIONS.
+#
+# The suite exists because SKIP_VERSION_CHECK=1 used to `exit 0` before the
+# whole hook, waiving the VOCAB_VERSIONS check the flag never advertised
+# waiving. Nothing ran the hook in CI, so nothing could have caught it.
+#
+# Hermetic: throwaway git repositories in a temp dir. No network, and no real
+# repository is committed to.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'scripts/hooks/**'
+      - 'scripts/test-pre-commit-hook.sh'
+      - '.github/workflows/pre-commit-hook.yml'
+  workflow_dispatch:
+
+jobs:
+  regression-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # POSIX sh for the suite, bash for the hook: the suite declares #!/bin/sh
+      # and must keep working there, while the hook declares #!/usr/bin/env bash
+      # and uses arrays and [[ ]]. Running the suite under dash catches bashisms
+      # that a bash-backed /bin/sh would silently accept.
+      - name: Install dash
+        run: sudo apt-get update && sudo apt-get install -y dash
+
+      - name: Syntax checks
+        run: |
+          dash -n scripts/test-pre-commit-hook.sh
+          bash -n scripts/hooks/pre-commit
+
+      - name: Regression suite (fixes + negative controls)
+        run: dash scripts/test-pre-commit-hook.sh

@@ -14,6 +14,28 @@
 # different data sources (EHR, device, patient-reported).
 #
 # Changelog:
+# v1.19 (2026-08-30): Added clinical:CoverageTypeVocabularyShape, checking the
+#     VALUE of clinical:coverageType against the value set FHIR R4 binds
+#     Coverage.type to, at sh:Warning. The list is
+#     coverage:CoverageTypeVocabularyShape's, copied unchanged, because
+#     clinical:coverageType and coverage:coverageType are the deprecated and the
+#     current spelling of one field. Corrects v1.18, which left the value
+#     unconstrained on the grounds that the ontology comment and the corpus
+#     disagreed -- the disagreement had already been settled by coverage v1.4,
+#     which lists the corpus's value "primary" by name, and v1.18 had not looked
+#     there. Three of the comment's five values are accepted nowhere in this
+#     specification at all.
+# v1.18 (2026-08-30): Added clinical:CoverageRecordShape, targeting the
+#     deprecated-and-retained clinical:CoverageRecord. Until now that class was
+#     the only deprecated class in this repository with no shape, so every
+#     record in the spelling all pre-migration EHR coverage data uses validated
+#     conforms:true because nothing looked at it. NOT strictly widening, and the
+#     distinction is the point: records move from unexamined to examined, so a
+#     malformed one can now be rejected rather than passing unread. No existing
+#     shape is touched and no record that was ever actually checked changes
+#     verdict. Mirrors coverage:InsurancePlanShape except in three places
+#     documented at the shape, where the retained corpus differs from what the
+#     migrated spelling assumes.
 # v1.17 (2026-08-28): Stop sh:node from escalating a nested sh:Warning into a
 #     sh:Violation. Strictly widening: no graph that validated under v1.16 stops
 #     validating, and six document classes stop being REJECTED for a value
@@ -75,7 +97,7 @@
 #
 #     GUARD. scripts/check-nested-severity.py fails any sh:node or
 #     sh:qualifiedValueShape reference into a shape carrying sh:Warning or
-#     sh:Info, against a baseline in scripts/nested-severity-baseline.json that
+#     sh:Info, against a baseline in scripts/known-severity-escalations.json that
 #     can only shrink. No existing check could see this class: it is not an
 #     entailment question, so check-shape-targets.py is silent on it, and spec
 #     runs no SHACL validator (see the root backlog on that).
@@ -2398,6 +2420,336 @@ clinical:ParsedIndicationReferenceEdgeShape a sh:PropertyShape ;
     sh:severity sh:Warning ;
     sh:message "clinical:parsedIndicationReference should reference the matched reason record (a Condition or Observation) by IRI"@en ;
     sh:name "Parsed Indication Reference Edge"@en .
+
+# ============================================================================
+# Shape: Coverage Record (DEPRECATED CLASS, RETAINED AND NOW JUDGED) — v1.18
+# ============================================================================
+#
+# clinical:CoverageRecord is deprecated in favour of coverage:InsurancePlan and
+# is RETAINED: clinical.ttl states "this class remains for backward
+# compatibility with existing EHR import pipeline data". Until clinical v1.18 it
+# was the only deprecated class in this repository with no shape, so every
+# record in that spelling — which is all EHR-imported coverage data written
+# before the migration — validated conforms:true because nothing looked at it.
+# A vacuous pass is indistinguishable from a real one, which is the whole defect.
+#
+# THE PRECEDENT. clinical v1.13 deprecated clinical:LabResult, clinical:Condition,
+# clinical:Allergy and clinical:Immunization on the same terms and all four kept
+# their shapes; both spellings are judged. This shape brings CoverageRecord into
+# line with its own vocabulary's practice.
+#
+# WHAT THIS SHAPE IS FOR, AND WHY IT IS NOT A COPY OF InsurancePlanShape.
+# coverage:InsurancePlanShape governs the spelling new data is WRITTEN in and can
+# constrain it to what the vocabulary intends. This shape governs a spelling that
+# is only READ: the records it judges were written years ago by an import path
+# that no longer runs, and it cannot ask them to change. So where the two
+# disagree, this one follows the data that exists. TWO places where it does, each
+# marked below at the constraint it applies to:
+#
+#   FIRST DEPARTURE   clinical:relationship  — this vocabulary's five values, not
+#                     the seven-code HL7 SubscriberPolicyholder set.
+#   SECOND DEPARTURE  clinical:effectivePeriodStart / effectivePeriodEnd — the
+#                     xsd:dateTime the importer emitted is accepted alongside the
+#                     declared xsd:date range.
+#
+# A THIRD DIVERGENCE HAS NO CONSTRAINT TO BE MARKED AT, so it is recorded here.
+# coverage:InsurancePlanShape binds coverage:status to the four FHIR R4 fm-status
+# codes at sh:Violation. This shape binds nothing, because the deprecated spelling
+# has no status property to bind: clinical:status is cross-class and carries no
+# rdfs:domain, none of the ten properties clinical.ttl does domain to
+# clinical:CoverageRecord is a status, and coverage:status itself did not exist
+# until coverage v1.5 — long after this class was deprecated. There is nothing
+# here to relax and nothing to enforce. Adding a status binding would be inventing
+# a field for a corpus that never had one.
+#
+# WHAT IS NOT A DEPARTURE, though earlier revisions of this header said so:
+#
+#   clinical:coverageType is judged by coverage:CoverageTypeVocabularyShape's
+#   value set, copied UNCHANGED, since v1.19 — see
+#   clinical:CoverageTypeVocabularyShape below. v1.18 listed it as a departure;
+#   that was the failure to look which v1.19 corrected, and the two spellings of
+#   the field are now judged identically, which is the opposite of a departure.
+#
+#   clinical:payorName is an EXTRA property this spelling carries and coverage:
+#   never gave a distinct name to. Constraining a field the other shape does not
+#   have is not a place the two disagree about a shared field.
+#
+# NOT sh:closed. Records in this spelling also carry health:sourceRecordId and
+# other cross-vocabulary predicates; closing the shape would reject them.
+
+clinical:CoverageRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:CoverageRecord ;
+    rdfs:label "Coverage Record Shape"@en ;
+    rdfs:comment "Validation constraints for EHR-imported insurance coverage records in the deprecated clinical:CoverageRecord spelling. Retained-and-read, not written: coverage:InsurancePlan is the spelling for new data. Mirrors coverage:InsurancePlanShape's severities and cardinalities except where the legacy data demonstrably differs, which is documented per constraint."@en ;
+
+    # ------------------------------------------------------------------
+    # REQUIRED (sh:Violation) — mirrors coverage:InsurancePlanShape
+    # ------------------------------------------------------------------
+
+    # Required: providerName — the insurer. Without it the record identifies no
+    # coverage and cannot be reconciled against a claim.
+    #
+    # Note the property is cross-class from clinical v1.16, which dropped its
+    # rdfs:domain because it is written on encounters and documents too. That is
+    # exactly why the domain-specific meaning is stated here in SHACL rather than
+    # in the ontology: clinical.ttl's own comment says so.
+    sh:property [
+        sh:path clinical:providerName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:name "Provider Name"@en ;
+        sh:message "Insurance provider name is required on a coverage record"@en ;
+        sh:severity sh:Violation
+    ] ;
+
+    # Required: memberId
+    sh:property [
+        sh:path clinical:memberId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:name "Member ID"@en ;
+        sh:message "Member ID is required for claims processing"@en ;
+        sh:severity sh:Violation
+    ] ;
+
+    # Required: coverageType. PRESENCE is required here; the VALUE is checked
+    # separately, at sh:Warning, by clinical:CoverageTypeVocabularyShape below.
+    # The split exists because one sh:property block carries one severity and
+    # these two facts do not share one -- the same reason
+    # coverage:CoverageTypeVocabularyShape is split out of
+    # coverage:InsurancePlanShape.
+    #
+    # WHICH VALUE SET, AND WHY NOT THE ONE IN clinical.ttl. The rdfs:comment on
+    # clinical:coverageType says "medical, dental, vision, prescription,
+    # mental_health". Three of those five -- medical, prescription,
+    # mental_health -- are accepted nowhere else in this specification: not by
+    # FHIR's coverage-type value set, not by coverage:CoverageTypeVocabularyShape,
+    # not by any other shape or ontology here. That comment is an unenforced
+    # prose line written when the class was created and never reconciled with the
+    # vocabulary that superseded it. It is not the authority and is not followed.
+    sh:property [
+        sh:path clinical:coverageType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:minLength 1 ;
+        sh:name "Coverage Type"@en ;
+        sh:message "Coverage type is required"@en ;
+        sh:severity sh:Violation
+    ] ;
+
+    # ------------------------------------------------------------------
+    # WARNING (sh:Warning) — mirrors coverage:InsurancePlanShape
+    # ------------------------------------------------------------------
+
+    # Warning: groupNumber
+    sh:property [
+        sh:path clinical:groupNumber ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:name "Group Number"@en ;
+        sh:message "Group number helps verify coverage"@en ;
+        sh:severity sh:Warning
+    ] ;
+
+    # Warning: planType. The value set is clinical.ttl's own and matches
+    # coverage:planType's exactly, so unlike coverageType above there is no
+    # conflict to resolve.
+    sh:property [
+        sh:path clinical:planType ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:in ("hmo" "ppo" "epo" "pos" "hdhp" "medicare" "medicaid" "tricare" "other") ;
+        sh:name "Plan Type"@en ;
+        sh:message "Plan type should be hmo, ppo, epo, pos, hdhp, medicare, medicaid, tricare, or other"@en ;
+        sh:severity sh:Warning
+    ] ;
+
+    # Warning: relationship — FIRST DEPARTURE. This is the deprecated spelling of
+    # what coverage:subscriberRelationship carries. The list here is clinical.ttl's
+    # five values, NOT the seven-code HL7 SubscriberPolicyholder set that
+    # coverage v1.4 completed: this vocabulary never accepted "common" or
+    # "injured", so no record in this spelling can carry one, and adding them
+    # would describe a corpus that does not exist. The full code system is
+    # available in the spelling that new data is written in.
+    sh:property [
+        sh:path clinical:relationship ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:in ("self" "spouse" "child" "parent" "other") ;
+        sh:name "Relationship"@en ;
+        sh:message "Relationship should be self, spouse, child, parent, or other"@en ;
+        sh:severity sh:Warning
+    ] ;
+
+    # Warning: effectivePeriodStart — SECOND DEPARTURE. clinical.ttl declares
+    # rdfs:range xsd:date, and the EHR-imported records carry xsd:dateTime with a
+    # midnight-UTC placeholder time. conformance's coverage-001 is the worked
+    # example: "2020-01-01T00:00:00Z"^^xsd:dateTime.
+    #
+    # A shape that judges retained data has to judge the data that was written.
+    # sh:datatype xsd:date alone would report a violation on every coverage
+    # record in the corpus for a mismatch introduced by the importer years ago
+    # and never emitted since. Both are accepted, and the ontology range is left
+    # untouched — correcting a range is a vocabulary change with a version bump
+    # and a downstream sync behind it, not something a shape should do quietly.
+    #
+    # The migrated spelling resolved this the other way: coverage:effectiveStart
+    # is xsd:date and the reference pod dropped the placeholder time, because the
+    # time component carried no information. New data should use that.
+    sh:property [
+        sh:path clinical:effectivePeriodStart ;
+        sh:or (
+            [ sh:datatype xsd:date ]
+            [ sh:datatype xsd:dateTime ]
+        ) ;
+        sh:maxCount 1 ;
+        sh:name "Effective Period Start"@en ;
+        sh:message "Coverage effective start must be xsd:date, or the xsd:dateTime the EHR import path emitted"@en ;
+        sh:severity sh:Warning
+    ] ;
+
+    # ------------------------------------------------------------------
+    # INFO (sh:Info) — mirrors coverage:InsurancePlanShape
+    # ------------------------------------------------------------------
+
+    # Info: effectivePeriodEnd. Same datatype latitude as the start date above.
+    sh:property [
+        sh:path clinical:effectivePeriodEnd ;
+        sh:or (
+            [ sh:datatype xsd:date ]
+            [ sh:datatype xsd:dateTime ]
+        ) ;
+        sh:maxCount 1 ;
+        sh:name "Effective Period End"@en ;
+        sh:severity sh:Info
+    ] ;
+
+    # Info: planName
+    sh:property [
+        sh:path clinical:planName ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:name "Plan Name"@en ;
+        sh:severity sh:Info
+    ] ;
+
+    # Info: subscriberId
+    sh:property [
+        sh:path clinical:subscriberId ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:name "Subscriber ID"@en ;
+        sh:severity sh:Info
+    ] ;
+
+    # Info: payorName — NOT A DEPARTURE, despite what this comment said through
+    # v1.19. coverage: has no payor property distinct from coverage:providerName,
+    # which is sh:maxCount 1, so records migrating to InsurancePlan retain this
+    # predicate under its original clinical: name. That makes it an EXTRA property
+    # live in both spellings and constrained here for both — not a place where the
+    # two shapes judge one shared field differently, which is what the numbered
+    # departures above are.
+    sh:property [
+        sh:path clinical:payorName ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:name "Payor Name"@en ;
+        sh:severity sh:Info
+    ] ;
+
+    # ------------------------------------------------------------------
+    # Standard Cascade metadata
+    # ------------------------------------------------------------------
+
+    # Required: provenance. The list is the one every clinical record shape
+    # carries, including cascade:AIExtracted — an insurance card read by a
+    # document-extraction pipeline is one of the most likely paths to a record in
+    # this spelling, and coverage v1.6 had to add it to InsurancePlanShape for
+    # exactly that reason.
+    sh:property [
+        sh:path cascade:dataProvenance ;
+        sh:in (cascade:ClinicalGenerated cascade:EHRVerified cascade:DeviceGenerated cascade:PatientReported cascade:SelfReported cascade:AIExtracted) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:name "Data Provenance"@en ;
+        sh:message "Coverage record must have valid provenance"@en
+    ] ;
+
+    # Required: schemaVersion
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[0-9]+\\.[0-9]+$" ;
+        sh:name "Schema Version"@en ;
+        sh:message "Schema version must be in format major.minor"@en
+    ] .
+
+# ============================================================================
+# Shape: Coverage Type vocabulary, deprecated spelling (advisory) -- v1.19
+# ============================================================================
+#
+# Split out of clinical:CoverageRecordShape so that the REQUIREMENT (a coverage
+# type is present) and the RECOMMENDATION (it comes from the value set FHIR
+# names) can carry different severities, which a single sh:property cannot do.
+#
+# The list is coverage:CoverageTypeVocabularyShape's, copied unchanged, and
+# deliberately so: clinical:coverageType and coverage:coverageType are the
+# deprecated and the current spelling of ONE field, and a record should not be
+# judged differently for which spelling it happens to be written in.
+#
+# WHY THIS LIST AND NOT THE ONE IN clinical.ttl. v1.18 left this value
+# unconstrained, reasoning that the ontology comment ("medical, dental, vision,
+# prescription, mental_health") and the corpus ("primary") disagreed and neither
+# could be preferred without evidence. That was wrong, and the evidence was
+# already in this repository: coverage v1.4 ratified a value set for this exact
+# field, grounded in the FHIR binding, and it lists "primary" BY NAME as a
+# retained Cascade value. Meanwhile "medical", "prescription" and
+# "mental_health" appear nowhere in this specification as accepted values of
+# anything. The disagreement was already settled; v1.18 had not looked in the
+# right file.
+#
+# Severity is sh:Warning because the FHIR binding is EXTENSIBLE: alternate codes
+# MAY be used where the value set does not cover the concept
+# (https://hl7.org/fhir/R4/terminologies.html#extensible). A payer's local code
+# is worth flagging for review and is not grounds for rejecting the record. That
+# is the rule coverage v1.4 established, and this accepts the same consequence it
+# did: because SHACL conformance is an empty result set and does not read
+# severity, an out-of-set value does make the record non-conforming. Applying the
+# rule to only one of the two spellings would have been the inconsistency.
+#
+# S5: this shape reaches its class by sh:targetClass and nothing references it
+# with sh:node, which is what makes a sh:Warning safe to publish on it.
+
+clinical:CoverageTypeVocabularyShape a sh:NodeShape ;
+    sh:targetClass clinical:CoverageRecord ;
+    rdfs:label "Coverage Type Vocabulary Shape (deprecated spelling)"@en ;
+    rdfs:comment "Advisory check that clinical:coverageType comes from the value set FHIR R4 binds Coverage.type to. Warning severity, because that binding is extensible. The list is coverage:CoverageTypeVocabularyShape's, unchanged: the two properties are the deprecated and current spellings of one field."@en ;
+
+    sh:property [
+        sh:path clinical:coverageType ;
+        sh:in (
+            # Retained Cascade values (v1.0-v1.3). "primary" and "secondary" are
+            # the FHIR Coverage.order sense rather than Coverage.type; the
+            # conflation is historical and both are kept for compatibility.
+            "primary" "secondary" "dental" "vision"
+            # v3-ActCode coverage types.
+            "EHCPOL" "HSAPOL" "AUTOPOL" "COL" "UNINSMOT" "PUBLICPOL"
+            "DENTPRG" "DISEASEPRG" "CANPRG" "ENDRENAL" "HIVAIDS" "MANDPOL"
+            "MENTPRG" "SAFNET" "SUBPRG" "SUBSIDIZ" "SUBSIDMC" "SUBSUPP"
+            "WCBPOL" "DENTAL" "DISEASE" "DRUGPOL" "HIP" "LTC" "MCPOL"
+            "POS" "HMO" "PPO" "MENTPOL" "SUBPOL" "VISPOL"
+        ) ;
+        sh:name "Coverage Type Vocabulary"@en ;
+        sh:message "Coverage type should come from the value set FHIR R4 binds Coverage.type to (http://hl7.org/fhir/ValueSet/coverage-type), or one of the retained Cascade values primary, secondary, dental, vision. That binding is extensible, so a payer-local code is acceptable where no listed code applies."@en ;
+        sh:severity sh:Warning
+    ] .
 
 # ============================================================================
 # Changelog

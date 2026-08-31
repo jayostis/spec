@@ -1,0 +1,177 @@
+{
+  "$comment": "Enumerated record-bearing classes that no shape targets, for scripts/check-class-coverage.py. This file is a GATE INPUT, not a filter: the check still examines and counts every class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity. The run fails when an unshaped class appears that is not listed here, when a listed class has since been shaped, and when a listed class no longer exists -- the last two reported separately, because a shape someone wrote and a class someone deleted are different events with different remediations. So the list can only shrink, and shrinking it is an explicit committed edit. Each entry names the vocabulary that owns the fix. Nothing here is acceptable in the long run -- each entry is a class whose records SHACL reports conforms:true over while having examined nothing, a verdict indistinguishable from one that was earned.",
+  "$rule": "A class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity has said its instances are record data. If no shape names it in sh:targetClass -- and carries at least one constraint beside that target, since a bare sh:targetClass asks nothing -- then those records are judged by nothing. The chain is walked transitively because a parent's shape does NOT reach a child: SHACL does not resolve subclass axioms over a pod's data graph (see validation/index.md), which is the same rule that makes the cure an explicit sh:targetClass rather than a subclass axiom. Where a class turns out NOT to hold record data, the cure is instead to reconsider the PROV superclass, which is the thing declaring that it does.",
+  "$established": "2026-08-30, clinical v1.18 (spec). clinical:CoverageRecord, the class this check was written for, is FIXED rather than baselined: it is shaped by clinical:CoverageRecordShape in the same change. The regression suite deletes that shape from a scratch copy and requires the check to name the class, which is what proves this would have caught it. REVISED 2026-08-30 (PR #10 review): the check's scope was one rdfs:subClassOf step deep and is now the full chain, and a bare sh:targetClass carrying no constraint no longer counts as coverage. The scope change revealed 11 further unshaped classes that were always in the population the rule describes and were simply not being looked at; they are baselined here rather than shaped, and are marked established-by-widening so it stays visible that they are pre-existing gaps rather than new ones. Ten of the eleven are the cascade:DataProvenance value terms and are the SAME defect that entry already records, now counted once per term. REVISED AGAIN 2026-08-30 (jayostis/spec#12): cascade:DataProvenance and its ten value terms are REMOVED from this file, not fixed by a shape. They were never record classes. The classification carried rdfs:subClassOf prov:Entity, which in this specification asserts that instances are stored record data, and the ten values inherited it; nothing is ever typed with one (179 uses in the reference pod, every one as the object of cascade:dataProvenance). core v3.9 drops that axiom, so all eleven leave the population this check describes. They were an obligation that could never be discharged, because a code-list member has nothing for a shape to constrain. This returns the file to 34 entries -- the count it held before the scope widening -- so that widening's net growth is zero, and every remaining entry is a class that genuinely wants a shape.",
+  "entries": [
+    {
+      "class": "checkup:AttentionItem",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 patient-facing summary class, part of the visit-prep group added in checkup v3. The whole group shipped without shapes."
+    },
+    {
+      "class": "checkup:CorrelationInsight",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 wellness-summary class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:KeyIndicator",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 wellness-summary class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:MedicationChangeRecord",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 visit-prep class; see checkup:AttentionItem. Carries medication deltas shown to a patient before an appointment, so an unchecked one is patient-visible."
+    },
+    {
+      "class": "checkup:TrendInsight",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 wellness-summary class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:VisitPrepSummary",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 visit-prep class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:VisitPrepTray",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 visit-prep container class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:VisitTrayItem",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 visit-prep item class; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:WellnessProfileReference",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 reference class linking a summary to its wellness profile; see checkup:AttentionItem."
+    },
+    {
+      "class": "checkup:WellnessSummary",
+      "ownedBy": "spec (checkup)",
+      "detail": "Layer 3 wellness-summary root class; see checkup:AttentionItem."
+    },
+    {
+      "class": "clinical:ImagingStudy",
+      "ownedBy": "spec (clinical)",
+      "detail": "Added in clinical v1.7 for FHIR ImagingStudy conversion, with properties, and never shaped. Real EHR imports write this class."
+    },
+    {
+      "class": "clinical:ImplantedDevice",
+      "ownedBy": "spec (clinical)",
+      "detail": "Added in clinical v1.7 for FHIR Device conversion, with properties, and never shaped. Real EHR imports write this class."
+    },
+    {
+      "class": "clinical:LabTestSeries",
+      "ownedBy": "spec (clinical)",
+      "detail": "Added in clinical v1.4 with 20 properties for longitudinal lab trending, and never shaped. Derived rather than imported, but derived records are still records and its 20 properties are unchecked."
+    },
+    {
+      "class": "clinical:MedicationAdministration",
+      "ownedBy": "spec (clinical)",
+      "detail": "Added in clinical v1.7 for FHIR MedicationAdministration conversion, with properties, and never shaped. Real EHR imports write this class."
+    },
+    {
+      "class": "coverage:AppealRecord",
+      "ownedBy": "spec (coverage)",
+      "detail": "Coverage class with properties (coverage:appealLevel and others, registered in sdk-typescript's TYPE_MAPPING) and no shape."
+    },
+    {
+      "class": "coverage:CopaySchedule",
+      "ownedBy": "spec (coverage)",
+      "detail": "PLACEHOLDER CLASS. coverage.ttl states 'Properties for this class will be defined in a future version', so there is nothing yet to constrain. The shape is owed when the properties land, and this entry is what will make that visible."
+    },
+    {
+      "class": "coverage:Deductible",
+      "ownedBy": "spec (coverage)",
+      "detail": "PLACEHOLDER CLASS; see coverage:CopaySchedule. Properties deferred to a future version by coverage v1.2."
+    },
+    {
+      "class": "coverage:DenialNotice",
+      "ownedBy": "spec (coverage)",
+      "detail": "Coverage class with properties (coverage:deniedProcedureCode and others, registered in sdk-typescript's TYPE_MAPPING) and no shape."
+    },
+    {
+      "class": "diabetes:ActivityCorrelation",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary: the whole diabetes v1-draft namespace shipped without shapes. Draft status is why this is baselined rather than blocking, and promotion out of v1-draft is the trigger to shape the set -- a draft that is promoted with no shapes carries the vacuous-pass problem into a released vocabulary."
+    },
+    {
+      "class": "diabetes:CGMSession",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:CarbEntry",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:DailyGlucoseSummary",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:DeviceDataSource",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:DiabetesProfile",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:GlucosePattern",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:GlucoseReading",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation. The highest-volume record type in the vocabulary, and a clinically load-bearing one."
+    },
+    {
+      "class": "diabetes:HbA1cResult",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "ESTABLISHED BY WIDENING, 2026-08-30 (PR #10 review): pre-existing, and invisible while the check looked only one rdfs:subClassOf step deep. This is the worked example for that scope hole -- rdfs:subClassOf diabetes:LabResult, which is rdfs:subClassOf prov:Entity -- and unlike the cascade: entries beside it, it is a genuine record class with its own properties (diabetes:hba1cValue, diabetes:hba1cMmolMol) and needs a real shape. Note diabetes:LabResult's own shape would not reach it even once written: SHACL does not resolve rdfs:subClassOf over a pod's data graph, so this class needs its own sh:targetClass. Draft vocabulary; see diabetes:ActivityCorrelation for why the set is baselined rather than blocking."
+    },
+    {
+      "class": "diabetes:HyperglycemicEvent",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:HypoglycemicEvent",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:InsulinDose",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation. Dose records are the ones where an unchecked value has the most direct physical consequence."
+    },
+    {
+      "class": "diabetes:LabResult",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation. Note the local name collides with clinical:LabResult, which IS shaped; the two are different classes in different namespaces."
+    },
+    {
+      "class": "diabetes:MealEvent",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "diabetes:SleepCorrelation",
+      "ownedBy": "spec (diabetes, v1-draft)",
+      "detail": "Draft vocabulary; see diabetes:ActivityCorrelation."
+    },
+    {
+      "class": "evidence:GroundingActivity",
+      "ownedBy": "spec (evidence, v1-draft)",
+      "detail": "Draft vocabulary, and the only prov:Activity in this baseline rather than a prov:Entity. It records the model pass that graded an assertion, so its provenance fields are exactly the ones a reader would want checked."
+    }
+  ]
+}

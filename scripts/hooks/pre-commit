@@ -7,6 +7,29 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
+# The escape hatch the failure message at the foot of this file offers. It was
+# advertised from the day this hook was written and never implemented, so the
+# only way past a false positive was --no-verify, which disables every hook
+# rather than this one.
+#
+# SCOPED, NOT BLANKET. It waives exactly the two assertions it names -- the
+# owl:versionInfo bump and the dct:modified date -- and nothing else. It used to
+# `exit 0` before the whole hook ran, which also waived the "VOCAB_VERSIONS not
+# staged" error and the shapes-file warning, neither of which it advertises.
+#
+# That mattered because of the realistic path, not an abusive one: the
+# dct:modified == today rule false-positives on `git commit --amend` after
+# midnight, and on staging one day and committing the next. The contributor then
+# follows this hook's OWN printed advice, runs SKIP_VERSION_CHECK=1, and the TTL
+# bump lands with VOCAB_VERSIONS still at the old value -- exactly the drift
+# check-downstream-versions.sh exists to catch, permitted by the documented
+# escape hatch rather than by --no-verify.
+SKIP_VERSION_CHECK="${SKIP_VERSION_CHECK:-}"
+if [[ "$SKIP_VERSION_CHECK" == "1" ]]; then
+  echo "pre-commit: SKIP_VERSION_CHECK=1 — owl:versionInfo and dct:modified checks skipped."
+  echo "            VOCAB_VERSIONS staging is still enforced."
+fi
+
 # Find all staged ontology TTL files (not shapes)
 STAGED_TTLS=$(git diff --cached --name-only | grep -E '^ontologies/.+/v[0-9]+/[^.]+\.ttl$' | grep -v '\.shapes\.ttl$' || true)
 
@@ -30,23 +53,38 @@ for ttl_file in $STAGED_TTLS; do
   staged_version=$(git show :"$ttl_file" 2>/dev/null | grep 'owl:versionInfo' | grep -oE '"[0-9]+\.[0-9.]+"' | tr -d '"' | head -1 || true)
   head_version=$(git show HEAD:"$ttl_file" 2>/dev/null | grep 'owl:versionInfo' | grep -oE '"[0-9]+\.[0-9.]+"' | tr -d '"' | head -1 || echo "NEW_FILE")
 
-  if [[ -z "$staged_version" ]]; then
-    ERRORS+=("$ttl_file: owl:versionInfo not found. Add it before committing.")
-    continue
-  fi
+  # THE TWO ASSERTIONS SKIP_VERSION_CHECK WAIVES, and the only two. Everything
+  # below this block runs either way.
+  if [[ "$SKIP_VERSION_CHECK" != "1" ]]; then
+    if [[ -z "$staged_version" ]]; then
+      ERRORS+=("$ttl_file: owl:versionInfo not found. Add it before committing.")
+      continue
+    fi
 
-  if [[ "$staged_version" == "$head_version" ]] && [[ "$head_version" != "NEW_FILE" ]]; then
-    ERRORS+=("$ttl_file: owl:versionInfo unchanged ($staged_version). Bump it for any modification.")
-    continue
-  fi
+    if [[ "$staged_version" == "$head_version" ]] && [[ "$head_version" != "NEW_FILE" ]]; then
+      ERRORS+=("$ttl_file: owl:versionInfo unchanged ($staged_version). Bump it for any modification.")
+      continue
+    fi
 
-  echo "  ✅ $vocab: $head_version → $staged_version"
+    echo "  ✅ $vocab: $head_version → $staged_version"
 
-  # Check dct:modified was updated
-  staged_modified=$(git show :"$ttl_file" 2>/dev/null | grep 'dct:modified' | head -1 || true)
-  head_modified=$(git show HEAD:"$ttl_file" 2>/dev/null | grep 'dct:modified' | head -1 || true)
-  if [[ "$staged_modified" == "$head_modified" ]] && [[ "$head_version" != "NEW_FILE" ]]; then
-    ERRORS+=("$ttl_file: dct:modified not updated. Set it to today's date.")
+    # Check dct:modified is TODAY'S DATE.
+    #
+    # This asks whether the date is right, not whether it CHANGED. The previous
+    # comparison against HEAD's value could not tell a forgotten date from an
+    # already-correct one, so a second release authored on the same day was
+    # blocked for having the right answer — and the only way to satisfy the hook
+    # was to write a date that was wrong. The error message always said "set it to
+    # today's date"; this checks that.
+    today=$(date +%F)
+    staged_modified=$(git show :"$ttl_file" 2>/dev/null | grep 'dct:modified'     | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)
+    if [[ -z "$staged_modified" ]]; then
+      ERRORS+=("$ttl_file: dct:modified not found. Add it before committing.")
+    elif [[ "$staged_modified" != "$today" ]]; then
+      ERRORS+=("$ttl_file: dct:modified is $staged_modified, not today ($today). Set it to today's date.")
+    fi
+  else
+    echo "  (skipped) $vocab: owl:versionInfo and dct:modified not checked"
   fi
 
   # Check SHACL shapes file is also staged
@@ -59,7 +97,7 @@ for ttl_file in $STAGED_TTLS; do
 
   # Check VOCAB_VERSIONS was updated
   if ! git diff --cached --name-only | grep -q "VOCAB_VERSIONS"; then
-    ERRORS+=("VOCAB_VERSIONS not staged. Update $vocab=$staged_version in VOCAB_VERSIONS.")
+    ERRORS+=("VOCAB_VERSIONS not staged. Update $vocab=${staged_version:-<version>} in VOCAB_VERSIONS. SKIP_VERSION_CHECK does not waive this.")
   fi
 done
 
@@ -74,7 +112,9 @@ if [[ ${#ERRORS[@]} -gt 0 ]]; then
     echo "  ERROR: $err"
   done
   echo ""
-  echo "To bypass (only for non-vocabulary housekeeping commits):"
+  echo "To waive the owl:versionInfo and dct:modified checks — and ONLY those;"
+  echo "VOCAB_VERSIONS staging is still enforced — for a genuine false positive,"
+  echo "such as an --amend across midnight:"
   echo "  SKIP_VERSION_CHECK=1 git commit ..."
   echo ""
   exit 1

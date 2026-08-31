@@ -83,7 +83,7 @@ python3 scripts/check-nested-severity.py        # the rule
 sh scripts/test-check-nested-severity.sh        # its regression suite
 ```
 
-`scripts/nested-severity-baseline.json` holds the pre-existing sites (checkup, health, draft genomics). It can only shrink: the check fails on an unlisted site AND on a listed site that no longer occurs. Do not add to it to make a build green — the entry is a committed admission that a consumer is being handed a rejection where the vocabulary promised a warning.
+`scripts/known-severity-escalations.json` holds the pre-existing sites (checkup, health, draft genomics). It can only shrink: the check fails on an unlisted site AND on a listed site that no longer occurs. Do not add to it to make a build green — the entry is a committed admission that a consumer is being handed a rejection where the vocabulary promised a warning.
 
 Note what neither check does: **spec runs no SHACL validator**, so a regression in an `sh:pattern` or an `sh:in` member is invisible here. Behavioural verification lives in the `conformance` repository.
 

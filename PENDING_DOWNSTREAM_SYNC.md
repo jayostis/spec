@@ -621,6 +621,105 @@ later one.
 
 ---
 
+## Deprecation — `clinical:CoverageRecord` → `coverage:InsurancePlan` (ENTERED RETROACTIVELY 2026-08-30)
+
+**This row is late by roughly six months, and that is the finding it records.** The
+deprecation was never entered in this ledger when it happened, so the propagation it
+implied was never tracked and never done. Three repositories each recorded a local
+symptom — `conformance/KNOWN_FAILURES.json`, two `CLAUDE.md` "Known gaps" sections and a
+`KNOWN GAP` source comment in `sdk-typescript` — and none of them referenced the others,
+because the row that would have joined them did not exist. It is entered now, with its
+boxes in the state they were actually in on 2026-08-30.
+
+**The deprecation has no clean version to name.** `clinical.ttl` labels the class
+`DEPRECATED (v1.5+)`, but clinical v1.5 (2026-02-10) **added** `CoverageRecord`: its
+changelog entry records eleven new properties and no deprecation at all. `coverage:InsurancePlan`,
+the class the label redirects to, arrives in coverage v1.0 on **2026-02-18**, eight days
+later. The `v1.5+` label was therefore applied retroactively by an edit this repository's
+squashed history cannot date. Anyone following that label to the v1.5 changelog expecting
+a deprecation will not find one — which is exactly why this row exists rather than a line
+inside a batch section.
+
+**Why nothing caught it.** The cross-repo sequence in `CONTRIBUTING.md` was add-only and
+contained the word "deprecat" zero times, so a deprecation passed all seven steps with
+every repository still writing the deprecated term. That gap is fixed in the same change
+as this row (jayostis/spec#9), and the new "Deprecating a spelling" subsection is now the
+checklist this row should have been generated from.
+
+**Note on issue links.** They are owner-qualified. The three issues carrying this work
+live on the contributor's forks, where the numbering collides with live, unrelated issues
+in `the-cascade-protocol/`; a bare `#7` in this file resolves to the wrong issue when read
+from the org repository.
+
+### What each repository owes
+
+- [x] **`spec` — a shape for the retained class.** DONE, clinical v1.18 + v1.19
+      (2026-08-30), `clinical:CoverageRecordShape` and
+      `clinical:CoverageTypeVocabularyShape` in `clinical.shapes.ttl`
+      (jayostis/spec#7).
+      `clinical:CoverageRecord` was the only deprecated class in this repository targeted
+      by no shape, so every record in that spelling validated `conforms: true` because
+      nothing looked at it. clinical v1.13's four deprecated classes all kept their
+      shapes; this one never had one to keep. **This bump is itself unpropagated — the
+      six downstream steps below the fold have not run for clinical 1.17 → 1.19,
+      nor for core 3.8 → 3.9, which landed in the same change (jayostis/spec#12):
+      `cascade:DataProvenance` dropped `rdfs:subClassOf prov:Entity`, an axiom that
+      classified eleven provenance code-list terms as record data they never hold.
+      No term is added, removed or renamed and no shape changes verdict, so the
+      downstream obligation is a `VOCAB_VERSIONS` line in each repo rather than
+      code — verified against `conformance`, `cascade-cli` and `sdk-typescript`,
+      none of which reference `prov:Entity` outside vendored copies of these
+      ontologies.**
+- [x] **`spec` — the process gap.** DONE, jayostis/spec#9: `CONTRIBUTING.md` now states
+      what a deprecation obliges, separately from an addition, and Step 1's shapes
+      obligation is no longer conditional on something having been added. A companion
+      check (jayostis/spec#6) fails any record-bearing class that no shape targets, so
+      the shaped-class half of this cannot recur silently.
+- [x] **`conformance` — the fixture is migrated.** DONE, jayostis/conformance#1, PR #4
+      merged 2026-08-31 as `bae2f8f`. `fixtures/coverage-001.json` asserted
+      `clinical:CoverageRecord` while `reference-patient-pod/clinical/insurance.ttl` in the
+      same repository had migrated to `coverage:InsurancePlan` — same subject UUID
+      (`urn:uuid:c0vr-0001-aaaa-bbbb-ccccddddeeee`), contradictory classes. The fixture is
+      now `coverage:InsurancePlan` and the `UNSHAPED` entry has been removed from
+      `KNOWN_FAILURES.json`.
+
+      **This closes one gap and opens a smaller one: no fixture anywhere now asserts
+      `clinical:CoverageRecord`, so the shape clinical v1.18 just added is exercised by
+      nothing.** Deprecated-and-retained means pods in that spelling still exist and will
+      keep being read, so the shape is right to exist — but the corpus no longer proves it
+      works. A legacy-read fixture, deliberately retained and labelled as one, is what the
+      new `CONTRIBUTING.md` deprecation checklist asks for and what this now needs. Not
+      yet filed.
+
+      Three references in `conformance` went stale with that merge and still describe the
+      old state: `CLAUDE.md:129` lists the class as a known gap "asserted by
+      `coverage-001`" (false on both halves now — the fixture migrated and `spec` has
+      shaped the class); `README.md:171`'s `UNSHAPED` table still counts it among nine;
+      and `reference-patient-pod/README.md:70` still names `CoverageRecord` in its class
+      column. Also not yet filed.
+- [ ] **`sdk-typescript` — the SDK cannot emit `coverage:InsurancePlan` at all**
+      (jayostis/sdk-typescript#26). `TYPE_MAPPING` resolves the `insurance` pod directory
+      to `clinical:CoverageRecord`, and `TYPE_TO_DIR` sends BOTH the `CoverageRecord` and
+      `InsurancePlan` spellings there, so both record types serialize as the deprecated
+      class. The mapping landed in commit `ed227f0` (2026-02-22) and is present in every
+      tagged release from `v1.3.0` onward. The fix is the `DEPRECATED_TYPE_ALIASES`
+      pattern this SDK already implements for clinical v1.13's four classes and never
+      extended to this one: readers accept both spellings, writers emit only the new one.
+- [ ] **`cascade-cli` — contingent, and triggered by the v1.18 bump above.** It vendors
+      `src/shapes/clinical.ttl`, which until v1.18 carried the class with no shape.
+      Nothing was wrong there — its own test had already retyped off the class — but the
+      shape now exists and `sync-shapes-from-spec.sh` has to run for `cascade validate` to
+      know about it. No issue yet; this row is the trigger.
+
+### Not checked
+
+`sdk-python`, `cascade-agent` and `cascadeprotocol.org` were **not examined** for this
+deprecation. They are not cloned on the machine this row was written from, and an unticked
+box is a claim about a repository someone looked at. Treat these three as unknown rather
+than clear, and check them before this row is closed out.
+
+---
+
 ## Open items
 
 ### 1. `clinical:sourceSystemOID` (planned) — NOT yet authored, deferred
@@ -649,4 +748,4 @@ later one.
 
 ---
 
-_Last updated: 2026-08-15._
+_Last updated: 2026-08-30._

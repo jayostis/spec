@@ -63,14 +63,22 @@ cascade validate ontologies/clinical/v1/clinical.shapes.ttl
 
 ## What must be green before review
 
-Two CI jobs gate this repository. Run their commands locally before opening a PR.
+Three CI workflows gate this repository, and the `shapes` one runs three independent jobs. Run their commands locally before opening a PR.
 
 ```bash
-source .venv/bin/activate                  # both checks shell out to `python3`
+source .venv/bin/activate                  # every check shells out to `python3`
 
-# shapes: the Validation Profile. Both must exit 0.
-sh scripts/test-check-shape-targets.sh     # the rule's own regression suite
-python3 scripts/check-shape-targets.py     # the rule, against this repository
+# shapes: three structural rules about this repository's own SHACL. Each pairs
+# a regression suite with the rule itself, and all six must exit 0. The three
+# rules are deliberately independent -- none can see the others' defect.
+sh scripts/test-check-shape-targets.sh     # entailment independence
+python3 scripts/check-shape-targets.py
+
+sh scripts/test-check-nested-severity.sh   # nested-shape severity (rule S5)
+python3 scripts/check-nested-severity.py
+
+sh scripts/test-check-class-coverage.sh    # record-class shape coverage
+python3 scripts/check-class-coverage.py
 
 # drift-checker: only if you touched the downstream drift check itself.
 # POSIX sh, not bash. CI runs it under dash to catch bashisms.
@@ -123,10 +131,12 @@ Before committing any change to an ontology (`.ttl`) file:
 - [ ] Bump `owl:versionInfo` (the pre-commit hook blocks the commit otherwise)
 - [ ] Update `dct:modified` to today's date
 - [ ] Add a changelog comment block at the top of the TTL file
-- [ ] Update the corresponding `.shapes.ttl` if classes or properties were added
+- [ ] Update the corresponding `.shapes.ttl`. This is **not** conditional on something having been added: every class that remains instantiable must be targeted by a shape, including one you are deprecating and retaining. `check-class-coverage.py` enforces it for any class declaring a PROV superclass
 - [ ] Update the JSON-LD context (`contexts/v1/{name}.jsonld`) if new terms need `@type` / `@id` mappings
 - [ ] Update `VOCAB_VERSIONS` and stage it explicitly: `git add VOCAB_VERSIONS`
 - [ ] `python3 scripts/check-shape-targets.py` exits 0
+- [ ] `python3 scripts/check-nested-severity.py` exits 0
+- [ ] `python3 scripts/check-class-coverage.py` exits 0 -- a new class declaring `rdfs:subClassOf prov:Entity` or `prov:Activity` must be given a shape, or added to `scripts/known-unshaped-classes.json` with an attribution saying who owes it. Baselining is an admission, not a fix: a class in that file is one whose records SHACL reports `conforms: true` over having examined nothing.
 - [ ] After committing, tag it: `git tag vocab/{name}-v{X.Y}`
 
 ### Steps 2 through 7 -- downstream, in this order
@@ -147,7 +157,26 @@ Order matters. Conformance fixtures gate the SDK releases, so a fixture that doe
 **Two failure modes worth naming, because both are silent:**
 
 - In `sdk-python`, registering a class in the serializer but not the deserializer makes `parse()` return an empty list rather than an error. A pod full of records reads as an empty pod. Test a round trip, never just a serialize.
-- In `conformance`, a fixture that no shape targets is reported `UNSHAPED`: zero constraints ran, so its PASS asserts nothing. A new fixture that passes vacuously is worse than no fixture.
+- In `conformance`, a fixture that no shape targets is reported `UNSHAPED`: zero constraints ran, so its PASS asserts nothing. A new fixture that passes vacuously is worse than no fixture. `spec` now catches the upstream half of this itself -- `scripts/check-class-coverage.py` fails a record-bearing class that no shape targets -- but only for classes declaring a PROV superclass, and only against a baseline of 34 that predate it. A fixture can still land on an unshaped class; `UNSHAPED` remains the place that is seen.
+
+### Deprecating a spelling -- what the seven steps do not ask
+
+The sequence above is add-only. Every obligation in it is phrased as an addition, so a deprecation can be authored, pass all seven steps, and leave every downstream repository still writing the deprecated term with every box ticked. That is not hypothetical: `clinical:CoverageRecord` was superseded by `coverage:InsurancePlan` and six months later `spec` had no shape for it, `conformance`'s `coverage-001` still asserted it while the reference pod in the same repository had migrated off it, and every `sdk-typescript` release still wrote it for both record types. The one deprecation that did complete -- clinical v1.13's four classes -- completed on someone's attention, not on process.
+
+**Reading and writing move in opposite directions, and this is the whole rule.** A deprecated spelling stops being *written* at once and stays *readable* indefinitely, because pods already contain it and a pod is not migrated by a release note. Every obligation below follows from that asymmetry.
+
+`sdk-typescript`'s `DEPRECATED_TYPE_ALIASES` is the reference implementation: readers resolve a requested type to its new RDF type *and* to any deprecated spelling listed there, while `TYPE_MAPPING` carries no entry for the deprecated classes, so nothing in that SDK can produce one. Copy that shape rather than inventing another.
+
+When a release deprecates a class or property, it owes this in addition to the seven steps:
+
+- [ ] **`spec` -- the deprecated class KEEPS its shape**, for as long as it remains readable. A deprecated class with no shape is worse than an undeprecated one: SHACL reports `conforms: true` over its records having examined nothing, so the data nobody is maintaining is also the data nobody is checking. Retaining a class and dropping its constraints is the one combination that must never ship.
+- [ ] **`spec` -- the deprecation gets its own `PENDING_DOWNSTREAM_SYNC.md` row**, not one line inside a batch section. A batch row tracks what was authored; a deprecation's open question is what is still being *emitted*, which is a different list with different owners and a much longer life.
+- [ ] **Every downstream writer stops emitting it.** Name each one: converters, importers, both SDKs' serializers and type tables, the agent's query patterns. "Nothing writes this any more" is a claim to verify per repository, not to assume from the deprecation.
+- [ ] **Every downstream reader keeps accepting it**, and there is a test proving a record in the old spelling still round-trips. A reader that drops the old spelling silently deletes data from a pod on read-modify-write.
+- [ ] **`conformance` -- every fixture asserting the old spelling is resolved explicitly**, either migrated to the new one or deliberately retained as a legacy-read case that says so in its notes. Leaving it unexamined is what produced a fixture and a reference pod in one repository asserting contradictory classes for the same subject UUID.
+- [ ] **The migration window has a stated end**, or an explicit statement that there is none. "Retained for backward compatibility" with no horizon is how a temporary spelling becomes permanent.
+
+**A deprecation is not additive, so it does not batch the way an addition does.** The argument for batching -- open-world shapes mean data can ship before the shapes catch up -- does not hold here. Every day the old spelling keeps being written is another day of data that will need the migration run over it again.
 
 ### Not every change fires all seven steps at once
 
