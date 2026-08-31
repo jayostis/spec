@@ -14,6 +14,15 @@ name: shapes
 #     is an EMPTY result set and a nested sh:Warning is therefore re-reported as
 #     a Violation on the referring shape. clinical v1.16 shipped that defect on
 #     six document classes; clinical v1.17 fixed it and added the check.
+#
+#  3. RECORD-CLASS SHAPE COVERAGE: a class declaring rdfs:subClassOf prov:Entity
+#     or prov:Activity holds record data, so some shape must name it in
+#     sh:targetClass. Without that, SHACL reports conforms:true over its records
+#     having examined nothing -- a verdict indistinguishable from an earned one.
+#     check-shape-targets.py reports PASS straight over this by design: its T
+#     assertion fires only for a superclass some shape already targets, and
+#     nothing targets prov:Entity. clinical:CoverageRecord lived its whole life
+#     unshaped; clinical v1.18 shaped it and added this check.
 
 on:
   push:
@@ -26,6 +35,9 @@ on:
       - 'scripts/check-nested-severity.py'
       - 'scripts/test-check-nested-severity.sh'
       - 'scripts/nested-severity-baseline.json'
+      - 'scripts/check-class-coverage.py'
+      - 'scripts/test-check-class-coverage.sh'
+      - 'scripts/class-coverage-baseline.json'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
   workflow_dispatch:
@@ -73,3 +85,26 @@ jobs:
 
       - name: Nested-shape severity check
         run: python3 scripts/check-nested-severity.py
+
+  record-class-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # The defining negative control removes the shape clinical v1.18 added and
+      # requires the check to name clinical:CoverageRecord, which is the only
+      # assertion proving it would have caught the live defect. The baseline is
+      # tested in BOTH directions: a newly unshaped class must fail, and a
+      # baselined class that has since been shaped must fail too.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-class-coverage.sh
+
+      - name: Record-class shape coverage check
+        run: python3 scripts/check-class-coverage.py
