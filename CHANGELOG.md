@@ -6,6 +6,22 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-08-31: Which bytes an attachment's digest commits to (pod-structure 1.2)
+
+No vocabulary change: no term is added, removed or renamed, and no shape moves. One prose amendment to `pod-structure.md`, which goes to 1.2.
+
+**Section 4.3 stated two rules that stop being compatible once a Pod is encrypted.** The attachment filename is a digest of the file's bytes, and content addressing is justified on a consumer hashing what it read and comparing it with where it read it from. The same section requires attachments to carry the same at-rest protection as record files. After encryption the bytes on disk are ciphertext while the name was computed from the plaintext, so a reader following the text literally finds a mismatch on every attachment: the section's own MUST breaks the section's own verification rule, and nothing said which reading was intended. Two implementations would have guessed differently, and the question was live because a DICOM importer is about to become the first writer of an attachment anywhere in the ecosystem.
+
+**Settled as digest-of-plaintext, verified after decrypt,** under a new "Digest and encryption" subsection, with the naming rule restated in section 7.5. Encrypting or decrypting a Pod MUST NOT rename an attachment, and the `cascade:Attachment` node is identical in both states: encryption changes file contents, never the graph.
+
+Naming the ciphertext was the alternative and is rejected in the text, because authenticated encryption uses a fresh nonce per operation and the same document sealed twice would get a different name. Deduplication and idempotent re-import would stop working, which are the two properties content addressing exists to provide; re-keying would become a rewrite of every `cascade:attachmentPath` and `cascade:contentHash` in the Pod, putting graph mutation on the key-rotation path; and one Pod would have two graphs depending on whether it was encrypted when read. Deriving the nonce from the plaintext to make ciphertext deterministic would recover the first two and is not permitted, because it makes the exposure below structural.
+
+**The cost is named rather than hidden.** A plaintext digest is a known-plaintext oracle: a holder of the encrypted Pod who already has a document byte-for-byte can confirm its presence without decrypting. It discloses nothing about content the holder lacks, and personalised attachments make an exact-byte match unlikely without prior possession. Per-Pod digest salting is permitted as an escape hatch, MUST be declared, and costs cross-Pod deduplication.
+
+Nothing implements `attachments/` yet, so no Pod migrates and the convention is set rather than changed.
+
+---
+
 ## 2026-08-28: A warning that was being published as a rejection (clinical v1.17, coverage v1.6)
 
 Two value-set corrections and the check that would have caught the first one. No term is added, removed or renamed anywhere in this release; every change is to SHACL, and both are in the widening direction.

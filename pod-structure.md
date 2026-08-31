@@ -1,8 +1,8 @@
 # Cascade Protocol Pod Structure Specification
 
 **Status:** Draft
-**Version:** 1.1
-**Date:** 2026-08-27
+**Version:** 1.2
+**Date:** 2026-08-31
 **Authors:** Cascade Agentic Labs LLC
 **Website:** https://cascadeprotocol.org
 
@@ -355,9 +355,9 @@ attachments/{algorithm}/{digest}
 ```
 
 - `{algorithm}` is the token from the [IANA Named Information Hash Algorithm Registry](https://www.rfc-editor.org/rfc/rfc6920) that the digest was computed with. New implementations MUST write `sha-256`. The algorithm is a directory level rather than a filename prefix so that adopting a stronger hash is a new directory, not a re-parse of every name.
-- `{digest}` is the digest of the file's own bytes, lowercase hexadecimal, with **no extension**. The media type is stated in RDF; a media type in a filename is a second claim about the same bytes that nothing verifies.
+- `{digest}` is the digest of the file's **plaintext** bytes, lowercase hexadecimal, with **no extension**. Plaintext even when the Pod is encrypted at rest; see "Digest and encryption" below. The media type is stated in RDF; a media type in a filename is a second claim about the same bytes that nothing verifies.
 
-**The file's name IS its digest**, which is what makes the store checkable: a consumer hashes what it read and compares it with where it read it from, and nothing has to be trusted to keep name and content in agreement. Two consequences follow with no mechanism behind them: the same document arriving from two sources is stored once, and re-importing is idempotent without a deduplication pass.
+**The file's name IS its digest**, which is what makes the store checkable: a consumer hashes the bytes the file yields and compares them with where it read them from, and nothing has to be trusted to keep name and content in agreement. On an encrypted Pod "the bytes the file yields" means the bytes it decrypts to, which is the subject of "Digest and encryption" below. Two consequences follow with no mechanism behind them: the same document arriving from two sources is stored once, and re-importing is idempotent without a deduplication pass.
 
 Writers MUST NOT write a file here whose name is not the digest of its contents. Readers SHOULD verify a digest before relying on an attachment, and MUST treat a mismatch as a missing attachment rather than as the document the metadata describes.
 
@@ -383,11 +383,21 @@ Each stored file is described by a `cascade:Attachment` in the Turtle of whichev
 
 `cascade:attachmentPath` MUST be relative to the Pod root. An absolute path or a URL breaks the moment a Pod is copied or re-rooted, which Pods routinely are, and a `..` segment makes an attachment reference a way to read a file the Pod does not contain. `cascade:AttachmentShape` in `core.shapes.ttl` rejects all three.
 
+#### Digest and encryption
+
+The digest is computed over the file's **plaintext** bytes, always, whether or not the Pod is encrypted at rest. An implementation MUST NOT rename an attachment when encrypting or decrypting a Pod, and the `cascade:Attachment` node describing it is identical in both states. Encrypting a Pod changes file contents; it never changes the graph.
+
+This has to be stated because the two rules in this section otherwise contradict each other. Attachments are encrypted at rest, so on an encrypted Pod the bytes on disk are ciphertext while the name was computed from the plaintext, and a reader checking the name against what it read from disk would find a mismatch on every attachment. Verification is therefore defined on the decrypted bytes: hash what the file decrypts to, compare with its name. That is also the only moment a consumer has a reason to care, since it is reading the document.
+
+Naming the ciphertext instead was considered and rejected. Authenticated encryption uses a fresh nonce per operation, so the same document sealed twice produces different bytes and therefore a different name. Three things follow. Deduplication and idempotent re-import stop working, and those are the properties content addressing exists to provide. Re-keying a Pod becomes a rewrite of every `cascade:attachmentPath` and `cascade:contentHash` it holds, which puts graph mutation on the same code path as key rotation. And one Pod would have two different graphs depending on whether it happened to be encrypted at the time it was read. Making the ciphertext deterministic instead, by deriving the nonce from the plaintext, would restore the first two at the cost of making the exposure below structural rather than incidental, and is not permitted.
+
+**One consequence, stated here so that it is a decision rather than an oversight.** A plaintext digest is a known-plaintext oracle: someone holding an encrypted Pod who already possesses a document byte-for-byte can hash it and learn whether the Pod contains that document, without decrypting anything. It reveals nothing about content the holder does not already have, and most attachments are personalised, so an exact-byte match usually means the holder had the file already. An implementation that needs this closed MAY salt the digest with a per-Pod value, and MUST state that it has: a salted store does not interoperate with an unsalted one, and it gives up both cross-Pod deduplication and the ability to ask whether a Pod holds a document you already hold.
+
 #### Deliberately implementation-defined in this release
 
 Two questions are named here so that their absence is a decision and not an oversight:
 
-- **Encryption at rest.** Attachment files MUST receive the same at-rest protection the implementation applies to the Pod's record files. Attachments hold the densest sensitive content in a Pod (rendered reports, clinical note documents), so an implementation that protects `.ttl` files and leaves `attachments/` in the clear does not conform. The protection mechanism itself remains implementation-defined, so nothing here has to be revised when one is ratified.
+- **Encryption at rest.** Attachment files MUST receive the same at-rest protection the implementation applies to the Pod's record files. How this interacts with the file's name is not implementation-defined and is settled under "Digest and encryption" above. Attachments hold the densest sensitive content in a Pod (rendered reports, clinical note documents), so an implementation that protects `.ttl` files and leaves `attachments/` in the clear does not conform. The protection mechanism itself remains implementation-defined, so nothing here has to be revised when one is ratified.
 - **Sync.** How an `attachments/` directory participates in Pod synchronization is unspecified. Content addressing makes the naive answer safe in one direction (a file's content never changes under its name), which is why deferring the rest is tolerable.
 
 ---
@@ -546,13 +556,13 @@ Container index files are RECOMMENDED for directories containing individual reco
 
 ### 7.5 Attachment Files (Content-Addressed)
 
-Files under `attachments/` are the one place in a Pod where the filename is not chosen. It is the digest of the file's own bytes, in lowercase hexadecimal, with no extension:
+Files under `attachments/` are the one place in a Pod where the filename is not chosen. It is the digest of the file's plaintext bytes, in lowercase hexadecimal, with no extension:
 
 ```
 attachments/{algorithm}/{digest}
 ```
 
-This is a deliberate exception to sections 7.1 and 7.2, and the reason is that the name is a claim the bytes can be checked against. A descriptive name, or an extension, would be a second claim about the same file that nothing verifies. Everything a human or a renderer needs to know about the file (its media type, its title, its size) is stated in RDF on the `cascade:Attachment` node that points at it. See section 4.3.
+This is a deliberate exception to sections 7.1 and 7.2, and the reason is that the name is a claim the bytes can be checked against. A descriptive name, or an extension, would be a second claim about the same file that nothing verifies. Everything a human or a renderer needs to know about the file (its media type, its title, its size) is stated in RDF on the `cascade:Attachment` node that points at it. The digest is over plaintext even on an encrypted Pod, and encrypting or decrypting a Pod never renames one. See section 4.3.
 
 ### 7.6 SHACL Shapes Files
 
