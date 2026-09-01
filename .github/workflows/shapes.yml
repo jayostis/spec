@@ -23,13 +23,6 @@ name: shapes
 #     assertion fires only for a superclass some shape already targets, and
 #     nothing targets prov:Entity. clinical:CoverageRecord lived its whole life
 #     unshaped; clinical v1.18 shaped it and added this check.
-#
-#  4. CONSENT SCOPE OPEN ENUMERATION: D-CONSENT-1 ratified cascade:consentScope's
-#     value set as OPEN -- sh:in at sh:Warning at most, never sh:Violation --
-#     because sensitivity categories grow and a closed list missing a member
-#     rejects conformant data. Only the VALUE SET is advisory: sh:nodeKind,
-#     sh:minCount and sh:maxCount stay sh:Violation in a property block of their
-#     own. core.shapes.ttl v1.8 published a one-member list at sh:Violation.
 
 on:
   push:
@@ -45,8 +38,6 @@ on:
       - 'scripts/check-class-coverage.py'
       - 'scripts/test-check-class-coverage.sh'
       - 'scripts/known-unshaped-classes.json'
-      - 'scripts/check-consent-scope-enumeration.py'
-      - 'scripts/test-check-consent-scope-enumeration.sh'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
   workflow_dispatch:
@@ -117,28 +108,3 @@ jobs:
 
       - name: Record-class shape coverage check
         run: python3 scripts/check-class-coverage.py
-
-  consent-scope-open-enumeration:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: python3 -m pip install -r scripts/requirements.txt
-
-      # D-CONSENT-1 ratified the consent scope value set as OPEN -- "sh:in at
-      # sh:Warning at most, never sh:Violation", because a closed list missing a
-      # member rejects conformant data. core.shapes.ttl v1.8 shipped one member
-      # at sh:Violation, so substance-use and mental-health records were
-      # rejected. The controls reintroduce that authoring into a scratch copy
-      # and require a named failure; they mutate the parsed graph rather than
-      # the text, so moving the property block cannot make them vacuous.
-      - name: Regression suite (check + negative controls)
-        run: sh scripts/test-check-consent-scope-enumeration.sh
-
-      - name: Consent scope open-enumeration check
-        run: python3 scripts/check-consent-scope-enumeration.py

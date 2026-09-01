@@ -866,8 +866,12 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 #   or sh:qualifiedValueShape -- it is targeted only by sh:targetSubjectsOf -- so
 #   the Warning is delivered as a Warning and
 #   scripts/known-severity-escalations.json gains nothing.
-#   scripts/check-consent-scope-enumeration.py asserts that precondition (CS5)
-#   alongside the value set (CS2), its severity (CS3) and the block split (CS4).
+#   scripts/check-nested-severity.py is this repository's gate for rule S5 and
+#   reports this shape clean. What it establishes is the precondition alone --
+#   that no sh:node reaches the shape. The membership, the severity and the
+#   block split are asserted by nothing automated here: spec runs no SHACL
+#   validator (scripts/requirements.txt), so their behavioural proof is the
+#   conformance fixtures named in jayostis/spec#38's manual verification.
 # - cascade:consentScope's rdfs:comment NO LONGER ENUMERATES ITS MEMBERS IN
 #   PROSE. Its old clause said the value is one of the cascade:ConsentScope named
 #   individuals and then listed exactly one of them; with three members that is

@@ -29,11 +29,13 @@ The value set that D-CONSENT-1 ratified as OPEN shipped closed, at `sh:Violation
 - **Rule S5 does not bite.** Nothing reaches `cascade:ConsentScopeShape` by
   `sh:node` or `sh:qualifiedValueShape` — it is targeted only by
   `sh:targetSubjectsOf` — so the Warning is delivered as a Warning and
-  `scripts/known-severity-escalations.json` gains nothing. That precondition is
-  now asserted rather than assumed, by a new check,
-  `scripts/check-consent-scope-enumeration.py`, which also asserts the
-  membership, the severity and the block split, and carries its own negative
-  controls (`scripts/test-check-consent-scope-enumeration.sh`).
+  `scripts/known-severity-escalations.json` gains nothing.
+  `scripts/check-nested-severity.py`, this repository's standing gate for rule
+  S5, reports the shape clean, and that is what establishes the precondition.
+  It establishes nothing beyond it. The membership, the severity and the block
+  split are asserted by no check in this repository, because `spec` runs no
+  SHACL validator; their proof is behavioural and belongs to `conformance`, as
+  this change's `manual` verification in jayostis/spec#38 declares.
 - **The list is `9ea7c78`'s, not a fresh choice.** D-CONSENT-1 also corrects the
   history that jayostis/spec#20 and #30 reconstructed backwards: the record class
   and its three fields were authored first in `sdk-typescript` (`9ea7c78`,
