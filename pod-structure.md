@@ -1,8 +1,8 @@
 # Cascade Protocol Pod Structure Specification
 
 **Status:** Draft
-**Version:** 1.3
-**Date:** 2026-08-31
+**Version:** 1.4
+**Date:** 2026-09-01
 **Authors:** Cascade Agentic Labs LLC
 **Website:** https://cascadeprotocol.org
 **Vocabulary versions:** core v3.8, health v2.8, clinical v1.17, coverage v1.6
@@ -562,11 +562,11 @@ A Cascade Checkup reader encountering a Pod with `/diabetes/` would simply ignor
 
 ## 6. Reserved Namespaces
 
-The following namespace directories are reserved for future Cascade Protocol features. Applications MUST NOT use these directory names for other purposes. The directories are defined in the SDK's `PodNamespace` enum but are not yet implemented in any shipping application.
+The following namespace directories are reserved for future Cascade Protocol features. Applications MUST NOT use these directory names for other purposes. The directories are defined in the Swift SDK's `PodNamespace` enum (a private repository) but are not yet implemented in any shipping application.
 
 | Directory | Purpose | Status |
 |-----------|---------|--------|
-| `consents/` | ODRL consent policies governing data sharing | RESERVED |
+| `consents/` | Per-scope consent records: grant and revocation state, modelled on FHIR Consent. See [D-CONSENT-1](decisions/2026-09-01-consent-architecture.md). | RESERVED |
 | `acl/` | WAC/ACL authorization rules (centralized ACL store) | RESERVED |
 | `profiles/` | WebID identity cards (multi-identity support) | RESERVED |
 | `shares/` | ShareManifest resources for tracking shared data | RESERVED |

@@ -6,6 +6,14 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-09-01: Consent architecture ratified as D-CONSENT-1 (pod-structure 1.4, first decisions/ entry)
+
+No vocabulary change yet. An external contributor's archaeology (jayostis/spec#20) found three half-built, apparently conflicting statements about where consent lives, and correctly refused to build against any of them. The answer is recorded in `decisions/2026-09-01-consent-architecture.md` — the first entry in a new `decisions/` directory, created because the contributor did careful work and still reconstructed the history backwards: the design intent lived in private repositories. Decisions of this kind are now recorded in the public authority repo.
+
+Short form: `cascade:consentScope` was designed in the SDKs (2026-03) and its ontology declaration never landed — it is to be declared as an ObjectProperty over an OPEN `cascade:ConsentScope` value set (`social-history`, `substance-use`, `mental-health`; never closed at sh:Violation). ODRL is rejected — Solid-era scaffolding with no enforcer anywhere in the stack; consent STATE will be modelled on FHIR Consent as a future `cascade:ConsentRecord` in `consents/`, deliberately not built until it has a consumer. Scope-on-the-record is a data-sensitivity tag, the pod path is ACL container mechanics, consent state lives in `consents/`, and `provenance/` holds disclosure receipts only. `pod-structure.md` goes to 1.4: the `consents/` reservation is re-described accordingly and the ODRL wording is removed.
+
+---
+
 ## 2026-08-31: The Pod structure spec had forked, and neither copy was whole (pod-structure 1.3)
 
 No vocabulary change. `pod-structure.md` goes to 1.3, and this entry records a reconciliation rather than new design.
