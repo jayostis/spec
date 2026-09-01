@@ -566,7 +566,7 @@ The following namespace directories are reserved for future Cascade Protocol fea
 
 | Directory | Purpose | Status |
 |-----------|---------|--------|
-| `consents/` | Per-scope consent records: grant and revocation state, modelled on FHIR Consent. See [D-CONSENT-1](decisions/2026-09-01-consent-architecture.md). | RESERVED |
+| `consents/` | Per-scope consent records: grant and revocation state, modelled on FHIR Consent. See [D-CONSENT-1](https://github.com/the-cascade-protocol/spec/blob/main/decisions/2026-09-01-consent-architecture.md). | RESERVED |
 | `acl/` | WAC/ACL authorization rules (centralized ACL store) | RESERVED |
 | `profiles/` | WebID identity cards (multi-identity support) | RESERVED |
 | `shares/` | ShareManifest resources for tracking shared data | RESERVED |
