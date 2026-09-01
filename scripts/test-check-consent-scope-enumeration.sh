@@ -143,6 +143,21 @@ expect_caught() {
   fi
 }
 
+# Run the check against a scratch root and require it to pass. Used by the
+# POSITIVE controls: a corpus that is legitimately allowed to look like this
+# must not be reported as a defect.
+expect_clean() {
+  dir="$1"
+  label="$2"
+  out="$("$PYTHON" "$CHECK" "$dir" 2>&1)"
+  status=$?
+  if [ $status -eq 0 ]; then
+    pass "$label"
+  else
+    fail "$label -- wrongly reported (exit $status)" "$out"
+  fi
+}
+
 echo ""
 echo "=========================================================="
 echo "  check-consent-scope-enumeration.py regression suite"
@@ -231,7 +246,76 @@ expect_caught "$DIR" CS5 "an sh:node reference to ConsentScopeShape fails CS5"
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "7. Missing-corpus control: an empty root must error, not pass"
+echo "7. Negative control: sh:or and sh:not reaching cascade:ConsentScopeShape"
+#
+# Rule S5 again, by the other doors. sh:node and sh:qualifiedValueShape are not
+# the only parameters that collapse a referenced shape's result set to a boolean
+# and re-report it at the REFERRING shape's severity: sh:or, sh:and, sh:xone and
+# sh:not do it too. Either of these would deliver the sh:in Warning to the
+# referring class as a rejection for an unrecognised scope IRI -- CS3's demotion
+# nominal again -- so CS5, which is documented as the precondition that makes
+# CS3 real, has to see them.
+#
+# check-nested-severity.py does not backstop this: its NESTED_SHAPE_PARAMS is
+# the same pair, and it walks sh:or / sh:and / sh:xone only for reachability
+# FROM a shape already referenced by that pair.
+
+DIR="$(scratch nested-or)"
+cat >> "$DIR/$CORE_SHAPES" <<'EOF'
+
+cascade:ControlOrNestingShape a sh:NodeShape ;
+    sh:targetClass cascade:ControlOrNestingTarget ;
+    sh:property [
+        sh:path cascade:consentScope ;
+        sh:or ( cascade:ConsentScopeShape cascade:ControlOtherShape )
+    ] .
+EOF
+expect_caught "$DIR" CS5 "an sh:or reference to ConsentScopeShape fails CS5"
+
+DIR="$(scratch nested-not)"
+cat >> "$DIR/$CORE_SHAPES" <<'EOF'
+
+cascade:ControlNotNestingShape a sh:NodeShape ;
+    sh:targetClass cascade:ControlNotNestingTarget ;
+    sh:property [
+        sh:path cascade:consentScope ;
+        sh:not cascade:ConsentScopeShape
+    ] .
+EOF
+expect_caught "$DIR" CS5 "an sh:not reference to ConsentScopeShape fails CS5"
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "8. Positive control: ratchet step 2 on another shape must not fail CS4"
+#
+# CS4's subject is cascade:ConsentScopeShape's OWN block split -- structural
+# constraints in a block carrying no sh:in, at sh:Violation. It is not a claim
+# on every shape in the corpus that mentions the predicate.
+#
+# core.shapes.ttl documents the next move as exactly such a shape: sh:minCount 1
+# at sh:Warning on clinical:SocialHistoryRecordShape, once the reference
+# producers emit a scope. That is a presence constraint on a record class, not a
+# softening of the value shape, and CS4 must not fire on it -- otherwise this
+# repository's own documented next step turns CI red and the cheapest-looking
+# fix is to weaken CS4. Other shapes' severities are the general gate's business.
+
+DIR="$(scratch ratchet2)"
+cat >> "$DIR/$CORE_SHAPES" <<'EOF'
+
+cascade:ControlRatchetStep2Shape a sh:NodeShape ;
+    sh:targetClass cascade:ControlRatchetStep2Target ;
+    sh:property [
+        sh:path cascade:consentScope ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message "should carry a consent scope"@en
+    ] .
+EOF
+expect_clean "$DIR" "a Warning sh:minCount on another shape does not fail CS4"
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "9. Missing-corpus control: an empty root must error, not pass"
 
 DIR="$WORK/nothing"
 mkdir -p "$DIR"

@@ -45,15 +45,34 @@ CS4  SEVERITY IS TWO CONSTRAINTS, NOT ONE. The ratification demotes the VALUE
      So the structural constraints must live on a property shape that carries
      no sh:in and stays sh:Violation. The block splits; it does not soften.
 
-CS5  Nothing reaches cascade:ConsentScopeShape by sh:node or
-     sh:qualifiedValueShape. This is rule S5 (validation/index.md) as a
+     SCOPED TO cascade:ConsentScopeShape'S OWN sh:property BLOCKS, deliberately.
+     CS4's subject is that shape's block split, not a claim on every shape in
+     the corpus that mentions the predicate. core.shapes.ttl documents the next
+     ratchet step as sh:minCount 1 at sh:Warning on
+     clinical:SocialHistoryRecordShape -- a presence constraint on a record
+     class, which is not a softening of the value shape and is nobody's defect.
+     A corpus-wide CS4 would fail on this repository's own documented next move,
+     and the cheapest-looking fix for that red build is to weaken CS4. Other
+     shapes' severities are the general gate's business.
+
+CS5  Nothing reaches cascade:ConsentScopeShape by any parameter that collapses
+     its result set to a boolean. This is rule S5 (validation/index.md) as a
      PRECONDITION rather than a prohibition: SHACL conformance is an empty
      result set and does not read severity, so a Warning on a shape something
-     reaches by sh:node is re-reported to the referring class as a Violation.
+     reaches that way is re-reported to the referring class as a Violation.
      CS3's demotion is real only while CS5 holds. clinical v1.16 shipped a
      Warning that was delivered as a rejection on six document classes;
      check-nested-severity.py is the general gate, and this is the local
      statement that the gate has nothing to find here.
+
+     sh:node and sh:qualifiedValueShape are not the whole set. sh:not takes a
+     shape directly, and sh:or / sh:and / sh:xone take a LIST of shapes; all
+     four evaluate the referenced shape for conformance and re-report at the
+     REFERRING shape's severity, so any of them would close the enumeration in
+     practice while a narrower CS5 printed PASS. check-nested-severity.py does
+     not backstop this either: its NESTED_SHAPE_PARAMS is the same pair, and it
+     walks the list parameters only for reachability FROM a shape already
+     referenced by that pair.
 
 WHAT THIS CHECK IS NOT: it is not a SHACL run. spec deliberately does not depend
 on pyshacl (scripts/requirements.txt says so), so this reasons over the shapes
@@ -85,6 +104,14 @@ RATIFIED_SCOPES = [
 ]
 
 STRUCTURAL_CONSTRAINTS = [SH.nodeKind, SH.minCount, SH.maxCount]
+
+# CS5's predicate set. Every parameter whose value is a SHAPE the node must
+# CONFORM TO collapses that shape's result set to a boolean and re-reports it at
+# the referring shape's severity -- which is what would deliver the sh:in
+# Warning as a rejection. sh:node, sh:qualifiedValueShape and sh:not name a
+# shape directly; sh:or, sh:and and sh:xone name an RDF list of them.
+NESTING_PARAMS = (SH.node, SH.qualifiedValueShape, SH["not"])
+NESTING_LIST_PARAMS = (SH["or"], SH["and"], SH.xone)
 
 
 def qname(term):
@@ -191,9 +218,23 @@ def main():
         return 1
 
     in_shapes = [s for s in scope_shapes if shapes.value(s, SH["in"]) is not None]
+
+    # CS4 is about ONE shape's block split, so it reads only the property shapes
+    # cascade:ConsentScopeShape itself reaches by sh:property (plus the shape
+    # itself, for a corpus that ever publishes it as a bare sh:PropertyShape).
+    # Scoping is load-bearing: see CS4 in the module docstring.
+    own_shapes = sorted(
+        {
+            s
+            for s in shapes.objects(CONSENT_SCOPE_SHAPE, SH.property)
+            if s in set(scope_shapes)
+        }
+        | ({CONSENT_SCOPE_SHAPE} if CONSENT_SCOPE_SHAPE in set(scope_shapes) else set()),
+        key=str,
+    )
     structural_shapes = [
         s
-        for s in scope_shapes
+        for s in own_shapes
         if any(shapes.value(s, c) is not None for c in STRUCTURAL_CONSTRAINTS)
     ]
 
@@ -252,26 +293,41 @@ def main():
     }
     for c in STRUCTURAL_CONSTRAINTS:
         if c not in present:
-            cs4_problems.append(f"no property shape constrains {qname(c)} on cascade:consentScope")
+            cs4_problems.append(
+                f"no sh:property block on cascade:ConsentScopeShape constrains {qname(c)}"
+            )
     record(
         "CS4",
         bool(strict_only) and not cs4_problems,
-        "sh:nodeKind / sh:minCount / sh:maxCount are a separate sh:Violation block",
+        "sh:nodeKind / sh:minCount / sh:maxCount are a separate sh:Violation block "
+        "on cascade:ConsentScopeShape",
         "\n".join(cs4_problems)
-        or "no property shape carries the structural constraints without sh:in",
+        or "no sh:property block on cascade:ConsentScopeShape carries the "
+        "structural constraints without sh:in",
     )
 
     # ---------------------------------------------------------------- CS5
     nested_refs = []
-    for pred in (SH.node, SH.qualifiedValueShape):
+    for pred in NESTING_PARAMS:
         for subj in shapes.subjects(pred, CONSENT_SCOPE_SHAPE):
             nested_refs.append(f"{describe(shapes, subj)} {qname(pred)} cascade:ConsentScopeShape")
+    for pred in NESTING_LIST_PARAMS:
+        for subj, head in shapes.subject_objects(pred):
+            try:
+                members = list(shapes.items(head))
+            except Exception:  # noqa: BLE001 - a malformed list is not CS5's finding
+                continue
+            if CONSENT_SCOPE_SHAPE in members:
+                nested_refs.append(
+                    f"{describe(shapes, subj)} {qname(pred)} ( ... cascade:ConsentScopeShape ... )"
+                )
     record(
         "CS5",
         not nested_refs,
-        "nothing reaches cascade:ConsentScopeShape by sh:node or sh:qualifiedValueShape",
+        "nothing reaches cascade:ConsentScopeShape by sh:node, sh:qualifiedValueShape, "
+        "sh:not, sh:or, sh:and or sh:xone",
         "a Warning on a shape reached this way is delivered as a Violation (rule S5)\n"
-        + "\n".join(nested_refs),
+        + "\n".join(sorted(set(nested_refs))),
     )
 
     print("")
