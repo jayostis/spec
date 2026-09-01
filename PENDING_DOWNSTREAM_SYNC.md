@@ -692,6 +692,99 @@ lines:
 
 ---
 
+## Pending batch — core v3.10 (authored 2026-08-31)
+
+**3 terms.** Tag `vocab/core-v3.10` — owed at merge, not created on the branch.
+`core.ttl` 3.9 to 3.10 and `core.shapes.ttl` 1.7 to 1.8: `cascade:consentScope`
+(`owl:ObjectProperty`, `rdfs:range cascade:ConsentScope`, deliberately no
+`rdfs:domain`), `cascade:ConsentScope` (`owl:Class`, a closed code list, **no
+`rdfs:subClassOf prov:Entity`** for the reason core v3.9 removed
+`cascade:DataProvenance`'s), and `cascade:SocialHistoryConsent` retyped as a
+member of it. `cascade:ConsentScopeShape` constrains the VALUE by
+`sh:targetSubjectsOf` + `sh:in` and the PRESENCE nowhere. `consentScope` added to
+`contexts/v1/core.jsonld` with `"@type": "@id"`. Closes jayostis/spec#5. See
+`CHANGELOG.md`.
+
+**Additive; nothing changes verdict.** The shape evaluates only subjects that
+already carry the predicate, and no pod, fixture or reference record carries it.
+Recorded as measured rather than asserted in the PR: the full `conformance` suite
+run against this branch and against `067db6ca`, results diffed, **0 verdict
+differences across all 161 fixtures**, the only difference anywhere being
+`specHead`.
+
+**Synced NOW (per the seam table — a released vocab gained a property AND a
+shape, so `cascade-cli` re-syncs promptly so `cascade validate` documents the
+new term):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `core=3.10`.
+- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` (embedded `core.ttl` +
+      `core.shapes.ttl`) + `VOCAB_VERSIONS` `core=3.10`. **NOT DONE.** It sits at
+      `core=3.6`, so this sync carries 3.7 through 3.10 together and is not a
+      v3.10-only step.
+
+**Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md`
+cross-repo sequence, steps 2-7):**
+
+- [ ] `conformance` — **jayostis/conformance#7, filed and blocked on this
+      merging** (there is no spec commit to pin until then). Owes three fixtures:
+      a positive carrying `cascade:consentScope cascade:SocialHistoryConsent`; a
+      negative carrying an IRI outside the code list, expected to report
+      `sh:InConstraintComponent` on that path; and one asserting that
+      `fixtures/clinical/social-history-smoking.ttl`, which carries no scope,
+      still conforms — that third is what proves the open-world half, and nothing
+      else in any repository can. `spec` runs no SHACL validator, so until these
+      exist `cascade:ConsentScopeShape` is asserted by nothing in CI. At
+      `core=3.8`.
+- [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, core v1 shape docs +
+      `schemas.md` + changelog entry. **Not examined** — not cloned on the machine
+      this row was written from. Recorded as unknown, not clear.
+- [ ] `sdk-typescript` — **not merely a version bump, and what it has today is
+      wrong in two ways rather than one.** `TYPE_MAPPING`'s
+      `social-history-consents` entry (`src/vocabularies/namespaces.ts`, lines
+      289-293) names `cascade:consentScope` as its `namePred` while the predicate
+      is registered nowhere, so the field is silently dropped on serialization —
+      that is jayostis/sdk-typescript#43, still open, which records 0 of 4
+      declared properties modelled for this term. The **second** defect is in the
+      same five lines and is not in #43's scope: that entry declares
+      `rdfType: 'cascade:SocialHistoryConsent'`, treating a code-list VALUE as a
+      pod record type with its own directory. core v3.10 settles what the term
+      is — a `cascade:ConsentScope` individual, the OBJECT of
+      `cascade:consentScope` on a record, never the `rdf:type` of one — so the
+      row wants removing or reworking, and no issue carries that half yet.
+      jayostis/sdk-typescript#42 (derive the record-type table from the
+      ontologies) would have prevented it by construction. Its consent module —
+      `applyConsent`, `clinicalOnlyPolicy`, `noAccessPolicy` — is pure in-memory
+      filtering that writes no RDF; that was not a defect while no predicate
+      existed, and **this release is what makes it one**. At `core=3.8`.
+- [ ] `sdk-python` — **not examined.** Recorded as unknown, not clear.
+- [ ] `cascade-agent` — **not examined.** Recorded as unknown, not clear.
+
+**Three things this deliberately did NOT close**, recorded so they do not vanish.
+None carries an issue:
+
+- **Presence is constrained nowhere, at any severity.** Ratchet step 2 is
+  `sh:minCount 1` at `sh:Warning` on `clinical:SocialHistoryRecordShape`, and its
+  precondition is a reference producer emitting the predicate — which is the
+  `sdk-typescript` row above. Step 3 raises it to `sh:Violation` after a release
+  in which that Warning is observably absent from conforming output. Each is its
+  own vocabulary version. No issue is filed because a dispatchable issue whose
+  precondition does not hold is noise; **this row is the trigger.**
+- **`contexts/v1/cascade.jsonld` carries neither `consentScope` nor
+  `SocialHistoryConsent`**, where `contexts/v1/core.jsonld` now carries both. A
+  real parity gap between the two published contexts. It predates this change —
+  `SocialHistoryConsent` has been in `core.jsonld` and absent from
+  `cascade.jsonld` since core v3.0 — and matters downstream because
+  `cascadeprotocol.org` publishes both.
+- **`cascade:proxyScope` enumerates its own values in prose only** (`'full'`,
+  `'read-only'`, `'investigation-only'`, in the `rdfs:comment` at
+  `core.ttl:1559` — the same comment that named `cascade:consentScope` as a live
+  sibling for the six months it was undeclared). An enumeration nothing can check
+  is one a document can contradict. It is the anti-pattern this release avoided
+  rather than the precedent it followed, and it is left alone as a separate
+  finding.
+
+---
+
 ## Deprecation — `clinical:CoverageRecord` → `coverage:InsurancePlan` (ENTERED RETROACTIVELY 2026-08-30)
 
 **This row is late by roughly six months, and that is the finding it records.** The
@@ -819,4 +912,4 @@ than clear, and check them before this row is closed out.
 
 ---
 
-_Last updated: 2026-08-30._
+_Last updated: 2026-08-31._
