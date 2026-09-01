@@ -7,7 +7,7 @@
 # ============================================================================
 # Cascade Protocol -- Core Vocabulary SHACL Validation Shapes
 # ============================================================================
-# Version: 1.8 (2026-08-31)
+# Version: 1.9 (2026-09-01)
 # Validates: cascade:PatientProfile, cascade:Address, cascade:EmergencyContact,
 #            cascade:PharmacyInfo, cascade:AdvanceDirectives, cascade:ProxyAgent,
 #            cascade:ExportManifest, cascade:RecordSummary,
@@ -869,7 +869,7 @@ cascade:HasAttachmentEdgeShape a sh:PropertyShape ;
     sh:name "Has Attachment Edge"@en .
 
 # ============================================================================
-# Shape: Consent Scope (core v3.10)
+# Shape: Consent Scope (core v3.10; value set opened in core v3.11)
 # ============================================================================
 # Open-world, exactly like SourceIdentityShape and DataAbsentReasonShape above:
 # sh:targetSubjectsOf, so it constrains the VALUE wherever cascade:consentScope
@@ -908,11 +908,33 @@ cascade:HasAttachmentEdgeShape a sh:PropertyShape ;
 # which is how all seventeen cascade:dataProvenance constraints check
 # cascade:EHRVerified, a term with no type triple in any fixture.
 #
-# sh:Violation rather than sh:Warning, and no ratchet is skipped by it. The
-# ratchet governs REQUIRING a property existing data could not have carried.
-# Nothing is required here; the constraint only says that a producer choosing to
-# write this brand-new property must write a member of the closed list it was
-# defined against. There is no existing data to be lenient toward.
+# SEVERITY IS TWO CONSTRAINTS, NOT ONE (core v3.11)
+# -------------------------------------------------
+# D-CONSENT-1 ratified the value set as OPEN: "sh:in at sh:Warning at most, never
+# sh:Violation ... a closed list missing a member rejects conformant data".
+# Sensitivity categories grow -- reproductive health and genomics are foreseeable
+# members -- and 42 CFR Part 2 is US-specific. v1.8 published the opposite, one
+# member at sh:Violation, so a record tagged substance-use or mental-health was
+# rejected.
+#
+# The ratification demotes the VALUE SET. It says nothing about sh:nodeKind,
+# sh:minCount or sh:maxCount, and demoting those too would silently turn "two
+# consent scopes on one record" and "a literal instead of an IRI" into warnings,
+# which nothing asked for. So the block SPLITS rather than softening: the
+# structural constraints keep sh:Violation in a block carrying no sh:in, and a
+# second block carries sh:in alone at sh:Warning. Declaring sh:severity next to a
+# combined block is not an alternative -- severity belongs to a shape, not to one
+# of its constraints.
+#
+# The demotion is real rather than nominal only while NOTHING reaches
+# cascade:ConsentScopeShape by sh:node or sh:qualifiedValueShape: SHACL
+# conformance is an empty result set and does not read severity, so a Warning on
+# a shape reached that way is re-reported to the referring class as a Violation
+# (rule S5, validation/index.md; the defect clinical v1.16 shipped and v1.17
+# fixed). This shape is targeted only by sh:targetSubjectsOf.
+# scripts/check-consent-scope-enumeration.py asserts that precondition, the
+# membership, the severity and the split; scripts/check-nested-severity.py is the
+# general gate and finds nothing here.
 #
 # sh:minCount 1 inside the property block means "exactly one value GIVEN the
 # property is present", because the target is sh:targetSubjectsOf. That is the
@@ -922,22 +944,60 @@ cascade:HasAttachmentEdgeShape a sh:PropertyShape ;
 cascade:ConsentScopeShape a sh:NodeShape ;
     sh:targetSubjectsOf cascade:consentScope ;
     rdfs:label "Consent Scope Shape"@en ;
-    rdfs:comment "Constrains the consent scope on any record that carries it. Open-world: absence is not a finding in core v3.10."@en ;
+    rdfs:comment "Constrains the consent scope on any record that carries it. Open-world: absence is not a finding."@en ;
 
+    # VIOLATION: shape of the value. Exactly one, and an IRI.
     sh:property [
         sh:path cascade:consentScope ;
         sh:nodeKind sh:IRI ;
-        sh:in ( cascade:SocialHistoryConsent ) ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:severity sh:Violation ;
         sh:name "Consent Scope"@en ;
-        sh:message "cascade:consentScope must carry exactly one IRI from the closed cascade:ConsentScope code list."@en
+        sh:message "cascade:consentScope must carry exactly one IRI."@en
+    ] ;
+
+    # WARNING: which value. The list is OPEN and expected to grow, so an
+    # unrecognised member is advisory and never a rejection.
+    sh:property [
+        sh:path cascade:consentScope ;
+        sh:in ( cascade:SocialHistoryConsent cascade:SubstanceUseConsent cascade:MentalHealthConsent ) ;
+        sh:severity sh:Warning ;
+        sh:name "Consent Scope Value"@en ;
+        sh:message "advisory: value outside the known cascade:ConsentScope list"@en
     ] .
 
 # ============================================================================
 # Changelog
 # ============================================================================
+#
+# Version 1.9 (2026-09-01)
+# - cascade:ConsentScopeShape's value set OPENS. v1.8 published sh:in with one
+#   member at sh:Violation; D-CONSENT-1 had ratified the list as
+#   social-history / substance-use / mental-health and ratified it OPEN --
+#   "sh:in at sh:Warning at most, never sh:Violation", because "a closed list
+#   missing a member rejects conformant data". A record tagged substance-use or
+#   mental-health was rejected. See jayostis/spec#38.
+# - THE BLOCK SPLITS, IT DOES NOT SOFTEN. The ratification demotes the VALUE SET
+#   and says nothing about the structural checks in the same block, so
+#   sh:nodeKind, sh:minCount and sh:maxCount stay sh:Violation in a block
+#   carrying no sh:in, and a second block carries sh:in alone at sh:Warning.
+#   Demoting the whole block would have turned "two consent scopes on one
+#   record" and "a literal instead of an IRI" into warnings.
+# - sh:in gains cascade:SubstanceUseConsent and cascade:MentalHealthConsent
+#   (core v3.11).
+# - RULE S5 IS SATISFIED, NOT WAIVED. Nothing reaches this shape by sh:node or
+#   sh:qualifiedValueShape -- it is targeted only by sh:targetSubjectsOf -- so
+#   the Warning is delivered as a Warning and
+#   scripts/known-severity-escalations.json is unchanged. A new check,
+#   scripts/check-consent-scope-enumeration.py, asserts that precondition
+#   together with the membership, the severity and the split.
+# - The shape's rdfs:comment drops "in core v3.10": the open-world statement is
+#   true of every release, and a version pinned in prose only rots.
+# - STRICTLY MORE PERMISSIVE. Nothing that conformed under v1.8 stops
+#   conforming; two values that were rejected now conform, and an unknown IRI
+#   moves from Violation to Warning. No presence constraint is added anywhere,
+#   at any severity, on any class; clinical.shapes.ttl is untouched.
 #
 # Version 1.8 (2026-08-31)
 # - Added cascade:ConsentScopeShape for core v3.10's cascade:consentScope, a

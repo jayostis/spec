@@ -6,6 +6,12 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-09-01: The ratified consent scope list, and only the value set demoted (core v3.11, core shapes v1.9)
+
+The first vocabulary change to follow D-CONSENT-1, and it corrects the release that preceded it by a day. core v3.10 published `cascade:ConsentScope` as a **closed** one-member enumeration at `sh:Violation`; D-CONSENT-1 ratified the list as `social-history` / `substance-use` / `mental-health` and ratified it **OPEN** — *"`sh:in` at `sh:Warning` at most, never `sh:Violation`"*, because *"a closed list missing a member rejects conformant data"*. A record tagged substance-use or mental-health was rejected by `spec` as shipped. `cascade:SubstanceUseConsent` and `cascade:MentalHealthConsent` are added as `cascade:ConsentScope` named individuals, and `cascade:ConsentScopeShape`'s single property block **splits**: `sh:nodeKind` / `sh:minCount` / `sh:maxCount` keep `sh:Violation`, `sh:in` moves to `sh:Warning` in a block of its own — because the ratification demotes the *value set*, not "two consent scopes on one record". Nothing reaches the shape by `sh:node`, so the Warning is delivered as a Warning and `scripts/known-severity-escalations.json` is unchanged; a new check, `scripts/check-consent-scope-enumeration.py`, asserts that precondition alongside the membership, the severity and the split, with negative controls for each. Strictly more permissive: no value that conformed under v3.10 fails under v3.11, and no presence constraint is added anywhere. See `ontologies/core/CHANGELOG.md` and jayostis/spec#38.
+
+---
+
 ## 2026-09-01: Consent architecture ratified as D-CONSENT-1 (pod-structure 1.4, first decisions/ entry)
 
 No vocabulary change yet. An external contributor's archaeology (jayostis/spec#20) found three half-built, apparently conflicting statements about where consent lives, and correctly refused to build against any of them. The answer is recorded in `decisions/2026-09-01-consent-architecture.md` — the first entry in a new `decisions/` directory, created because the contributor did careful work and still reconstructed the history backwards: the design intent lived in private repositories. Decisions of this kind are now recorded in the public authority repo.

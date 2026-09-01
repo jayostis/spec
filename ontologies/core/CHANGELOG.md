@@ -1,5 +1,66 @@
 # Core Vocabulary Changelog
 
+## v3.11 - 2026-09-01
+
+The value set that D-CONSENT-1 ratified as OPEN shipped closed, at `sh:Violation`.
+
+- Added `cascade:SubstanceUseConsent` and `cascade:MentalHealthConsent`, each an
+  `owl:NamedIndividual` also typed `cascade:ConsentScope`, matching
+  `cascade:SocialHistoryConsent`. SHACL: `cascade:ConsentScopeShape` in
+  `core.shapes.ttl` v1.9. Closes jayostis/spec#38.
+- **What was wrong.**
+  `decisions/2026-09-01-consent-architecture.md` (D-CONSENT-1) ratified the scope
+  value set as `social-history`, `substance-use`, `mental-health` and ratified the
+  enumeration OPEN — *"`sh:in` at `sh:Warning` at most, never `sh:Violation`"*,
+  because *"a closed list missing a member rejects conformant data"*. v3.10
+  published one member at `sh:Violation`, so a record tagged substance-use or
+  mental-health — data the decision calls conformant — was **rejected**, with an
+  `sh:InConstraintComponent` violation. The decision named that outcome in
+  advance.
+- **Severity is two constraints, not one.** The ratification demotes the *value
+  set*. It says nothing about the structural checks sharing the block, and
+  demoting those too would have turned "two consent scopes on one record" and "a
+  literal instead of an IRI" from rejections into warnings, which nothing asked
+  for. So `cascade:ConsentScopeShape`'s single property block **splits**:
+  `sh:nodeKind`, `sh:minCount` and `sh:maxCount` stay `sh:Violation` in a block
+  carrying no `sh:in`; a second block carries `sh:in` alone at `sh:Warning`.
+  Declaring `sh:severity` beside a combined block is not an alternative —
+  severity belongs to a shape, not to one of its constraints.
+- **Rule S5 does not bite.** Nothing reaches `cascade:ConsentScopeShape` by
+  `sh:node` or `sh:qualifiedValueShape` — it is targeted only by
+  `sh:targetSubjectsOf` — so the Warning is delivered as a Warning and
+  `scripts/known-severity-escalations.json` gains nothing. That precondition is
+  now asserted rather than assumed, by a new check,
+  `scripts/check-consent-scope-enumeration.py`, which also asserts the
+  membership, the severity and the block split, and carries its own negative
+  controls (`scripts/test-check-consent-scope-enumeration.sh`).
+- **The list is `9ea7c78`'s, not a fresh choice.** D-CONSENT-1 also corrects the
+  history that jayostis/spec#20 and #30 reconstructed backwards: the record class
+  and its three fields were authored first in `sdk-typescript` (`9ea7c78`,
+  2026-03-28), and this repository's `e059b3b` is a late partial copy, not the
+  origin.
+- **Prose that enumerated the members is deleted rather than extended.**
+  `cascade:consentScope`'s `rdfs:comment` said *"Value is one of the
+  `cascade:ConsentScope` named individuals: `cascade:SocialHistoryConsent`"*; with
+  three members that is false, not merely stale, and a prose copy is a third
+  place to keep in sync and the only one nothing checks. `rdfs:range` names the
+  class and `sh:in` holds the members. `cascade:ConsentScope`'s own comment drops
+  "Closed" for the same reason, and the shape's comment drops "in core v3.10" —
+  the open-world statement is true of every release.
+- **Strictly more permissive; nothing that conformed stops conforming.** Two
+  values that were rejected now conform, and an IRI outside the list moves from
+  Violation to Warning. No presence constraint is added anywhere, on any class,
+  at any severity: the core v3.5 ratchet is untouched and step 2 still waits on a
+  reference producer emitting the predicate. `ontologies/clinical/` is not
+  touched.
+- **Deliberately not here, now on ratified authority rather than on an open
+  question:** `cascade:ConsentRecord` and `consentGrantedAt` /
+  `consentRevokedAt`. D-CONSENT-1 settles their shape — FHIR Consent alignment,
+  in `consents/` — and then says building *"waits for the first consumer. Nothing
+  should invent an interim representation."*
+- JSON-LD: both new individuals added to `contexts/v1/core.jsonld` beside
+  `SocialHistoryConsent`.
+
 ## v3.10 - 2026-08-31
 
 A value that had been declared for six months with no property to carry it.

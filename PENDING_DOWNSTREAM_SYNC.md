@@ -692,6 +692,83 @@ lines:
 
 ---
 
+## Pending batch — core v3.11 (authored 2026-09-01)
+
+**2 terms, and one severity correction.** Tag `vocab/core-v3.11` — owed at merge,
+not created on the branch. `core.ttl` 3.10 to 3.11 and `core.shapes.ttl` 1.8 to
+1.9: `cascade:SubstanceUseConsent` and `cascade:MentalHealthConsent` added as
+`cascade:ConsentScope` named individuals, and `cascade:ConsentScopeShape`'s
+single property block split so `sh:in` carries the three members at
+**`sh:Warning`** while `sh:nodeKind` / `sh:minCount` / `sh:maxCount` keep
+`sh:Violation`. Both individuals added to `contexts/v1/core.jsonld`. Closes
+jayostis/spec#38. See `CHANGELOG.md`.
+
+**This row supersedes the v3.10 row below rather than replacing it.** v3.10 has
+not been propagated to any downstream repo, so every repo that owes v3.10 now
+owes 3.10 **and** 3.11 together and should sync once, to `core=3.11`. The v3.10
+row is kept for its per-repo findings, which are still accurate.
+
+**Additive and strictly more permissive; nothing that conformed stops
+conforming.** Two values that v3.10 rejected now conform, and an IRI outside the
+list moves from `sh:Violation` to `sh:Warning`. No pod, fixture or reference
+record carries the predicate at all, so no verdict changes anywhere.
+
+**Synced NOW (same seam-table reasoning as v3.10: a released vocab's shape
+changed, so `cascade-cli` re-syncs promptly so `cascade validate` stops
+rejecting substance-use and mental-health scopes):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `core=3.11`.
+- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` (embedded `core.ttl` +
+      `core.shapes.ttl`) + `VOCAB_VERSIONS` `core=3.11`. **NOT DONE.** It sits at
+      `core=3.6`, so this sync carries 3.7 through 3.11 together. Until it runs,
+      the CLI's embedded shapes do not even contain v3.10's `sh:in`, so it is not
+      currently rejecting anything this release fixes.
+
+**Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md`
+cross-repo sequence, steps 2-7):**
+
+- [ ] `conformance` — **jayostis/conformance#7 is now under-specified and must be
+      amended before it is worked.** It was filed against v3.10 and asks for a
+      fixture carrying an IRI outside the code list *"expected to report
+      `sh:InConstraintComponent` on that path"* — which is still expected, but
+      now at **`sh:Warning`**, so the fixture belongs in the `.WARN.ttl`
+      polarity and not the negative one. It also needs the two new positives
+      (substance-use, mental-health) and a two-valued negative proving
+      `sh:MaxCountConstraintComponent` is still a **Violation** — that last one
+      is the guard on the block split, and nothing else in any repository can
+      assert it. `spec` runs no SHACL validator, so the four graphs in
+      jayostis/spec#38's `manual` verification have no durable home until these
+      exist. At `core=3.8`.
+- [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, core v1 shape docs +
+      `schemas.md` + changelog entry. **Not examined** — not cloned on the machine
+      this row was written from. Recorded as unknown, not clear.
+- [ ] `sdk-typescript` — everything the v3.10 row records still stands, and
+      D-CONSENT-1 has since ratified the disposition of the second defect: the
+      `TYPE_MAPPING` entry declaring `rdfType: 'cascade:SocialHistoryConsent'`
+      treats a code-list VALUE as a pod record type and **should be removed**;
+      jayostis/sdk-typescript#43 is the issue and is correct. Its consent module
+      can now name all three scopes. At `core=3.8`.
+- [ ] `sdk-python` — **not examined.** Recorded as unknown, not clear.
+- [ ] `cascade-agent` — **not examined.** Recorded as unknown, not clear.
+
+**Deliberately NOT closed here**, recorded so it does not vanish:
+
+- **`cascade:ConsentRecord`, `consentGrantedAt`, `consentRevokedAt` stay
+  unbuilt** — now on ratified authority rather than on an open question.
+  D-CONSENT-1 settles their shape (FHIR Consent alignment, in `consents/`) and
+  then says building *"waits for the first consumer. Nothing should invent an
+  interim representation."* jayostis/spec#20 is the archaeology that prompted it.
+- **Presence is still constrained nowhere, at any severity.** Ratchet step 2 is
+  unchanged by this release and its precondition — a reference producer emitting
+  the predicate — still does not hold. The `sdk-typescript` row above is that
+  trigger.
+- **`contexts/v1/cascade.jsonld` still carries none of the three scope
+  individuals nor `consentScope`**, where `contexts/v1/core.jsonld` now carries
+  all four. The parity gap the v3.10 row recorded widens by two terms; it is
+  still a separate finding.
+
+---
+
 ## Pending batch — core v3.10 (authored 2026-08-31)
 
 **3 terms.** Tag `vocab/core-v3.10` — owed at merge, not created on the branch.
