@@ -6,6 +6,39 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-09-01: Consent architecture ratified as D-CONSENT-1 (pod-structure 1.4, first decisions/ entry)
+
+No vocabulary change yet. An external contributor's archaeology (jayostis/spec#20) found three half-built, apparently conflicting statements about where consent lives, and correctly refused to build against any of them. The answer is recorded in `decisions/2026-09-01-consent-architecture.md` — the first entry in a new `decisions/` directory, created because the contributor did careful work and still reconstructed the history backwards: the design intent lived in private repositories. Decisions of this kind are now recorded in the public authority repo.
+
+Short form: `cascade:consentScope` was designed in the SDKs (2026-03) and its ontology declaration never landed — it is to be declared as an ObjectProperty over an OPEN `cascade:ConsentScope` value set (`social-history`, `substance-use`, `mental-health`; never closed at sh:Violation). ODRL is rejected — Solid-era scaffolding with no enforcer anywhere in the stack; consent STATE will be modelled on FHIR Consent as a future `cascade:ConsentRecord` in `consents/`, deliberately not built until it has a consumer. Scope-on-the-record is a data-sensitivity tag, the pod path is ACL container mechanics, consent state lives in `consents/`, and `provenance/` holds disclosure receipts only. `pod-structure.md` goes to 1.4: the `consents/` reservation is re-described accordingly and the ODRL wording is removed.
+
+---
+
+## 2026-08-31: The Pod structure spec had forked, and neither copy was whole (pod-structure 1.3)
+
+No vocabulary change. `pod-structure.md` goes to 1.3, and this entry records a reconciliation rather than new design.
+
+**The document existed in two versions that had each received a real revision the other lacked.** The copy here was the only one to get section 4.3 (`attachments/`, core v3.7), section 7.5, and the v1.2 digest-and-encryption rules. The published copy at `cascadeprotocol.org/docs/spec/` was the only one to get the 2026-08-03 correction pass, which checked every `solid:forClass` registration and file/class table against the published ontologies and the reference patient pod and fixed fourteen phantom class names — so the copy in this repository, the authority, went on prescribing `clinical:MedicationRecord`, `cascade:HealthData`, `health:HeartRateStatistics`, `pots:POTSTest` and their siblings, names no Cascade ontology defines and no implementation writes, in registration examples an implementer would copy. Both copies said `Version: 1.1`. The published copy also documented `settings/preferences` and `profile/extended.ttl` — real, implemented structure (the reference pod contains both) that this copy never mentioned, including the rule that `solid:privateTypeIndex` MUST NOT appear in the publicly-readable `card.ttl`.
+
+**v1.3 is the merge, verified rather than assumed.** Every disputed class name was checked against the ontology files in this repository and against the reference pod before choosing a side; the published copy's names won everywhere the two disagreed, and its warning that `clinical:ScreeningResult` / `clinical:DiagnosticResult` remain unratified is kept. From this side, v1.3 keeps sections 4.3 and 7.5, the digest rules, the Workbench `notes/` and `annotations/` containers, and the `/attachments/` ACL guidance. The two files are now byte-identical, `spec/` remains the authority, and the published copy is brought under `sync-from-spec.sh` so the fork cannot recur silently.
+
+---
+
+## 2026-08-31: Which bytes an attachment's digest commits to (pod-structure 1.2)
+
+No vocabulary change: no term is added, removed or renamed, and no shape moves. One prose amendment to `pod-structure.md`, which goes to 1.2.
+
+**Section 4.3 stated two rules that stop being compatible once a Pod is encrypted.** The attachment filename is a digest of the file's bytes, and content addressing is justified on a consumer hashing what it read and comparing it with where it read it from. The same section requires attachments to carry the same at-rest protection as record files. After encryption the bytes on disk are ciphertext while the name was computed from the plaintext, so a reader following the text literally finds a mismatch on every attachment: the section's own MUST breaks the section's own verification rule, and nothing said which reading was intended. Two implementations would have guessed differently, and the question was live because a DICOM importer is about to become the first writer of an attachment anywhere in the ecosystem.
+
+**Settled as digest-of-plaintext, verified after decrypt,** under a new "Digest and encryption" subsection, with the naming rule restated in section 7.5. Encrypting or decrypting a Pod MUST NOT rename an attachment, and the `cascade:Attachment` node is identical in both states: encryption changes file contents, never the graph.
+
+Naming the ciphertext was the alternative and is rejected in the text, because authenticated encryption uses a fresh nonce per operation and the same document sealed twice would get a different name. Deduplication and idempotent re-import would stop working, which are the two properties content addressing exists to provide; re-keying would become a rewrite of every `cascade:attachmentPath` and `cascade:contentHash` in the Pod, putting graph mutation on the key-rotation path; and one Pod would have two graphs depending on whether it was encrypted when read. Deriving the nonce from the plaintext to make ciphertext deterministic would recover the first two and is not permitted, because it makes the exposure below structural.
+
+**The cost is named rather than hidden.** A plaintext digest is a known-plaintext oracle: a holder of the encrypted Pod who already has a document byte-for-byte can confirm its presence without decrypting. It discloses nothing about content the holder lacks, and personalised attachments make an exact-byte match unlikely without prior possession. Per-Pod digest salting is permitted as an escape hatch, MUST be declared, and costs cross-Pod deduplication.
+
+Nothing implements `attachments/` yet, so no Pod migrates and the convention is set rather than changed.
+---
+
 ## 2026-08-31: A value with no property to carry it (core v3.10)
 
 Three terms, and the argument is about which two of them a validator will ever read. `cascade:consentScope` appeared exactly once in this repository — inside `cascade:proxyScope`'s `rdfs:comment`, which calls it a live, composable sibling — and was declared nowhere: no property declaration, no domain, no range, and no `sh:path` in any of the six stable shapes files. core v3.10 declares it as an `owl:ObjectProperty`, gives its value a code-list class (`cascade:ConsentScope`) to belong to, and constrains it in `core.shapes.ttl` v1.8.
