@@ -727,18 +727,22 @@ rejecting substance-use and mental-health scopes):**
 **Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md`
 cross-repo sequence, steps 2-7):**
 
-- [ ] `conformance` — **jayostis/conformance#7 is now under-specified and must be
-      amended before it is worked.** It was filed against v3.10 and asks for a
-      fixture carrying an IRI outside the code list *"expected to report
-      `sh:InConstraintComponent` on that path"* — which is still expected, but
-      now at **`sh:Warning`**, so the fixture belongs in the `.WARN.ttl`
-      polarity and not the negative one. It also needs the two new positives
-      (substance-use, mental-health) and a two-valued negative proving
-      `sh:MaxCountConstraintComponent` is still a **Violation** — that last one
-      is the guard on the block split, and nothing else in any repository can
-      assert it. `spec` runs no SHACL validator, so the four graphs in
-      jayostis/spec#38's `manual` verification have no durable home until these
-      exist. At `core=3.8`.
+- [ ] `conformance` — **jayostis/conformance#12.** #7 is CLOSED and its
+      fixtures landed; it was correct for v3.10 and is not to be reopened.
+      What v3.11 breaks is one of them:
+      `fixtures/clinical/social-history-consent-scope-wrong-value.INVALID.ttl`
+      asserts a rejection for an IRI outside the code list, and that verdict is
+      now `sh:Warning` with **zero** `sh:Violation` — so `P_INVALID` fails it
+      with `NO_VIOLATION` the moment `SPEC_PIN` moves, reporting the fix as a
+      regression. It moves to the `.WARN.ttl` polarity this repo already has
+      (`run_conformance.py`'s `P_WARN`, seven fixtures use it). #12 also covers
+      the two new positives (substance-use, mental-health) and a two-valued
+      negative proving `sh:MaxCountConstraintComponent` is still a
+      **Violation** — that last one is the guard on the block split, and
+      nothing else in any repository can assert it. `spec` runs no SHACL
+      validator, so the four graphs in jayostis/spec#38's `manual` verification
+      have no durable home until #12 lands. Blocked on this PR merging: the pin
+      must name a commit on `spec` `main`. At `core=3.8`.
 - [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, core v1 shape docs +
       `schemas.md` + changelog entry. **Not examined** — not cloned on the machine
       this row was written from. Recorded as unknown, not clear.
