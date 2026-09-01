@@ -7,13 +7,14 @@
 # ============================================================================
 # Cascade Protocol -- Core Vocabulary SHACL Validation Shapes
 # ============================================================================
-# Version: 1.7 (2026-08-27)
+# Version: 1.8 (2026-08-31)
 # Validates: cascade:PatientProfile, cascade:Address, cascade:EmergencyContact,
 #            cascade:PharmacyInfo, cascade:AdvanceDirectives, cascade:ProxyAgent,
 #            cascade:ExportManifest, cascade:RecordSummary,
 #            cascade:InteractionScenario, cascade:Attachment, and the values of
-#            cascade:sourceIdentity, cascade:dataAbsentReason and
-#            cascade:hasAttachment wherever they appear
+#            cascade:sourceIdentity, cascade:dataAbsentReason,
+#            cascade:hasAttachment and cascade:consentScope wherever they
+#            appear
 #
 # Severity levels:
 #   sh:Violation -- Must fix (blocks operations)
@@ -868,8 +869,94 @@ cascade:HasAttachmentEdgeShape a sh:PropertyShape ;
     sh:name "Has Attachment Edge"@en .
 
 # ============================================================================
+# Shape: Consent Scope (core v3.10)
+# ============================================================================
+# Open-world, exactly like SourceIdentityShape and DataAbsentReasonShape above:
+# sh:targetSubjectsOf, so it constrains the VALUE wherever cascade:consentScope
+# appears and requires the property's presence NOWHERE. Every pod written before
+# core v3.10 carries the predicate nowhere, so this shape reports nothing on one
+# and no existing pod, fixture or reference record changes verdict.
+#
+# WHY NO PRESENCE CONSTRAINT ON ANY RECORD CLASS
+# ----------------------------------------------
+# clinical.ttl states on clinical:SocialHistoryRecord that the class "requires
+# separate consent scope (cascade:SocialHistoryConsent)", so an sh:minCount 1 on
+# clinical:SocialHistoryRecordShape is the obvious next move. It is three ratchet
+# steps at once, and the ratchet is written down above, on SourceIdentityShape:
+# requiring presence the moment a property is defined turns every existing pod
+# amber for a property no producer has yet had the opportunity to write, and a
+# warning that fires on correct historical data is a warning readers learn to
+# skip. Step 2 is sh:minCount 1 at sh:Warning on that shape, once the reference
+# producers emit a scope; step 3 raises it to sh:Violation after a release in
+# which the Warning is observably absent from conforming output. Each is its own
+# vocabulary version, and neither is this one. clinical.shapes.ttl is untouched
+# by core v3.10.
+#
+# WHY sh:in AND NOT sh:class
+# --------------------------
+# SHACL resolves class membership over the DATA graph. A pod record carries
+# <record> cascade:consentScope cascade:SocialHistoryConsent and no rdf:type
+# triple for that object -- the type assertion lives in core.ttl. Nor is it
+# rescued by a validator that merges the ontology: conformance's runner builds
+# its ontology graph from rdfs:subClassOf triples only, so an rdf:type axiom is
+# never in scope there either. sh:class cascade:ConsentScope would therefore fire
+# on every correctly-authored record, at sh:Violation. This repository has paid
+# for that once already: clinical shapes v1.11 REMOVED the sh:class constraints
+# from HasEncounterEdgeShape and LinkedConditionEdgeShape because a value whose
+# type lives outside the validated file could never satisfy them. sh:in is the
+# house instrument for a code list and is entailment-free -- it compares IRIs,
+# which is how all seventeen cascade:dataProvenance constraints check
+# cascade:EHRVerified, a term with no type triple in any fixture.
+#
+# sh:Violation rather than sh:Warning, and no ratchet is skipped by it. The
+# ratchet governs REQUIRING a property existing data could not have carried.
+# Nothing is required here; the constraint only says that a producer choosing to
+# write this brand-new property must write a member of the closed list it was
+# defined against. There is no existing data to be lenient toward.
+#
+# sh:minCount 1 inside the property block means "exactly one value GIVEN the
+# property is present", because the target is sh:targetSubjectsOf. That is the
+# idiom, not an approximation of one: it is SourceIdentityShape and
+# DataAbsentReasonShape above, letter for letter.
+
+cascade:ConsentScopeShape a sh:NodeShape ;
+    sh:targetSubjectsOf cascade:consentScope ;
+    rdfs:label "Consent Scope Shape"@en ;
+    rdfs:comment "Constrains the consent scope on any record that carries it. Open-world: absence is not a finding in core v3.10."@en ;
+
+    sh:property [
+        sh:path cascade:consentScope ;
+        sh:nodeKind sh:IRI ;
+        sh:in ( cascade:SocialHistoryConsent ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:name "Consent Scope"@en ;
+        sh:message "cascade:consentScope must carry exactly one IRI from the closed cascade:ConsentScope code list."@en
+    ] .
+
+# ============================================================================
 # Changelog
 # ============================================================================
+#
+# Version 1.8 (2026-08-31)
+# - Added cascade:ConsentScopeShape for core v3.10's cascade:consentScope, a
+#   property whose value existed (cascade:SocialHistoryConsent, since core v3.0)
+#   while the property itself was declared nowhere and constrained by nothing.
+#   A search of all six stable shapes files for anything consent-related
+#   returned zero results before this release, so a record carrying a consent
+#   scope that was absent, wrong or invented validated identically.
+# - sh:targetSubjectsOf, so it constrains the VALUE wherever the property
+#   appears and never requires its presence; every pod written before v3.10
+#   validates unchanged. VIOLATION for a literal, a repeated value, or an IRI
+#   outside the closed cascade:ConsentScope code list.
+# - sh:in and NOT sh:class. SHACL resolves class membership over the data graph
+#   and a pod record carries no rdf:type triple for the value, so sh:class would
+#   have fired on every correctly-authored record -- the defect clinical shapes
+#   v1.11 removed two constraints for.
+# - NO presence constraint anywhere, on any record class, at any severity. That
+#   is ratchet step 2 and its precondition -- a reference producer emitting the
+#   predicate -- does not hold yet. clinical.shapes.ttl is untouched.
 #
 # Version 1.7 (2026-08-27)
 # - Added cascade:AttachmentShape, cascade:AttachmentMediaTypeShape and

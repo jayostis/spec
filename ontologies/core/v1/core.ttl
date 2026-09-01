@@ -19,8 +19,8 @@
     dct:description "Core vocabulary for schema versioning, data provenance, identity management, and patient demographics across all Cascade Protocol applications"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
-    dct:modified "2026-08-30"^^xsd:date ;
-    owl:versionInfo "3.9" ;
+    dct:modified "2026-08-31"^^xsd:date ;
+    owl:versionInfo "3.10" ;
     rdfs:comment "This vocabulary defines cross-cutting concepts used by all Cascade Protocol health data applications: schema versioning, data provenance, patient demographics (PatientProfile), and supporting identity classes (Address, PharmacyInfo, AdvanceDirectives). Domain-specific vocabularies (e.g., pots:, ecg:, glucose:) import this core vocabulary."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/core/v1.0/> .
 
@@ -843,6 +843,63 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 # ============================================================================
 # Changelog
 #
+# Version 3.10 (2026-08-31)
+# - A VALUE THAT EXISTED WITH NO PROPERTY TO CARRY IT. cascade:consentScope was
+#   named in cascade:proxyScope's rdfs:comment as a live, composable sibling and
+#   declared nowhere: no owl:DatatypeProperty, no owl:ObjectProperty, no domain,
+#   no range, no sh:path in any shapes file. Meanwhile
+#   cascade:SocialHistoryConsent has been declared since v3.0 as "consent scope
+#   for social history data", and clinical.ttl states on
+#   clinical:SocialHistoryRecord that the class "requires separate consent scope
+#   (cascade:SocialHistoryConsent)". The obligation was stated in one file and
+#   unmeetable in every other. See jayostis/spec#5.
+# - THREE TERMS. cascade:ConsentScope (owl:Class, code list),
+#   cascade:SocialHistoryConsent retyped into it, and cascade:consentScope
+#   (owl:ObjectProperty, rdfs:range cascade:ConsentScope).
+# - OBJECT PROPERTY, NOT DATATYPE, on this repository's own evidence rather than
+#   on taste. The value is already declared as a RESOURCE -- an
+#   owl:NamedIndividual with a label and a comment -- so a datatype property
+#   would leave it declared, labelled and pointed at by nothing, which is the
+#   exact condition being fixed. And thirteen of the fourteen named individuals
+#   in this file already declare their value-class (cascade:Canonical is a
+#   cascade:ReconciliationStatus, cascade:InitialGeneration is a
+#   cascade:GenerationTrigger); cascade:SocialHistoryConsent was the only orphan.
+#   The section header has read "Consent Scopes", plural, since v3.0: the code
+#   list was intended from the start and only the class was never written.
+#   cascade:proxyScope's prose enumeration is the anti-pattern here, not the
+#   precedent -- an enumeration nothing can check is one a document can
+#   contradict.
+# - NO PROV SUPERCLASS on cascade:ConsentScope, for the reason v3.9 removed
+#   cascade:DataProvenance's. A code list is not record data, and asserting
+#   otherwise puts it into check-class-coverage.py's population with nothing for
+#   a shape to constrain.
+# - NO rdfs:domain on the property. A domain axiom would silently type every
+#   subject carrying the predicate, and clinical:SocialHistoryRecord is not the
+#   only class that may want a scope. The range is kept, because its entailment
+#   is the one being asserted on purpose.
+# - SHACL (core.shapes.ttl v1.8): cascade:ConsentScopeShape constrains the VALUE
+#   wherever the property appears (sh:targetSubjectsOf) and requires its presence
+#   NOWHERE. That is ratchet step 1 of the three the v3.5 changelog wrote down.
+#   Step 2, sh:minCount 1 at sh:Warning on clinical:SocialHistoryRecordShape, is
+#   real and owed and its precondition -- a reference producer emitting the
+#   predicate -- does not hold yet; step 3 raises that to sh:Violation only after
+#   a release in which the Warning is observably absent from conforming output.
+#   Each step is its own vocabulary version.
+# - COMPATIBILITY: purely additive, and no existing pod, fixture or reference
+#   record changes verdict. A record carrying no consent scope is never evaluated
+#   by the new shape.
+# - JSON-LD: consentScope added to contexts/v1/core.jsonld with "@type": "@id",
+#   because the value is an IRI and a context that omits it makes the JSON round
+#   trip lossy.
+# - DELIBERATELY NOT HERE: a cascade:ConsentRecord class and the
+#   consentGrantedAt / consentRevokedAt properties sdk-typescript models. A
+#   consent record with grant and revocation timestamps is a 42 CFR Part 2
+#   question about required fields rather than an RDF modelling one, and
+#   pod-structure.md already reserves consents/ for ODRL policies and
+#   provenance/ for the audit trail. Tracked in jayostis/spec#20. Adding the
+#   scope property first forecloses nothing: a consent record class would carry
+#   cascade:consentScope too.
+#
 # Version 3.9 (2026-08-30)
 # - NO new terms, and no term changes meaning. ONE axiom is REMOVED:
 #   cascade:DataProvenance no longer declares rdfs:subClassOf prov:Entity.
@@ -1339,13 +1396,46 @@ cascade:discardConfidence a owl:DatatypeProperty ;
     rdfs:comment "Confidence score that caused the discard (< 0.50)."@en .
 
 # ============================================================================
-# Consent Scopes (v3.0)
+# Consent Scopes (v3.0; code list and property added in v3.10)
 # ============================================================================
+# THE CODE LIST TAKES NO PROV SUPERCLASS, DELIBERATELY -- for the reason
+# cascade:DataProvenance lost its in core v3.9. cascade:ConsentScope is a
+# CLASSIFICATION: nothing in a pod is ever typed with it, the terms beneath it
+# appear only as the OBJECT of cascade:consentScope. rdfs:subClassOf prov:Entity
+# would assert that its instances are stored record data, which would enter it
+# into scripts/check-class-coverage.py's population and oblige someone to write
+# a shape for a code list -- an obligation that can never be discharged, because
+# a code-list member has nothing for a shape to constrain. See jayostis/spec#12.
+
+cascade:ConsentScope a owl:Class ;
+    rdfs:label "Consent Scope"@en ;
+    rdfs:comment "Closed enumeration of data-sensitivity scopes a consent grant may cover."@en ;
+    owl:versionInfo "Added in core v3.10" .
 
 # Consent scope for social history records
-cascade:SocialHistoryConsent a owl:NamedIndividual ;
+cascade:SocialHistoryConsent a owl:NamedIndividual, cascade:ConsentScope ;
     rdfs:label "Social History Consent"@en ;
     rdfs:comment "Consent scope for social history data. Patient can share clinical/ pod without exposing social-history/. Subject to 42 CFR Part 2 for substance use disorder records."@en .
+
+# NO rdfs:domain, DELIBERATELY; rdfs:range IS kept. Both axioms entail rather
+# than constrain, so the only question is which entailment is wanted. A domain
+# axiom would silently type every subject that carries the predicate, and
+# clinical:SocialHistoryRecord is not the only class that may want a scope --
+# health:SocialHistoryRecord and any future sensitive class may too. The range's
+# entailment is the one asserted on purpose: the object of consentScope IS a
+# consent scope, and the list is closed.
+#
+# Which members a document may actually write is enforced by sh:in on
+# cascade:ConsentScopeShape and NOT by sh:class, because SHACL resolves class
+# membership over the DATA graph: a pod record carries the value IRI and no
+# rdf:type triple for it, so sh:class cascade:ConsentScope would fire on every
+# correctly-authored record. clinical shapes v1.11 removed two sh:class
+# constraints for exactly that defect.
+cascade:consentScope a owl:ObjectProperty ;
+    rdfs:label "Consent Scope"@en ;
+    rdfs:comment "The data-sensitivity scope whose consent governs this record. Value is one of the cascade:ConsentScope named individuals: cascade:SocialHistoryConsent. Composable with cascade:proxyScope (authority), which it does not replace."@en ;
+    rdfs:range cascade:ConsentScope ;
+    owl:versionInfo "Added in core v3.10" .
 
 # ============================================================================
 # Genomics & Advisory Provenance (v3.1)

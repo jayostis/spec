@@ -1,5 +1,108 @@
 # Core Vocabulary Changelog
 
+## v3.10 - 2026-08-31
+
+A value that had been declared for six months with no property to carry it.
+
+- Added `cascade:ConsentScope` (`owl:Class`, a closed code list),
+  `cascade:consentScope` (`owl:ObjectProperty`, `rdfs:range cascade:ConsentScope`),
+  and retyped `cascade:SocialHistoryConsent` as
+  `owl:NamedIndividual, cascade:ConsentScope`. SHACL: `cascade:ConsentScopeShape`
+  in `core.shapes.ttl` v1.8.
+- **The predicate appeared exactly once in this repository, inside another
+  property's `rdfs:comment`.** `cascade:proxyScope` says its authority scope is
+  *"composable with `cascade:consentScope` (data-sensitivity), which it does not
+  replace"* — treating it as a live sibling a reader already has. Searching every
+  `.ttl` for the term returned that one line: no `owl:DatatypeProperty`, no
+  `owl:ObjectProperty`, no domain, no range, and no `sh:path` in any of the six
+  stable shapes files.
+- **What made it more than a stale comment is that the value was already here.**
+  `cascade:SocialHistoryConsent` has been declared since v3.0 as *"consent scope
+  for social history data"*, with a label, a comment naming 42 CFR Part 2, and an
+  entry in `contexts/v1/core.jsonld` — a value of a consent-scope property with
+  no property it could be the object of. `clinical.ttl` states the obligation
+  outright on `clinical:SocialHistoryRecord`: the class *"requires separate
+  consent scope (`cascade:SocialHistoryConsent`)"*. The requirement was stated in
+  one file and unmeetable in every other. Downstream, `sdk-typescript` names
+  `cascade:consentScope` as a predicate in its `TYPE_MAPPING` and silently drops
+  the field on serialization, because the predicate is unregistered; its consent
+  module is pure in-memory filtering that writes no RDF, which is not a defect
+  there — there was no predicate for it to write. Consent scope was enforced by
+  application code and left no trace in the graph.
+- **`owl:ObjectProperty`, decided on this repository's evidence rather than on
+  taste.** The value is already declared as a *resource*, so a datatype property
+  would leave it declared, labelled and pointed at by nothing — the exact
+  condition being fixed. And thirteen of the fourteen named individuals in
+  `core.ttl` already declare their value-class (`cascade:Canonical` is a
+  `cascade:ReconciliationStatus`, `cascade:InitialGeneration` is a
+  `cascade:GenerationTrigger`); `cascade:SocialHistoryConsent` was the only
+  orphan. The section header has read "Consent Scopes", plural, since v3.0: the
+  code list was intended from the start and only the class was never written.
+  `cascade:proxyScope`'s own prose enumeration (`'full'`, `'read-only'`,
+  `'investigation-only'`, in a comment) is the anti-pattern here rather than the
+  precedent — an enumeration nothing can check is one a document can contradict.
+  That property is left alone; it is a real finding and a separate one.
+- **`sh:in`, not `sh:class`, and the distinction is not stylistic.** SHACL
+  resolves class membership over the DATA graph. A pod record carries
+  `<record> cascade:consentScope cascade:SocialHistoryConsent` and no `rdf:type`
+  triple for that object — the type assertion lives here, in the ontology. Nor is
+  it rescued by a validator that merges the ontology: `conformance`'s runner
+  builds its ontology graph from `rdfs:subClassOf` triples only. `sh:class` would
+  have fired on every correctly-authored record, at `sh:Violation`. This
+  repository has paid for that once: clinical shapes v1.11 *removed* the
+  `sh:class` constraints from `HasEncounterEdgeShape` and
+  `LinkedConditionEdgeShape` for the same reason. `sh:in` compares IRIs and is
+  entailment-free, which is how all seventeen `cascade:dataProvenance`
+  constraints check `cascade:EHRVerified`. It follows that `cascade:ConsentScope`
+  does no validation work: it earns its place on the 13-of-14 house-pattern
+  argument, and `sh:in` is what a validator actually reads.
+- **No PROV superclass on the code list**, for the reason v3.9 removed
+  `cascade:DataProvenance`'s. A code list is not record data; asserting otherwise
+  enters it into `scripts/check-class-coverage.py`'s population and creates an
+  obligation to shape something with nothing to constrain.
+  `known-unshaped-classes.json` is unchanged and the check still reports 103
+  classes examined, 69 shaped, 34 baselined.
+- **No `rdfs:domain` on the property; the range is kept.** Both axioms entail
+  rather than constrain, so the question is which entailment is wanted. A domain
+  axiom would silently type every subject carrying the predicate, and
+  `clinical:SocialHistoryRecord` is not the only class that may want a scope —
+  `health:SocialHistoryRecord` and any future sensitive class may too.
+- **This release constrains the VALUE and never the PRESENCE.** The shape is
+  `sh:targetSubjectsOf`, so a record carrying no consent scope is not evaluated
+  and reports nothing. Putting `sh:minCount 1` on
+  `clinical:SocialHistoryRecordShape` — which the prose obligation invites — is
+  three ratchet steps at once, and the ratchet is written down in the v3.5
+  changelog and on `cascade:SourceIdentityShape`. Step 2 is that `sh:minCount 1`
+  at `sh:Warning`, once the reference producers emit a scope; step 3 raises it to
+  `sh:Violation` after a release in which the Warning is observably absent from
+  conforming output. Each is its own vocabulary version and neither is this one,
+  so no follow-on issue is filed yet: step 2's precondition does not hold, and a
+  dispatchable issue that cannot be started is noise.
+- **Compatibility: purely additive, and nothing changes verdict.**
+  `ontologies/clinical/` is untouched and `clinical` in `VOCAB_VERSIONS` is
+  unchanged, because with the constraint in `core.shapes.ttl` there is nothing
+  for a clinical bump to describe. `conformance`'s
+  `fixtures/clinical/social-history-smoking.ttl` carries no consent scope, is
+  never evaluated by the new shape, and keeps passing untouched.
+- **Deliberately not here: a `cascade:ConsentRecord` class**, and the
+  `consentGrantedAt` / `consentRevokedAt` properties `sdk-typescript` models. A
+  scope value cannot carry them — an individual is a singleton, so it has nowhere
+  to put per-instance grant and revocation timestamps. Whether an audit trail of
+  when consent was granted and withdrawn is *required* is a 42 CFR Part 2
+  question about required fields rather than an RDF modelling one, and
+  `pod-structure.md` already reserves `consents/` for ODRL policies and
+  `provenance/` for the audit trail, so a consent record class may want a
+  different home entirely. Tracked in jayostis/spec#20. Adding the scope property
+  first forecloses none of it: a consent record class would carry
+  `cascade:consentScope` too.
+- JSON-LD: `consentScope` added to `contexts/v1/core.jsonld` with
+  `"@type": "@id"`, because the value is an IRI and a context that omits it makes
+  the JSON round trip lossy.
+
+*Note on this file: v3.8 and v3.9 have no entry here. Both are recorded in
+`core.ttl`'s own changelog block and in the root `CHANGELOG.md`; backfilling them
+is not this release's change.*
+
 ## v3.7 - 2026-08-27
 
 A Pod gets somewhere to keep the documents its records point at.

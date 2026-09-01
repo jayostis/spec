@@ -147,6 +147,10 @@
     "AIExtractionActivity": "cascade:AIExtractionActivity",
     "AIDiscardedExtraction": "cascade:AIDiscardedExtraction",
     "SocialHistoryConsent": "cascade:SocialHistoryConsent",
+    "consentScope": {
+      "@id": "cascade:consentScope",
+      "@type": "@id"
+    },
     "extractionConfidence": {
       "@id": "cascade:extractionConfidence",
       "@type": "xsd:decimal"
