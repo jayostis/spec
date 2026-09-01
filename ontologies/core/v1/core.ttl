@@ -19,8 +19,8 @@
     dct:description "Core vocabulary for schema versioning, data provenance, identity management, and patient demographics across all Cascade Protocol applications"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
-    dct:modified "2026-08-31"^^xsd:date ;
-    owl:versionInfo "3.10" ;
+    dct:modified "2026-09-01"^^xsd:date ;
+    owl:versionInfo "3.11" ;
     rdfs:comment "This vocabulary defines cross-cutting concepts used by all Cascade Protocol health data applications: schema versioning, data provenance, patient demographics (PatientProfile), and supporting identity classes (Address, PharmacyInfo, AdvanceDirectives). Domain-specific vocabularies (e.g., pots:, ecg:, glucose:) import this core vocabulary."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/core/v1.0/> .
 
@@ -843,6 +843,55 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 # ============================================================================
 # Changelog
 #
+# Version 3.11 (2026-09-01)
+# - THE VALUE SET OPENS, AND ONLY THE VALUE SET. D-CONSENT-1
+#   (decisions/2026-09-01-consent-architecture.md) ratified the consent scope
+#   list as social-history / substance-use / mental-health and ratified it OPEN:
+#   "sh:in at sh:Warning at most, never sh:Violation ... a closed list missing a
+#   member rejects conformant data". v3.10 shipped one member at sh:Violation,
+#   so a record tagged substance-use or mental-health -- data the decision calls
+#   conformant -- was REJECTED. See jayostis/spec#38.
+# - TWO NEW MEMBERS: cascade:SubstanceUseConsent and cascade:MentalHealthConsent,
+#   each an owl:NamedIndividual also typed cascade:ConsentScope, matching
+#   cascade:SocialHistoryConsent. The list is the one authored in sdk-typescript
+#   9ea7c78 (2026-03-28), which predates this repository's declaration; v3.10 was
+#   a late partial copy of it, not the origin.
+# - SEVERITY IS TWO CONSTRAINTS, NOT ONE (core.shapes.ttl v1.9).
+#   cascade:ConsentScopeShape's single property block SPLITS: sh:nodeKind,
+#   sh:minCount and sh:maxCount stay sh:Violation in a block carrying no sh:in,
+#   and a second block carries sh:in alone at sh:Warning. Demoting the whole
+#   block would have turned "two consent scopes on one record" and "a literal
+#   instead of an IRI" into warnings, which nothing asked for.
+# - RULE S5 DOES NOT BITE. Nothing reaches cascade:ConsentScopeShape by sh:node
+#   or sh:qualifiedValueShape -- it is targeted only by sh:targetSubjectsOf -- so
+#   the Warning is delivered as a Warning and
+#   scripts/known-severity-escalations.json gains nothing.
+#   scripts/check-nested-severity.py is this repository's gate for rule S5 and
+#   reports this shape clean. What it establishes is the precondition alone --
+#   that no sh:node reaches the shape. The membership, the severity and the
+#   block split are asserted by nothing automated here: spec runs no SHACL
+#   validator (scripts/requirements.txt), so their behavioural proof is the
+#   conformance fixtures named in jayostis/spec#38's manual verification.
+# - cascade:consentScope's rdfs:comment NO LONGER ENUMERATES ITS MEMBERS IN
+#   PROSE. Its old clause said the value is one of the cascade:ConsentScope named
+#   individuals and then listed exactly one of them; with three members that is
+#   false rather than merely stale, and a prose copy is a third place to keep in
+#   sync and the only one nothing checks. rdfs:range names the class; sh:in holds
+#   the members. cascade:ConsentScope's own comment drops "Closed" for the same
+#   reason.
+# - COMPATIBILITY: purely additive and strictly more permissive. No value that
+#   validated under v3.10 fails under v3.11; two values that were rejected now
+#   conform. No presence constraint is added anywhere -- the v3.5 ratchet is
+#   untouched and step 2 still waits on a reference producer emitting the
+#   predicate.
+# - JSON-LD: both new individuals added to contexts/v1/core.jsonld beside
+#   SocialHistoryConsent, so a document can name what it may write.
+# - DELIBERATELY NOT HERE, on ratified authority rather than on an open question:
+#   cascade:ConsentRecord and consentGrantedAt / consentRevokedAt. D-CONSENT-1
+#   settles their shape (FHIR Consent alignment, in consents/) and then says
+#   building waits for the first consumer -- nothing should invent an interim
+#   representation.
+#
 # Version 3.10 (2026-08-31)
 # - A VALUE THAT EXISTED WITH NO PROPERTY TO CARRY IT. cascade:consentScope was
 #   named in cascade:proxyScope's rdfs:comment as a live, composable sibling and
@@ -1409,7 +1458,7 @@ cascade:discardConfidence a owl:DatatypeProperty ;
 
 cascade:ConsentScope a owl:Class ;
     rdfs:label "Consent Scope"@en ;
-    rdfs:comment "Closed enumeration of data-sensitivity scopes a consent grant may cover."@en ;
+    rdfs:comment "Open enumeration of data-sensitivity scopes a consent grant may cover. Membership is advisory: sh:in on cascade:ConsentScopeShape reports sh:Warning, and the list is expected to grow."@en ;
     owl:versionInfo "Added in core v3.10" .
 
 # Consent scope for social history records
@@ -1417,13 +1466,26 @@ cascade:SocialHistoryConsent a owl:NamedIndividual, cascade:ConsentScope ;
     rdfs:label "Social History Consent"@en ;
     rdfs:comment "Consent scope for social history data. Patient can share clinical/ pod without exposing social-history/. Subject to 42 CFR Part 2 for substance use disorder records."@en .
 
+# Consent scope for substance use disorder records
+cascade:SubstanceUseConsent a owl:NamedIndividual, cascade:ConsentScope ;
+    rdfs:label "Substance Use Consent"@en ;
+    rdfs:comment "Consent scope for substance use disorder data. Subject to 42 CFR Part 2."@en ;
+    owl:versionInfo "Added in core v3.11" .
+
+# Consent scope for mental health records
+cascade:MentalHealthConsent a owl:NamedIndividual, cascade:ConsentScope ;
+    rdfs:label "Mental Health Consent"@en ;
+    rdfs:comment "Consent scope for mental health data."@en ;
+    owl:versionInfo "Added in core v3.11" .
+
 # NO rdfs:domain, DELIBERATELY; rdfs:range IS kept. Both axioms entail rather
 # than constrain, so the only question is which entailment is wanted. A domain
 # axiom would silently type every subject that carries the predicate, and
 # clinical:SocialHistoryRecord is not the only class that may want a scope --
 # health:SocialHistoryRecord and any future sensitive class may too. The range's
 # entailment is the one asserted on purpose: the object of consentScope IS a
-# consent scope, and the list is closed.
+# consent scope. The list is OPEN (D-CONSENT-1): sensitivity categories grow,
+# and a closed list missing a member rejects conformant data.
 #
 # Which members a document may actually write is enforced by sh:in on
 # cascade:ConsentScopeShape and NOT by sh:class, because SHACL resolves class
@@ -1433,7 +1495,7 @@ cascade:SocialHistoryConsent a owl:NamedIndividual, cascade:ConsentScope ;
 # constraints for exactly that defect.
 cascade:consentScope a owl:ObjectProperty ;
     rdfs:label "Consent Scope"@en ;
-    rdfs:comment "The data-sensitivity scope whose consent governs this record. Value is one of the cascade:ConsentScope named individuals: cascade:SocialHistoryConsent. Composable with cascade:proxyScope (authority), which it does not replace."@en ;
+    rdfs:comment "The data-sensitivity scope whose consent governs this record. Composable with cascade:proxyScope (authority), which it does not replace."@en ;
     rdfs:range cascade:ConsentScope ;
     owl:versionInfo "Added in core v3.10" .
 

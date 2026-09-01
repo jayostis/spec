@@ -147,6 +147,8 @@
     "AIExtractionActivity": "cascade:AIExtractionActivity",
     "AIDiscardedExtraction": "cascade:AIDiscardedExtraction",
     "SocialHistoryConsent": "cascade:SocialHistoryConsent",
+    "SubstanceUseConsent": "cascade:SubstanceUseConsent",
+    "MentalHealthConsent": "cascade:MentalHealthConsent",
     "consentScope": {
       "@id": "cascade:consentScope",
       "@type": "@id"
