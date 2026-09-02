@@ -20,7 +20,7 @@
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
     dct:modified "2026-09-01"^^xsd:date ;
-    owl:versionInfo "3.11" ;
+    owl:versionInfo "3.12" ;
     rdfs:comment "This vocabulary defines cross-cutting concepts used by all Cascade Protocol health data applications: schema versioning, data provenance, patient demographics (PatientProfile), and supporting identity classes (Address, PharmacyInfo, AdvanceDirectives). Domain-specific vocabularies (e.g., pots:, ecg:, glucose:) import this core vocabulary."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/core/v1.0/> .
 
@@ -741,9 +741,21 @@ cascade:conflictDetail a owl:ObjectProperty ;
     rdfs:domain owl:Thing ;
     rdfs:range cascade:ConflictDetail .
 
+# A RECORD CLASS, DECLARED AS ONE (core v3.12). The argument is the class's own
+# properties, not its name: cascade:conflictFor, cascade:systemValue and
+# cascade:forSystem all declare rdfs:domain of it, so an instance carries three
+# fields of its own. Those fields are written into the patient's pod beside the
+# reconciled record that cascade:conflictDetail points at them from, and read
+# back when someone asks why two source systems disagreed. Being addressed as a
+# blank node governs how the node is named, not whether it is stored.
+# rdfs:subClassOf prov:Entity is what says "instances of this are stored record
+# data" in this specification, so it is stated rather than left implicit -- and
+# scripts/check-class-coverage.py, which reads exactly that chain, can then see
+# the class instead of passing over it. See jayostis/spec#13.
 cascade:ConflictDetail a owl:Class ;
     rdfs:label "Conflict Detail"@en ;
-    rdfs:comment "A structured representation of conflicting values across source systems for a single property. Used as a blank node linked from cascade:conflictDetail."@en .
+    rdfs:comment "A structured representation of conflicting values across source systems for a single property. Used as a blank node linked from cascade:conflictDetail."@en ;
+    rdfs:subClassOf prov:Entity .
 
 cascade:conflictFor a owl:ObjectProperty ;
     rdfs:label "Conflict For"@en ;
@@ -842,6 +854,37 @@ WHAT THIS IS NOT. It is not an interpretation, and it is not a substitute for on
 
 # ============================================================================
 # Changelog
+#
+# Version 3.12 (2026-09-01)
+# - TWO RECORD CLASSES SAY SO. cascade:ConflictDetail and
+#   cascade:AIDiscardedExtraction gain rdfs:subClassOf prov:Entity. NO new
+#   terms, no property changed, no constraint added or removed: this states a
+#   fact about two existing classes that was already true of the data.
+# - WHY IT MATTERED. In this specification rdfs:subClassOf prov:Entity asserts
+#   that instances of a class are stored record data, and
+#   scripts/check-class-coverage.py reads that chain to decide what it examines.
+#   Neither class declared any rdfs:subClassOf at all, so the gate could not see
+#   them: it reported PASS over both, and they were absent from
+#   scripts/known-unshaped-classes.json too, because that file is the gate's
+#   OUTPUT. Invisible in both directions. Each is now baselined there as owing a
+#   shape, which is the honest state rather than the silent one.
+# - THE ARGUMENT IS PER CLASS, FROM ITS PROPERTIES. cascade:ConflictDetail is
+#   the domain of three properties; cascade:AIDiscardedExtraction of four, and
+#   its own rdfs:comment names the pod file it is retained in. Both are argued
+#   in a comment at the class rather than from the class's name.
+# - WHAT DELIBERATELY DID NOT CHANGE. cascade:DataProvenance, its ten value
+#   terms and cascade:ConsentScope stay with NO PROV superclass. They are code
+#   lists; v3.9 removed that axiom from the first eleven for exactly this reason
+#   (jayostis/spec#12) and nothing here gives it back. The fix for an invisible
+#   record class is the vocabulary telling the truth, not widening the check --
+#   pointing it at every class with no superclass would import 43 enumerations
+#   as obligations no shape could ever discharge.
+# - NO SHAPES ARE WRITTEN HERE. What each class requires is a separate
+#   judgement per class; core.shapes.ttl is unchanged and `shaped` does not
+#   move. See jayostis/spec#13.
+# - COMPATIBILITY: none possible. A superclass axiom in an ontology file changes
+#   no SHACL result -- SHACL resolves class membership over the DATA graph
+#   (validation/index.md) -- and no pod record needs rewriting.
 #
 # Version 3.11 (2026-09-01)
 # - THE VALUE SET OPENS, AND ONLY THE VALUE SET. D-CONSENT-1
@@ -1419,9 +1462,19 @@ cascade:requiresLLMExtraction a owl:DatatypeProperty ;
     rdfs:comment "True if a C-CDA section contains only narrative text (no structured entries); signals the P5.3 LLM extraction pipeline."@en .
 
 # Discard log entry for low-confidence extractions
+#
+# A RECORD CLASS, DECLARED AS ONE (core v3.12). Four properties declare
+# rdfs:domain of it -- cascade:discardedEntityType, cascade:discardedFrom,
+# cascade:discardedAt and cascade:discardConfidence -- and nothing declares it
+# as an rdfs:range, so instances are addressed in their own right rather than
+# only as some other record's value. Its own rdfs:comment names the pod file it
+# is retained in and the patient action that reads it back, which is the
+# definition of stored record data. rdfs:subClassOf prov:Entity states that,
+# and scripts/check-class-coverage.py reads it. See jayostis/spec#13.
 cascade:AIDiscardedExtraction a owl:Class ;
     rdfs:label "AI Discarded Extraction"@en ;
     rdfs:comment "A low-confidence extraction (confidence < 0.50) retained in the patient's pod at pod/analysis/discarded-extractions.ttl. Not auto-imported. Patient can review and rescue into the review queue."@en ;
+    rdfs:subClassOf prov:Entity ;
     owl:versionInfo "Added in core v3.0" .
 
 cascade:discardedEntityType a owl:DatatypeProperty ;
