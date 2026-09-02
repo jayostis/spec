@@ -2,6 +2,15 @@
 
 All notable changes to the `workbench:` vocabulary. Draft status: not registered in `spec/VOCAB_VERSIONS` until v1.0 graduation (per the `genomics:` / `advisory:` draft policy).
 
+## v1-draft.0.8 (2026-09-01)
+
+- **Two record classes say so.** `workbench:Hypothesis` and `workbench:Pin` gain `rdfs:subClassOf prov:Entity`. No term is added, removed or renamed and no definition changed. One of four vocabularies moving together for jayostis/spec#13.
+- **What was wrong.** That axiom asserts, in this specification, that instances of a class are stored record data, and `scripts/check-class-coverage.py` reads the `rdfs:subClassOf` chain to decide which classes it examines. Neither class declared any superclass, so the gate reported PASS over both while no shape judged either, and both were absent from `scripts/known-unshaped-classes.json` too -- that file is the gate's OUTPUT, not a filter on it. Both are now in the population and baselined there as owing a shape.
+- **The argument is per class, from its properties.** `Hypothesis` is the domain of four properties and the range of `workbench:hasHypothesis`; `Pin` is the domain of two and the range of `workbench:hasPin`. Both persist beyond the session that created them, which is the point of a lifecycle status and of a curated bookmark respectively. `workbench:ImportedConversation` already declared the same superclass.
+- **`workbench:Investigation` is NOT declared here, deliberately.** It is the domain of eight properties, declares no `rdfs:subClassOf` either, and so meets the same test and is invisible to the gate for the same reason. jayostis/spec#13 enumerates seven classes across four vocabularies and this is not one of them, so declaring it here would be a change nobody reviewed under an issue that did not scope it. Recorded rather than done.
+- **No SHACL change:** no shape is written for either class. What each requires is a separate judgement; the baseline records the debt in the meantime.
+- **Draft, so no `VOCAB_VERSIONS` line.** That file registers the six released vocabularies and omits the five drafts; `workbench` joins it at v1.0 graduation. Downstream repos record a dated comment only, per D-PATH.
+
 ## v1-draft.0.5 (2026-07-15)
 
 - **Added the notes / research-flags / follow-ups substrate as W3C Web Annotations**. All three artifacts are ONE thing, an `oa:Annotation` over one or more graph nodes, distinguished by `oa:motivatedBy`: caregiver note = `oa:commenting`, research flag = `oa:questioning`, follow-up = `workbench:followUp`.

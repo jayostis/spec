@@ -69,7 +69,8 @@ Three CI workflows gate this repository, and the `shapes` one runs three indepen
 source .venv/bin/activate                  # every check shells out to `python3`
 
 # shapes: three structural rules about this repository's own SHACL. Each pairs
-# a regression suite with the rule itself, and all six must exit 0. The three
+# a regression suite with the rule itself; the third carries a second suite, over
+# the VOCABULARY rather than over the check. All seven must exit 0. The three
 # rules are deliberately independent -- none can see the others' defect.
 sh scripts/test-check-shape-targets.sh     # entailment independence
 python3 scripts/check-shape-targets.py
@@ -78,6 +79,7 @@ sh scripts/test-check-nested-severity.sh   # nested-shape severity (rule S5)
 python3 scripts/check-nested-severity.py
 
 sh scripts/test-check-class-coverage.sh    # record-class shape coverage
+sh scripts/test-record-class-declarations.sh   # the vocabulary fact beneath it
 python3 scripts/check-class-coverage.py
 
 # drift-checker: only if you touched the downstream drift check itself.
@@ -86,6 +88,8 @@ dash scripts/test-check-downstream-versions.sh
 ```
 
 `scripts/check-shape-targets.py` runs on every PR touching `ontologies/`, together with its own negative controls, so a check that has stopped being able to fail is caught here rather than in a consumer. Do not "fix" the frozen specimens in `scripts/testdata/`; their bugs are what make the controls meaningful.
+
+**`scripts/test-record-class-declarations.sh` is the one to run before you push, not after.** The other six ask whether a *check* can still fail, and a normal vocabulary edit does not move them. This one asserts a fact about the *ontologies* -- that every class carrying its own data properties declares the PROV superclass saying it holds record data -- and it pins the population it measures, so a **legitimate** edit reddens it: adding a record class moves `record classes`, and writing a shape against a baselined one moves `shaped`. Either puts the run off the counts pinned in `HEAD_RECORD_CLASSES` / `HEAD_SHAPED`, and updating those in the same commit is the point of the pin rather than an inconvenience -- it is what makes a silent change in the population impossible. The suite's MAINTENANCE block says which count each kind of change moves.
 
 ## Commit messages
 
@@ -115,7 +119,7 @@ Tag format for a ratified vocabulary version: `vocab/{name}-v{X.Y}`, for example
 
 1. Branch from `main`.
 2. Make the change, and complete the in-repo checklist below in the same PR.
-3. Run the commands under "What must be green" and confirm all six exit 0.
+3. Run the commands under "What must be green" and confirm all seven exit 0.
 4. Push and open a PR. `.github/PULL_REQUEST_TEMPLATE.md` fills in with the checklist; keep the items and tick them.
 5. Say in the PR body which downstream repositories you are able to update and which you are not. A contributor who cannot open PRs against all seven should still say so, so a maintainer can carry the rest rather than discovering the gap later.
 6. One maintainer approval is required for vocabulary changes. Documentation-only changes need one review.

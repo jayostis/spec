@@ -48,6 +48,12 @@
 # in the same commit -- that edit is the point, not an inconvenience: it is
 # what makes a silent change in the population impossible.
 #
+# Case 3 is the ONLY case a shape-writing commit touches. Discharging a
+# known-unshaped-classes.json entry moves `shaped`, so HEAD_SHAPED goes up
+# by one and nothing else in this file changes: cases 1 and 2 read the
+# population, which shaping does not move, and case 4 reads the gate, which
+# stays green because the entry left the baseline in the same commit.
+#
 # Usage: ./scripts/test-record-class-declarations.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -113,26 +119,72 @@ echo "  spec root: $SPEC_ROOT"
 echo "=========================================================="
 
 # ---------------------------------------------------------------------------
+# THE POPULATION, AND WHY IT IS NOT `--no-baseline`
+#
+# Cases 1 and 2 assert MEMBERSHIP of the set check-class-coverage.py examines.
+# That is a fact about the ontology graph alone: a class is in the population
+# because its rdfs:subClassOf chain reaches a PROV record root, and whether
+# anything shapes it is a separate question.
+#
+# `--no-baseline` prints only the UNSHAPED members, so keying these cases on it
+# couples them to the DEBT rather than to the population, in both directions:
+#
+#   * Discharge one entry -- write coverage:ClaimRecordShape, drop the baseline
+#     row -- and the class leaves the list. Case 1 then reported it "invisible
+#     to the gate ... declares no rdfs:subClassOf prov:Entity" on the very
+#     commit that discharges the debt, and every word of that message is false:
+#     the class declares the superclass, is in the population, and is now
+#     shaped.
+#   * Discharge them all and the list empties, so --no-baseline exits 0. The
+#     suite failed with "it named nothing at all" on a repository that had just
+#     reached the complete coverage known-unshaped-classes.json calls the goal
+#     ("nothing here is acceptable in the long run").
+#
+# So the population is read directly. check-class-coverage.py remains the
+# instrument and remains UNCHANGED: its own load() and record_bearing_classes()
+# are imported and asked, so the chain-walking rule lives in exactly one place
+# and this suite cannot drift from it.
+# ---------------------------------------------------------------------------
+POP_OUT="$(CHECK_PATH="$CHECK" ROOT_PATH="$SPEC_ROOT" "$PYTHON" - 2>&1 <<'PY'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location(
+    "check_class_coverage", os.environ["CHECK_PATH"]
+)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+ontology = module.load(os.environ["ROOT_PATH"])[0]
+for name in sorted(module.qname(c) for c in module.record_bearing_classes(ontology)):
+    print(name)
+PY
+)"
+POP_STATUS=$?
+POP_COUNT="$(printf '%s\n' "$POP_OUT" | grep -c '[^[:space:]]')"
+
+# ---------------------------------------------------------------------------
 # 1. THE OUTER LOOP. Every class in DECLARED_RECORD_CLASSES is inside the
-#    population check-class-coverage.py examines, and none of them is shaped,
-#    so --no-baseline names each one. This is the whole issue: today the run
-#    reports nothing about any of them, and a gate that cannot see a class
-#    cannot judge it.
+#    population check-class-coverage.py examines. This is the whole issue:
+#    before the declaration the run reported nothing about any of them, and a
+#    gate that cannot see a class cannot judge it.
+#
+#    The first assertion is the smoke test that the instrument ran at all --
+#    a population that is unreadable or empty would make every check below
+#    vacuous. It reads the population, never an exit code that also means
+#    "unshaped classes remain".
 # ---------------------------------------------------------------------------
 echo ""
 echo "1. Each declared record class is visible to the gate"
 
-NB_OUT="$("$PYTHON" "$CHECK" "$SPEC_ROOT" --no-baseline 2>&1)"
-NB_STATUS=$?
-
-if [ $NB_STATUS -ne 0 ]; then
-  pass "--no-baseline exits non-zero, so it is reporting a list (exit $NB_STATUS)"
+if [ $POP_STATUS -eq 0 ] && [ "$POP_COUNT" -gt 0 ]; then
+  pass "the population is readable and non-empty ($POP_COUNT classes)"
 else
-  fail "--no-baseline exited 0, so it named nothing at all" "$NB_OUT"
+  fail "could not read the population (exit $POP_STATUS, $POP_COUNT line(s))" "$POP_OUT"
 fi
 
 for CLS in $DECLARED_RECORD_CLASSES; do
-  if printf '%s\n' "$NB_OUT" | grep -qE "^[[:space:]]+${CLS}\$"; then
+  if printf '%s\n' "$POP_OUT" | grep -qxF "$CLS"; then
     pass "$CLS is a record class the gate can see"
   else
     fail "$CLS is invisible to the gate" \
@@ -146,13 +198,19 @@ done
 # 2. The value enumerations stay OUT. This is what distinguishes declaring the
 #    truth about seven record classes from widening the check over all 57
 #    classes that declare no superclass.
+#
+#    Read from the population for the reason above, and here the coupling
+#    would have been a false PASS rather than a false FAIL: an enumeration
+#    that had wrongly entered the population AND been given a shape is
+#    absent from --no-baseline for the second reason, so the case would
+#    have reported the leak clean.
 # ---------------------------------------------------------------------------
 echo ""
 echo "2. Value enumerations do not enter the population"
 
 ENUM_LEAKED=""
 for CLS in $VALUE_ENUMERATIONS; do
-  if printf '%s\n' "$NB_OUT" | grep -qE "^[[:space:]]+${CLS}\$"; then
+  if printf '%s\n' "$POP_OUT" | grep -qxF "$CLS"; then
     ENUM_LEAKED="$ENUM_LEAKED $CLS"
   fi
 done

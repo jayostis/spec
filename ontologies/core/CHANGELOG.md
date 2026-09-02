@@ -1,5 +1,43 @@
 # Core Vocabulary Changelog
 
+## v3.12 - 2026-09-01
+
+Two classes held record data and no axiom said so.
+
+- `cascade:ConflictDetail` and `cascade:AIDiscardedExtraction` gain
+  `rdfs:subClassOf prov:Entity`. **No term is added, removed or renamed; no
+  definition, domain, range or shape changes.** One of four vocabularies moving
+  together for jayostis/spec#13 -- see the top-level `CHANGELOG.md` for the whole
+  change and `VOCAB_VERSIONS` for the other three.
+- **What was wrong.** In this specification `rdfs:subClassOf prov:Entity` asserts
+  that instances of a class are stored record data, and
+  `scripts/check-class-coverage.py` reads that chain to decide which classes it
+  examines. Neither class declared any superclass at all, so the gate reported
+  PASS over both while no shape judged either -- and neither appeared in
+  `scripts/known-unshaped-classes.json`, because that file is the gate's OUTPUT
+  and not a filter on it. Invisible in **both** directions: a class the gate
+  cannot see is neither judged nor recorded as owing a judgement.
+- **The argument is per class, and from its properties rather than its name.**
+  `cascade:ConflictDetail` is the domain of `cascade:conflictFor`,
+  `cascade:systemValue` and `cascade:forSystem`, so an instance carries three
+  fields of its own, written beside the reconciled record and read back when
+  someone asks why two source systems disagreed; being addressed as a blank node
+  governs how the node is named, not whether it is stored.
+  `cascade:AIDiscardedExtraction` is the domain of four properties and the range
+  of none, and its own `rdfs:comment` names the pod file it is retained in
+  (`pod/analysis/discarded-extractions.ttl`) and the patient action that reads it
+  back -- which is the definition of stored record data.
+- **No shape is written, deliberately.** What each class requires is a separate
+  per-class judgement, and a hurried shape would record it wrongly. Both are
+  added to `scripts/known-unshaped-classes.json` instead, which records the debt
+  honestly and keeps the ratchet: `shaped` is unchanged at 69. The baseline goes
+  from 34 entries to 41 across all four vocabularies, and that growth is the
+  point -- the debt did not increase, it became visible.
+- **Nothing that conformed stops conforming.** No shape targets `prov:Entity`, so
+  no record's verdict moves under an entailing validator either;
+  `scripts/check-shape-targets.py` is green, which is what says so.
+- JSON-LD: no change. `contexts/v1/core.jsonld` maps terms, and no term is added.
+
 ## v3.11 - 2026-09-01
 
 The value set that D-CONSENT-1 ratified as OPEN shipped closed, at `sh:Violation`.
