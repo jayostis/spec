@@ -1,12 +1,27 @@
 {
   "$comment": "Enumerated record-bearing classes that no shape targets, for scripts/check-class-coverage.py. This file is a GATE INPUT, not a filter: the check still examines and counts every class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity. The run fails when an unshaped class appears that is not listed here, when a listed class has since been shaped, and when a listed class no longer exists -- the last two reported separately, because a shape someone wrote and a class someone deleted are different events with different remediations. So the list can only shrink, and shrinking it is an explicit committed edit. Each entry names the vocabulary that owns the fix. Nothing here is acceptable in the long run -- each entry is a class whose records SHACL reports conforms:true over while having examined nothing, a verdict indistinguishable from one that was earned.",
   "$rule": "A class whose rdfs:subClassOf chain reaches prov:Entity or prov:Activity has said its instances are record data. If no shape names it in sh:targetClass -- and carries at least one constraint beside that target, since a bare sh:targetClass asks nothing -- then those records are judged by nothing. The chain is walked transitively because a parent's shape does NOT reach a child: SHACL does not resolve subclass axioms over a pod's data graph (see validation/index.md), which is the same rule that makes the cure an explicit sh:targetClass rather than a subclass axiom. Where a class turns out NOT to hold record data, the cure is instead to reconsider the PROV superclass, which is the thing declaring that it does.",
-  "$established": "2026-08-30, clinical v1.18 (spec). clinical:CoverageRecord, the class this check was written for, is FIXED rather than baselined: it is shaped by clinical:CoverageRecordShape in the same change. The regression suite deletes that shape from a scratch copy and requires the check to name the class, which is what proves this would have caught it. REVISED 2026-08-30 (PR #10 review): the check's scope was one rdfs:subClassOf step deep and is now the full chain, and a bare sh:targetClass carrying no constraint no longer counts as coverage. The scope change revealed 11 further unshaped classes that were always in the population the rule describes and were simply not being looked at; they are baselined here rather than shaped, and are marked established-by-widening so it stays visible that they are pre-existing gaps rather than new ones. Ten of the eleven are the cascade:DataProvenance value terms and are the SAME defect that entry already records, now counted once per term. REVISED AGAIN 2026-08-30 (jayostis/spec#12): cascade:DataProvenance and its ten value terms are REMOVED from this file, not fixed by a shape. They were never record classes. The classification carried rdfs:subClassOf prov:Entity, which in this specification asserts that instances are stored record data, and the ten values inherited it; nothing is ever typed with one (179 uses in the reference pod, every one as the object of cascade:dataProvenance). core v3.9 drops that axiom, so all eleven leave the population this check describes. They were an obligation that could never be discharged, because a code-list member has nothing for a shape to constrain. This returns the file to 34 entries -- the count it held before the scope widening -- so that widening's net growth is zero, and every remaining entry is a class that genuinely wants a shape.",
+  "$established": "2026-08-30, clinical v1.18 (spec). clinical:CoverageRecord, the class this check was written for, is FIXED rather than baselined: it is shaped by clinical:CoverageRecordShape in the same change. The regression suite deletes that shape from a scratch copy and requires the check to name the class, which is what proves this would have caught it. REVISED 2026-08-30 (PR #10 review): the check's scope was one rdfs:subClassOf step deep and is now the full chain, and a bare sh:targetClass carrying no constraint no longer counts as coverage. The scope change revealed 11 further unshaped classes that were always in the population the rule describes and were simply not being looked at; they are baselined here rather than shaped, and are marked established-by-widening so it stays visible that they are pre-existing gaps rather than new ones. Ten of the eleven are the cascade:DataProvenance value terms and are the SAME defect that entry already records, now counted once per term. REVISED AGAIN 2026-08-30 (jayostis/spec#12): cascade:DataProvenance and its ten value terms are REMOVED from this file, not fixed by a shape. They were never record classes. The classification carried rdfs:subClassOf prov:Entity, which in this specification asserts that instances are stored record data, and the ten values inherited it; nothing is ever typed with one (179 uses in the reference pod, every one as the object of cascade:dataProvenance). core v3.9 drops that axiom, so all eleven leave the population this check describes. They were an obligation that could never be discharged, because a code-list member has nothing for a shape to constrain. This returns the file to 34 entries -- the count it held before the scope widening -- so that widening's net growth is zero, and every remaining entry is a class that genuinely wants a shape. REVISED AGAIN 2026-09-01 (jayostis/spec#13): seven classes ENTER this file, and none of them is a new gap. cascade:AIDiscardedExtraction, cascade:ConflictDetail, checkup:CheckInSettings, coverage:BenefitStatement, coverage:ClaimRecord, workbench:Hypothesis and workbench:Pin each carry their own data properties and hold record data, and each declared NO rdfs:subClassOf at all. This check reads that chain to decide what it examines, so it reported PASS over all seven -- and they could not be listed here either, because this file is the gate's OUTPUT. Invisible in both directions, while conformance/KNOWN_FAILURES.json carried two of them (coverage:ClaimRecord, coverage:BenefitStatement) as UNSHAPED ownedBy: spec. The fix was in the vocabulary, not in the check: core v3.12, coverage v1.8, checkup v3.4 and workbench v1-draft.0.8 each declare rdfs:subClassOf prov:Entity on the classes they own, argued at the class from its own properties. The check is UNCHANGED, deliberately -- pointing it at every class with no superclass would report 57 unshaped classes of which 43 are value enumerations, which is the jayostis/spec#12 defect at four times the scale. This takes the file from 34 entries to 41. That growth is the point: the debt did not increase, it became visible.",
   "entries": [
+    {
+      "class": "cascade:AIDiscardedExtraction",
+      "ownedBy": "spec (core)",
+      "detail": "Declared rdfs:subClassOf prov:Entity in core v3.12 (jayostis/spec#13), which is what made it visible to this check at all: it previously declared no superclass, so the gate passed over it and it could not appear here either. Four properties describe a discard the pipeline made, and its own rdfs:comment says the patient reviews them and can rescue the extraction into the review queue -- so an unchecked cascade:discardConfidence is a number a patient acts on."
+    },
+    {
+      "class": "cascade:ConflictDetail",
+      "ownedBy": "spec (core)",
+      "detail": "Declared rdfs:subClassOf prov:Entity in core v3.12 (jayostis/spec#13); previously invisible to this check for want of any superclass. Instances are blank nodes hung off a reconciled record, which is why it was easy to miss -- a blank node is still stored data, and the per-system values it holds are what a reader consults when two source systems disagreed."
+    },
     {
       "class": "checkup:AttentionItem",
       "ownedBy": "spec (checkup)",
       "detail": "Layer 3 patient-facing summary class, part of the visit-prep group added in checkup v3. The whole group shipped without shapes."
+    },
+    {
+      "class": "checkup:CheckInSettings",
+      "ownedBy": "spec (checkup)",
+      "detail": "Declared rdfs:subClassOf prov:Entity in checkup v3.4 (jayostis/spec#13); previously invisible to this check for want of any superclass. Four unconstrained fields, two of which are xsd:integer clock components that mean 0-23 and 0-59 with nothing anywhere saying so."
     },
     {
       "class": "checkup:CorrelationInsight",
@@ -77,6 +92,16 @@
       "class": "coverage:AppealRecord",
       "ownedBy": "spec (coverage)",
       "detail": "Coverage class with properties (coverage:appealLevel and others, registered in sdk-typescript's TYPE_MAPPING) and no shape."
+    },
+    {
+      "class": "coverage:BenefitStatement",
+      "ownedBy": "spec (coverage)",
+      "detail": "Declared rdfs:subClassOf prov:Entity in coverage v1.8 (jayostis/spec#13); previously invisible to this check for want of any superclass. Nine properties, four of them xsd:decimal money fields including coverage:patientResponsibility. conformance/KNOWN_FAILURES.json has carried this class as UNSHAPED ownedBy: spec, so a downstream repository recorded the gap before this repository could see it."
+    },
+    {
+      "class": "coverage:ClaimRecord",
+      "ownedBy": "spec (coverage)",
+      "detail": "Declared rdfs:subClassOf prov:Entity in coverage v1.8 (jayostis/spec#13); previously invisible to this check for want of any superclass. Seven properties, and coverage.ttl v1.7's changelog already recorded the consequence without naming the cause: the coverage:sourceRecordId constraint had no node shape to live in because neither this class nor coverage:BenefitStatement had one. Also carried in conformance/KNOWN_FAILURES.json as UNSHAPED ownedBy: spec."
     },
     {
       "class": "coverage:CopaySchedule",
@@ -172,6 +197,16 @@
       "class": "evidence:GroundingActivity",
       "ownedBy": "spec (evidence, v1-draft)",
       "detail": "Draft vocabulary, and the only prov:Activity in this baseline rather than a prov:Entity. It records the model pass that graded an assertion, so its provenance fields are exactly the ones a reader would want checked."
+    },
+    {
+      "class": "workbench:Hypothesis",
+      "ownedBy": "spec (workbench, v1-draft)",
+      "detail": "Draft vocabulary. Declared rdfs:subClassOf prov:Entity in workbench v1-draft.0.8 (jayostis/spec#13); previously invisible to this check for want of any superclass. workbench:hypothesisStatus ranges over a closed enumeration that no sh:in enforces, and retiring or excluding a hypothesis is the lifecycle the class exists for."
+    },
+    {
+      "class": "workbench:Pin",
+      "ownedBy": "spec (workbench, v1-draft)",
+      "detail": "Draft vocabulary. Declared rdfs:subClassOf prov:Entity in workbench v1-draft.0.8 (jayostis/spec#13); previously invisible to this check for want of any superclass. The smallest of the seven at two properties, one of which is free text the user typed that nothing judges for so much as a length."
     }
   ]
 }
