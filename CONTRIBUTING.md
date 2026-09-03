@@ -52,7 +52,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r scripts/requirements.txt
 ```
 
-Without `rdflib` installed both checks exit 2 and say so, rather than passing vacuously. That is deliberate: the check parses Turtle and cannot degrade to a text scan without becoming unsound.
+Without `rdflib` installed both checks exit 2 and say so, rather than passing vacuously. That is deliberate: the check parses Turtle and cannot degrade to a text scan without becoming unsound. `scripts/test-check-context-validity.sh` does the same on a missing `PyLD`, for the same reason.
 
 Optionally, to validate against the CLI:
 
