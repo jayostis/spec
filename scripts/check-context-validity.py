@@ -40,8 +40,18 @@ import glob
 import json
 import sys
 
-from pyld import jsonld
-from pyld.jsonld import JsonLdError
+try:
+    from pyld import jsonld
+    from pyld.jsonld import JsonLdError
+except ImportError:
+    # Exit 2 with a message, never a traceback, and never a pass. CONTRIBUTING
+    # promises this for every check here: a missing parser means the run
+    # examined nothing, which must not be reported as success. The regression
+    # suite guards its own import the same way.
+    print("ERROR: cannot import pyld, so no context would be checked.\n"
+          "       Install it:  python3 -m pip install -r scripts/requirements.txt",
+          file=sys.stderr)
+    sys.exit(2)
 
 # Keys that carry configuration rather than a term definition.
 CONTEXT_KEYWORDS = {

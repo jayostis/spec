@@ -295,6 +295,25 @@ else
        "a broken contexts/v2/ file was never opened: $OUT"
 fi
 
+# -- 14. A missing processor exits 2 with a message, never a traceback --------
+# CONTRIBUTING promises this for every check in this repository, and the reason
+# is the same one behind control 5: a run that examined nothing must not be
+# reported as success, and a traceback is not a diagnosis. The stub shadows the
+# real package on PYTHONPATH and raises on import.
+mkdir -p "$WORK/nopyld"
+echo 'raise ImportError("blocked by test-check-context-validity.sh")' \
+  > "$WORK/nopyld/pyld.py"
+OUT="$(PYTHONPATH="$WORK/nopyld" "$PYTHON" "$CHECK" "$SUBJECT" 2>&1)"
+STATUS=$?
+if [ "$STATUS" -eq 2 ] \
+   && echo "$OUT" | grep -q "cannot import pyld" \
+   && ! echo "$OUT" | grep -q "Traceback"; then
+  pass "a missing PyLD exits 2 with a message, not a traceback"
+else
+  fail "a missing PyLD exits 2 with a message, not a traceback" \
+       "expected exit 2 and a diagnostic, got exit $STATUS: $OUT"
+fi
+
 echo ""
 echo "passed: $PASSED   failed: $FAILED"
 [ "$FAILED" -eq 0 ] || exit 1
