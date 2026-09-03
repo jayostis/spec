@@ -58,35 +58,74 @@ def load_context(path):
     with open(path, encoding="utf-8") as fh:
         doc = json.load(fh)
     ctx = doc.get("@context")
-    if not isinstance(ctx, dict):
+    if not isinstance(ctx, (dict, list)):
         raise ValueError(
-            f"@context is {type(ctx).__name__}, expected an object")
+            f"@context is {type(ctx).__name__}, expected an object or an array")
     return ctx
 
 
+def layers(ctx):
+    """A context is one object OR an array of objects and remote IRIs.
+
+    Both forms are legal, so nothing below may assume a bare object: treating
+    the array form as malformed would block a valid change on a file a
+    conformant processor loads.
+    """
+    return ctx if isinstance(ctx, list) else [ctx]
+
+
+def local_terms(ctx):
+    """Term names defined inline, in order, across every object layer."""
+    names = {}
+    for layer in layers(ctx):
+        if isinstance(layer, dict):
+            for key in layer:
+                if not key.startswith("@"):
+                    names[key] = None
+    return list(names)
+
+
 def exercise(ctx):
-    """Expand a document that uses every term, so no definition goes unread."""
-    doc = {"@context": ctx, "@id": "urn:x:check-context-validity"}
-    for key in ctx:
-        if key.startswith("@"):
-            continue
-        doc[key] = "v"
-    jsonld.expand(doc)
+    """Expand against the context, so every definition in it gets read.
+
+    No term is USED in the document, and that is deliberate. A processor
+    creates every term definition eagerly while processing the context, so a
+    bare expansion already reads all of them. A document that instead assigns
+    a value to every term reports the legal forms whose value shape is
+    constrained: `{"@reverse": "..."}` rejects a plain string, so the usage is
+    the syntax error, on a context a conformant processor accepts.
+    """
+    jsonld.expand({"@context": ctx, "@id": "urn:x:check-context-validity"})
 
 
 def culprits(ctx):
-    """Which individual terms cannot be processed, given the file's prefixes."""
-    scaffold = {k: v for k, v in ctx.items()
-                if k in CONTEXT_KEYWORDS or is_prefix_entry(v)}
+    """Which individual terms cannot be processed, given the file's prefixes.
+
+    The scaffold keeps the shape of the original: each object layer reduced to
+    its keywords and prefixes, each remote layer left where it was. The term
+    under test is then appended as a final layer.
+    """
+    scaffold = [
+        {k: v for k, v in layer.items()
+         if k in CONTEXT_KEYWORDS or is_prefix_entry(v)}
+        if isinstance(layer, dict) else layer
+        for layer in layers(ctx)
+    ]
+    carried = {k for layer in scaffold if isinstance(layer, dict)
+               for k in layer}
+
     bad = []
-    for key, value in ctx.items():
-        if key.startswith("@") or key in scaffold:
+    for layer in layers(ctx):
+        if not isinstance(layer, dict):
             continue
-        try:
-            jsonld.expand({"@context": dict(scaffold, **{key: value}),
-                           "@id": "urn:x:check-context-validity"})
-        except JsonLdError as exc:
-            bad.append((key, value, str(exc).splitlines()[0]))
+        for key, value in layer.items():
+            if key.startswith("@") or key in carried:
+                continue
+            try:
+                jsonld.expand({"@context": scaffold + [{key: value}],
+                               "@id": "urn:x:check-context-validity"})
+            except JsonLdError as exc:
+                bad.append((key, value, str(exc).splitlines()[0]))
     return bad
 
 
@@ -95,17 +134,21 @@ def check(path):
 
     try:
         ctx = load_context(path)
-    except (ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        # FileNotFoundError, IsADirectoryError and UnicodeDecodeError are not
+        # ValueError. A typo in a CI invocation must arrive as a FAILED line.
+        label = "UNREADABLE" if isinstance(exc, OSError) else "NOT A CONTEXT"
         print(f"{name:22s}    -- FAILED")
-        print(f"      NOT A CONTEXT: {exc}", file=sys.stderr)
+        print(f"      {label}: {exc}", file=sys.stderr)
         return 1
 
-    terms = [k for k in ctx if not k.startswith("@")]
+    terms = local_terms(ctx)
+    remote = [layer for layer in layers(ctx) if isinstance(layer, str)]
 
     # A context that defines nothing must not read as success. The whole class
     # of defect this file guards against is a check that examines nothing and
     # reports green.
-    if not terms:
+    if not terms and not remote:
         print(f"{name:22s} {0:4d} terms -- FAILED")
         print("      EMPTY: no term definitions, so nothing was checked",
               file=sys.stderr)

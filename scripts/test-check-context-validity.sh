@@ -49,6 +49,17 @@ trap 'rm -rf "$WORK"' EXIT
 # failure in a control below is the injected defect and not pre-existing noise.
 SUBJECT="$SPEC_ROOT/contexts/v1/coverage.jsonld"
 
+# fixture_ready <status> <what> -- a fixture that was not built is not a
+# control that passed. Without this the scratch file is simply never written
+# and the control below crashes out of open() with a Python traceback.
+fixture_ready() {
+  if [ "$1" -ne 0 ]; then
+    echo "ERROR: could not build the fixture for '$2', so the controls below"
+    echo "       would test nothing. Stopping."
+    exit 2
+  fi
+}
+
 # inject <src> <dst> <key> <value> -- add one term to a context's @context.
 inject() {
   "$PYTHON" - "$1" "$2" "$3" "$4" <<'PY'
@@ -61,6 +72,42 @@ doc["@context"][key] = value
 with open(dst, "w", encoding="utf-8") as fh:
     json.dump(doc, fh, indent=2, ensure_ascii=False)
 PY
+  fixture_ready $? "$3"
+}
+
+# inject_json <src> <dst> <key> <json> -- as inject, but the value is parsed as
+# JSON, so the term can be given an expanded definition object.
+inject_json() {
+  "$PYTHON" - "$1" "$2" "$3" "$4" <<'PY'
+import json, sys
+src, dst, key, value = sys.argv[1:5]
+with open(src, encoding="utf-8") as fh:
+    doc = json.load(fh)
+assert key not in doc["@context"], "fixture already defines %r" % key
+doc["@context"][key] = json.loads(value)
+with open(dst, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, indent=2, ensure_ascii=False)
+PY
+  fixture_ready $? "$3"
+}
+
+# split <src> <dst> [extra-json] -- rewrite a context into the ARRAY form,
+# prefixes in the first layer and everything else in the second, optionally
+# merging one more object into the second layer.
+split() {
+  "$PYTHON" - "$1" "$2" "${3:-null}" <<'PY'
+import json, sys
+src, dst, extra = sys.argv[1:4]
+with open(src, encoding="utf-8") as fh:
+    ctx = json.load(fh)["@context"]
+prefixes = {k: v for k, v in ctx.items()
+            if isinstance(v, str) and (v.endswith("#") or v.endswith("/"))}
+rest = {k: v for k, v in ctx.items() if k not in prefixes}
+rest.update(json.loads(extra) or {})
+with open(dst, "w", encoding="utf-8") as fh:
+    json.dump({"@context": [prefixes, rest]}, fh, indent=2, ensure_ascii=False)
+PY
+  fixture_ready $? "array-valued @context"
 }
 
 echo "check-context-validity.py regression suite"
@@ -134,7 +181,7 @@ import json, sys
 from rdflib import Graph
 with open(sys.argv[1], encoding="utf-8") as fh:
     ctx = json.load(fh)["@context"]
-doc = json.dumps({"@context": ctx, "@id": "urn:x", "coverageType": "v"})
+doc = json.dumps({"@context": ctx, "@id": "urn:x", "coverageCoverageType": "v"})
 try:
     Graph().parse(data=doc, format="json-ld")
     print("accepted")
@@ -151,6 +198,51 @@ PY
 else
   fail "rdflib accepts the broken context, so the check is not using it" \
        "rdflib is not importable, so this control tested nothing"
+fi
+
+# -- 7. Positive control: a legal @reverse term definition -------------------
+# The check must read every definition without USING any term. A document that
+# assigns a value to every term instead rejects this context: a @reverse term's
+# value may not be a plain string, so the usage itself is the syntax error, on
+# a context a conformant processor accepts.
+inject_json "$SUBJECT" "$WORK/reverse.jsonld" "employedBy"             '{"@reverse": "coverage:coverageStatus"}'
+OUT="$("$PYTHON" "$CHECK" "$WORK/reverse.jsonld" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "a legal @reverse term definition is accepted"
+else
+  fail "a legal @reverse term definition is accepted"        "check rejected a context a processor accepts: $OUT"
+fi
+
+# -- 8. Positive control: an array-valued @context ---------------------------
+# "@context": [ {...}, {...} ] is legal JSON-LD. An object-only loader reports
+# the file as NOT A CONTEXT and blocks a valid change.
+split "$SUBJECT" "$WORK/array.jsonld"
+OUT="$("$PYTHON" "$CHECK" "$WORK/array.jsonld" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "an array-valued @context is accepted"
+else
+  fail "an array-valued @context is accepted"        "check rejected a legal context form: $OUT"
+fi
+
+# -- 9. Negative control: array support must not be hollow -------------------
+# The cheap way to stop rejecting arrays is to stop looking inside them. This
+# is control 2's defect, in the second layer of an array.
+split "$SUBJECT" "$WORK/arrayprose.jsonld" '{"__comment_section": "=== Section ==="}'
+OUT="$("$PYTHON" "$CHECK" "$WORK/arrayprose.jsonld" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "INVALID TERM '__comment_section'"; then
+  pass "a prose term inside an array-valued @context is caught and named"
+else
+  fail "a prose term inside an array-valued @context is caught and named"        "check did not fail, or did not name the term: $OUT"
+fi
+
+# -- 10. A path that cannot be read is a FAILED line, not a traceback --------
+# FileNotFoundError, IsADirectoryError and UnicodeDecodeError are not
+# ValueError. A typo in a CI invocation must produce a diagnostic.
+OUT="$("$PYTHON" "$CHECK" "$WORK/no-such-file.jsonld" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "FAILED"    && ! echo "$OUT" | grep -q "Traceback"; then
+  pass "an unreadable path is reported, not raised as a traceback"
+else
+  fail "an unreadable path is reported, not raised as a traceback"        "expected a FAILED line and no traceback: $OUT"
 fi
 
 echo ""
