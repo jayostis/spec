@@ -1,0 +1,51 @@
+name: contexts
+
+# Asserts that every published JSON-LD context under contexts/v1/ loads in a
+# strict JSON-LD processor.
+#
+# Without this job nothing in the repository ever passes these files to a
+# processor, which is exactly how three of the seven came to be published
+# invalid and stay that way: json.load succeeds on all of them, so a JSON
+# syntax check -- or an editor, or a linter -- reports them fine. Only
+# expansion objects, and nothing expanded them. See issue #48.
+#
+# Note the `paths` list: it must include contexts/** or the job fires only on
+# PRs that edit the check and never on PRs that edit a context, which is
+# backwards and is how the other workflows in this repository are currently
+# scoped. That is deliberate here, not a copy-paste from term-status.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'contexts/**'
+      - 'scripts/check-context-validity.py'
+      - 'scripts/test-check-context-validity.sh'
+      - 'scripts/requirements.txt'
+      - '.github/workflows/contexts.yml'
+  workflow_dispatch:
+
+jobs:
+  contexts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # The regression suite runs the check against the repository AND against
+      # scratch copies with known defects introduced, so a check that has
+      # stopped being able to fail is caught here rather than in a consumer.
+      # Control 6 additionally fails if the strict processor is ever swapped
+      # for rdflib, which accepts the broken files.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-context-validity.sh
+
+      - name: Every context loads in a strict processor
+        run: python3 scripts/check-context-validity.py
