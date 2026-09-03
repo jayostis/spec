@@ -37,6 +37,7 @@ on:
       - 'scripts/known-severity-escalations.json'
       - 'scripts/check-class-coverage.py'
       - 'scripts/test-check-class-coverage.sh'
+      - 'scripts/test-record-class-declarations.sh'
       - 'scripts/known-unshaped-classes.json'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
@@ -105,6 +106,18 @@ jobs:
       # baselined class that has since been shaped must fail too.
       - name: Regression suite (check + negative controls)
         run: sh scripts/test-check-class-coverage.sh
+
+      # The suite above asks whether the CHECK can still fail. This one asks
+      # whether the VOCABULARY still says something true about itself: a class
+      # carrying its own data properties is record data and must declare the
+      # PROV superclass that says so, or the gate cannot see it at all -- it
+      # reports PASS over the class while the baseline, being the gate's
+      # output, does not list it either. Seven classes were invisible in both
+      # directions that way, two of them reported by conformance for months.
+      # It also pins the population count, so widening the check's scope over
+      # the 43 value enumerations fails here rather than shipping.
+      - name: Record-class declaration suite
+        run: sh scripts/test-record-class-declarations.sh
 
       - name: Record-class shape coverage check
         run: python3 scripts/check-class-coverage.py

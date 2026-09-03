@@ -866,6 +866,97 @@ None carries an issue:
 
 ---
 
+## Pending batch — core v3.12 / coverage v1.8 / checkup v3.4 / workbench v1-draft.0.8 (authored 2026-09-01)
+
+**0 terms. Seven classes declare a PROV superclass they always warranted.** Tags
+`vocab/core-v3.12`, `vocab/coverage-v1.8`, `vocab/checkup-v3.4` and
+`vocab/workbench-v1-draft.0.8` — owed at merge, not created on the branch.
+`coverage:BenefitStatement`, `coverage:ClaimRecord`,
+`cascade:AIDiscardedExtraction`, `checkup:CheckInSettings`,
+`workbench:Hypothesis`, `cascade:ConflictDetail` and `workbench:Pin` gain
+`rdfs:subClassOf prov:Entity`. **No term is added, removed or renamed; no
+definition, domain, range or shape changes anywhere.** Closes jayostis/spec#13.
+See `CHANGELOG.md`.
+
+**Four vocabularies, one row.** They are one change — the same axiom, for the
+same reason, verified by one gate run — and splitting them into four rows would
+invite four separate syncs of a change that has no per-vocab content.
+`VOCAB_VERSIONS` moves `core` 3.11 to **3.12**, `coverage` 1.7 to **1.8** and
+`checkup` 3.3 to **3.4**. `workbench` is draft and stays UNROWED per D-PATH;
+downstream repos record a dated comment only.
+
+**This row does NOT supersede the `coverage v1.7` or `core v3.11` rows below.**
+Neither has been propagated, and this change is orthogonal to both: a repo that
+owes v3.11 now owes 3.11 **and** 3.12 and should sync once, to `core=3.12`, but
+the v3.11 row's per-repo findings are what tell it what to actually do. This row
+adds a version number to that sync and no work of its own.
+
+**Additive; nothing that conformed stops conforming.** No shape targets
+`prov:Entity`, so no record's verdict moves even under an entailing validator —
+`scripts/check-shape-targets.py` is green, which is what establishes that. No
+constraint is added at any severity, on any class. **No fixture, pod or SDK
+model needs to change for correctness.**
+
+**Synced NOW: nothing.** The seam table's trigger is a released vocab gaining a
+property, so `cascade validate` knows the term. No property is added and no
+embedded shape changes, so `cascade-cli` has nothing to re-sync and no consumer
+is rejecting anything this release fixes.
+
+**Batched (do NOT execute now; run at the next batch, per the `CONTRIBUTING.md`
+cross-repo sequence, steps 2-7):**
+
+- [x] `spec/` — authored (this repo); `VOCAB_VERSIONS` `core=3.12`,
+      `coverage=1.8`, `checkup=3.4`; seven classes added to
+      `scripts/known-unshaped-classes.json` (34 entries to 41).
+- [ ] `conformance` — **the one repo with real work owed, and it is a
+      subtraction.** `KNOWN_FAILURES.json` has been carrying
+      `coverage:ClaimRecord` and `coverage:BenefitStatement` as UNSHAPED with
+      `ownedBy: spec` — a downstream repository reporting a gap this
+      repository's own gate could not see. Those two are now corroborated by
+      `spec`'s own baseline rather than only by `conformance`, so the records
+      should cross-reference `scripts/known-unshaped-classes.json` rather than
+      stand alone. **No fixture changes**; no verdict moves. Not examined at
+      this version — recorded as unknown, not clear.
+- [ ] `cascadeprotocol.org` — `sync-from-spec.sh`, then the core / coverage /
+      checkup v1 class docs and `schemas.md`, plus a changelog entry. The class
+      tables show superclasses, so they are stale until this runs. **Not
+      examined** — recorded as unknown, not clear.
+- [ ] `cascade-cli` — `sync-shapes-from-spec.sh` + `VOCAB_VERSIONS`. Ontology
+      files only; no `.shapes.ttl` in any vocabulary is touched by this change.
+      **Not examined** — recorded as unknown, not clear.
+- [ ] `sdk-typescript` — `VOCAB_VERSIONS` only. No model file changes: no term
+      is added and `prov:Entity` is not serialized as a type by any writer.
+      **Not examined** — recorded as unknown, not clear.
+- [ ] `sdk-python` — `VOCAB_VERSIONS` only, same reasoning. **Not examined** —
+      recorded as unknown, not clear.
+- [ ] `cascade-agent` — `VOCAB_VERSIONS` only. No query pattern changes: no
+      term is added. **Not examined** — recorded as unknown, not clear.
+
+**Recorded so it does not vanish:**
+
+- **41 baselined classes is a debt made visible, not a debt incurred.** Nothing
+  in `scripts/known-unshaped-classes.json` is acceptable in the long run: each
+  entry is a class whose records validate vacuously today. The seven added here
+  were validating vacuously before too, invisibly. The list can only shrink.
+- **`workbench:Investigation` meets the same test and is deliberately not
+  declared.** Domain of eight properties, no `rdfs:subClassOf`, invisible to the
+  gate for exactly the reason the seven were. jayostis/spec#13 did not scope it,
+  so declaring it would be a change nobody reviewed. It needs its own issue.
+- **`coverage` and `checkup` have no per-vocab `CHANGELOG.md`.** `core` and
+  `workbench` do, and both are updated by this change. Four of the six released
+  vocabularies have never had one, so this release follows the convention rather
+  than inventing files for two of them; the gap is real and is a separate
+  finding.
+- **`ontologies/workbench/CHANGELOG.md` is missing v1-draft.0.6 and 0.7.** Both
+  are in the TTL's own changelog block and neither reached the per-vocab file.
+  This change adds 0.8 and does not backfill them: the content would be
+  reconstructed rather than authored. A separate finding, predating this PR.
+- **`scripts/check-downstream-versions.sh` will report all six repos behind on
+  three vocabularies** the moment this merges. That is the drift this ledger
+  exists to carry, and this row is what stops the next batch skipping it.
+
+---
+
 ## Deprecation — `clinical:CoverageRecord` → `coverage:InsurancePlan` (ENTERED RETROACTIVELY 2026-08-30)
 
 **This row is late by roughly six months, and that is the finding it records.** The

@@ -21,8 +21,8 @@
     dct:description "Structured health data for patient intake forms and pre-visit preparation. Enables aggregation of EHR, HealthKit, and manually entered health data."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-01-03"^^xsd:date ;
-    dct:modified "2026-08-08"^^xsd:date ;
-    owl:versionInfo "3.3" ;
+    dct:modified "2026-09-01"^^xsd:date ;
+    owl:versionInfo "3.4" ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/checkup/v1/> .
 
 # ============================================================================
@@ -1290,10 +1290,29 @@ checkup:DiscussionTopic a owl:Class ;
     cascade:subConcern "analytics" ;
     rdfs:subClassOf prov:Entity .
 
+# A RECORD CLASS, DECLARED AS ONE (checkup v3.4). Four properties declare
+# rdfs:domain of it -- checkup:checkInEnabled, checkup:notificationHour,
+# checkup:notificationMinute and checkup:enabledDays -- and checkup:IntakeFormData
+# reaches an instance through checkup:hasCheckInSettings, so these values are
+# written into the pod and read back out of it.
+#
+# cascade:subConcern "app-config" is not an argument against this. That
+# annotation "classifies a vocabulary class by its functional role ... used for
+# documentation generation, migration planning, and vocabulary organization"
+# (core.ttl): it says what the record is ABOUT, not whether it is stored. A
+# schedule the patient chose is data someone kept, and four unconstrained
+# fields is four fields a malformed write can put anything in --
+# notificationHour is an xsd:integer that means 0-23 and nothing says so.
+#
+# rdfs:subClassOf prov:Entity is the assertion "instances of this are stored
+# record data" in this specification, and its absence made the class invisible
+# to scripts/check-class-coverage.py rather than exempt from it. Its immediate
+# sibling checkup:DiscussionTopic already declares it. See jayostis/spec#13.
 checkup:CheckInSettings a owl:Class ;
     rdfs:label "Check-in Settings" ;
     rdfs:comment "Application configuration for daily check-in notification scheduling and day-of-week preferences." ;
-    cascade:subConcern "app-config" .
+    cascade:subConcern "app-config" ;
+    rdfs:subClassOf prov:Entity .
 
 # --- DailyCheckIn Properties ---
 
@@ -1791,6 +1810,33 @@ checkup:supplementUPC a owl:DatatypeProperty ;
 # ============================================================================
 # CHANGELOG
 # ============================================================================
+#
+# v3.4 (2026-09-01): NO class or property added, removed or renamed, and no
+# SHACL change. One existing class, checkup:CheckInSettings, gains
+# rdfs:subClassOf prov:Entity.
+#
+# In this specification that axiom asserts that instances of a class are stored
+# record data, and scripts/check-class-coverage.py reads the rdfs:subClassOf
+# chain to decide which classes it examines at all. checkup:CheckInSettings
+# declared no superclass, so the gate reported PASS over it while no shape
+# judged it -- and it was absent from scripts/known-unshaped-classes.json too,
+# because that file is the gate's OUTPUT rather than a filter on it. Invisible
+# in both directions. It is now in the population and baselined there as owing
+# a shape.
+#
+# The argument is from the class's properties, not its name: four properties
+# declare rdfs:domain of it and checkup:IntakeFormData links to an instance
+# through checkup:hasCheckInSettings, so the values are written to the pod and
+# read back. Its cascade:subConcern "app-config" annotation classifies the
+# functional role for documentation and migration planning (core.ttl) and does
+# not bear on whether the data is stored; the neighbouring
+# checkup:DiscussionTopic already declares the same superclass.
+#
+# NO shape is written here, deliberately -- what the class requires is a
+# separate judgement, and checkup.shapes.ttl is unchanged so `shaped` does not
+# move. COMPATIBILITY: none possible; SHACL resolves class membership over the
+# DATA graph (validation/index.md), so an ontology superclass axiom changes no
+# validation result and no pod record needs rewriting. See jayostis/spec#13.
 #
 # v3.3 (2026-08-08): SHACL only; no class or property added, removed or
 # renamed. The checkup:icd10Code sh:pattern required a digit in the second and
