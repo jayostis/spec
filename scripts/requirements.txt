@@ -5,3 +5,11 @@
 # (check-shape-targets.py reasons over graph structure only), so pyshacl is
 # deliberately not a dependency of this repository.
 rdflib==7.6.0
+
+# check-context-validity.py needs a STRICT JSON-LD processor, and rdflib above
+# is not one: its JSON-LD parser accepted all three contexts that shipped
+# invalid, without complaint. Reusing it would have produced a check that sat
+# green over the exact defect it exists to catch, so PyLD is pinned separately.
+# scripts/test-check-context-validity.sh control 6 fails if anyone consolidates
+# these back into one. See issue #48.
+PyLD==3.3.0

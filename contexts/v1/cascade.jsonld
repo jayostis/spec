@@ -24,8 +24,6 @@
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
 
-    "__comment_core": "=== Core Vocabulary (cascade:) ===",
-
     "DataProvenance": "cascade:DataProvenance",
     "ConsumerGenerated": "cascade:ConsumerGenerated",
     "ClinicalGenerated": "cascade:ClinicalGenerated",
@@ -161,8 +159,6 @@
     "hashAlgorithm": "cascade:hashAlgorithm",
     "byteSize": { "@id": "cascade:byteSize", "@type": "xsd:integer" },
     "attachmentTitle": "cascade:attachmentTitle",
-
-    "__comment_clinical": "=== Clinical Vocabulary (clinical:) ===",
 
     "ClinicalDocument": "clinical:ClinicalDocument",
     "ClinicalSection": "clinical:ClinicalSection",
@@ -502,8 +498,6 @@
     "payorName": "clinical:payorName",
     "clinicalSubscriberId": "clinical:subscriberId",
 
-    "__comment_health": "=== Health Vocabulary (health:) ===",
-
     "ActivitySnapshot": "health:ActivitySnapshot",
     "SleepSnapshot": "health:SleepSnapshot",
     "VO2MaxStatistics": "health:VO2MaxStatistics",
@@ -785,8 +779,6 @@
     "healthUnit": "health:unit",
     "healthUcumCode": "health:ucumCode",
     "trendPolarity": "health:trendPolarity",
-
-    "__comment_checkup": "=== Checkup Vocabulary (checkup:) ===",
 
     "IntakeFormData": "checkup:IntakeFormData",
     "InsuranceInfo": "checkup:InsuranceInfo",
@@ -1335,8 +1327,6 @@
       "@type": "@id"
     },
 
-    "__comment_pots": "=== POTS Vocabulary (pots:) ===",
-
     "POTSCheckResult": "pots:POTSCheckResult",
     "HeartRateMeasurement": "pots:HeartRateMeasurement",
     "BloodPressureMeasurement": "pots:BloodPressureMeasurement",
@@ -1451,8 +1441,6 @@
       "@id": "pots:averageImportedHRV",
       "@type": "xsd:double"
     },
-
-    "__comment_coverage": "=== Coverage Vocabulary (coverage:) ===",
 
     "InsurancePlan": "coverage:InsurancePlan",
     "Deductible": "coverage:Deductible",

@@ -22,10 +22,16 @@ spec/
     pots/v1/pots.ttl              # POTS-specific ontology
     pots/v1/pots.shapes.ttl
   serialization/
-    turtle-rules.md               # Serialization conventions
-    pod-structure.md              # Pod directory layout
-  contexts/
-    cascade-v1.jsonld             # JSON-LD context
+    index.md                      # Serialization conventions
+  pod-structure.md                # Pod directory layout (repo root, not nested)
+  contexts/v1/
+    cascade.jsonld                # Every vocabulary in one context
+    core.jsonld                   # Per-vocabulary contexts
+    health.jsonld
+    clinical.jsonld
+    coverage.jsonld
+    checkup.jsonld
+    pots.jsonld
 ```
 
 ## Key Concepts
@@ -87,6 +93,30 @@ sh scripts/test-check-nested-severity.sh        # its regression suite
 
 Note what neither check does: **spec runs no SHACL validator**, so a regression in an `sh:pattern` or an `sh:in` member is invisible here. Behavioural verification lives in the `conformance` repository.
 
+### A `@context` has no comments, so a section header IS a term definition
+
+Every non-keyword key in a `@context` is a term definition, and its value must be an IRI, a compact IRI, or a keyword. JSON has no comment syntax and JSON-LD adds none, so the familiar workaround — a key nobody will collide with — does not work here:
+
+```json
+"__comment_core": "=== Core Vocabulary (cascade:) ===",
+```
+
+That is a term whose IRI is a sentence, and a conformant processor rejects **the whole file** over it. Not the one entry: all 716 terms in `cascade.jsonld` were unreachable because six of them were headings.
+
+Three of the seven published contexts shipped that way and stayed broken for months. `json.load` succeeds on all of them — they are valid *JSON*, so an editor, a linter and a JSON syntax check all report them fine. Only expansion objects, and nothing in this repository expanded them.
+
+```sh
+python3 scripts/check-context-validity.py       # the rule
+sh scripts/test-check-context-validity.sh       # its regression suite
+```
+
+Two things to know before changing that check:
+
+1. **Do not rewrite it against `rdflib`.** rdflib is already pinned here and parses JSON-LD, so it is the obvious instrument; it also accepted all three broken files without complaint. `PyLD` is pinned separately for strictness, and control 6 of the suite fails if the two are consolidated.
+2. **It asserts that a context LOADS, never that a term maps to the right IRI.** A context resolving `dateOfBirth` to the wrong predicate is valid JSON-LD and passes. That is a different question, and an open one.
+
+If you want a section marker, `@` followed by **letters only** is ignored by a processor — `@commentCore` works, `@comment_core` fails exactly as the original did. Prefer no marker: the terms under a heading already carry the prefix it names.
+
 ### Version Bumping
 
 When modifying an ontology:
@@ -109,6 +139,7 @@ Before committing any change to an ontology (`.ttl`) file, you MUST:
 - [ ] Update `VOCAB_VERSIONS` file for this vocabulary — stage it with `git add VOCAB_VERSIONS`
 - [ ] Run `python3 scripts/check-shape-targets.py` and get exit 0 (the `shapes` CI job runs it, and its regression suite, on every PR touching `ontologies/`)
 - [ ] Run `python3 scripts/check-nested-severity.py` and get exit 0 — same CI job. Required whenever you add or move an `sh:severity`, and whenever you add an `sh:node`
+- [ ] Run `python3 scripts/check-context-validity.py` and get exit 0 — the `contexts` CI job runs it, and its regression suite, on every PR touching `contexts/`. **Required whenever you touch a context, which is not the same trigger as the rest of this list**: a context change need not accompany a `.ttl` change, and this was the one gate with no `.ttl` in front of it
 - [ ] Tag the commit: `git tag vocab/{name}-v{X.Y}` after committing
 
 After committing, complete the downstream update sequence (in order):

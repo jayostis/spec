@@ -198,8 +198,6 @@
       "@type": "xsd:dateTime"
     },
 
-    "_comment_v3_4": "core v3.4 — pod export manifest (DCAT/VoID grounded) and reading-level terms",
-
     "ExportManifest": "cascade:ExportManifest",
     "RecordSummary": "cascade:RecordSummary",
     "InteractionScenario": "cascade:InteractionScenario",
