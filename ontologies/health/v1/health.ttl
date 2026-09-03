@@ -21,8 +21,8 @@
     dct:description "Vocabulary for consumer-generated wellness observations from wearable devices and HealthKit. Maps Cascade wellness properties to established SNOMED CT and LOINC codes following the three-layer ontology architecture."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-01-29"^^xsd:date ;
-    dct:modified "2026-08-27"^^xsd:date ;
-    owl:versionInfo "2.8" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "2.9" ;
     rdfs:comment """Three-layer ontology for wellness data:
         Layer 1 (Established standards): SNOMED CT concept IDs + LOINC observation codes
         Layer 2 (Cascade health vocabulary): health: namespace properties linking to Layer 1
@@ -489,32 +489,32 @@ health:sleepQuality a owl:DatatypeProperty ;
 # Composite Classes
 # ============================================================================
 
-health:ActivitySnapshot a owl:Class ;
+health:ActivitySnapshot a owl:Class, cascade:RecordClass ;
     rdfs:label "Activity Snapshot"@en ;
     rdfs:comment "Aggregated activity metrics over a measurement period (typically 7 days)"@en ;
     rdfs:subClassOf prov:Entity .
 
-health:SleepSnapshot a owl:Class ;
+health:SleepSnapshot a owl:Class, cascade:RecordClass ;
     rdfs:label "Sleep Snapshot"@en ;
     rdfs:comment "Aggregated sleep metrics over a measurement period (typically 7 days)"@en ;
     rdfs:subClassOf prov:Entity .
 
-health:VO2MaxStatistics a owl:Class ;
+health:VO2MaxStatistics a owl:Class, cascade:RecordClass ;
     rdfs:label "VO2 Max Statistics"@en ;
     rdfs:comment "Statistical summary of VO2 Max readings over a measurement period (typically 180 days). Provides trend analysis, fitness classification, and min/max/mean calculations. Designed for dual-path UI display: rich statistics view when available, fallback to single VO2 Max value otherwise."@en ;
     rdfs:subClassOf prov:Entity .
 
-health:HRVStatistics a owl:Class ;
+health:HRVStatistics a owl:Class, cascade:RecordClass ;
     rdfs:label "HRV Statistics"@en ;
     rdfs:comment "Statistical summary of Heart Rate Variability (SDNN) readings over a measurement period. Provides trend analysis and min/max/mean calculations."@en ;
     rdfs:subClassOf prov:Entity .
 
-health:BPStatistics a owl:Class ;
+health:BPStatistics a owl:Class, cascade:RecordClass ;
     rdfs:label "Blood Pressure Statistics"@en ;
     rdfs:comment "Statistical summary of blood pressure readings over a measurement period. Provides mean, min, max for systolic and diastolic values, plus AHA category classification."@en ;
     rdfs:subClassOf prov:Entity .
 
-health:HealthProfile a owl:Class ;
+health:HealthProfile a owl:Class, cascade:RecordClass ;
     rdfs:label "Health Profile"@en ;
     rdfs:comment "Top-level wellness profile aggregating vital signs, body measurements, activity, and sleep data from consumer devices. Stored at /wellness/ in the Cascade Pod."@en ;
     rdfs:subClassOf prov:Entity .
@@ -539,12 +539,12 @@ health:VitalSignReading a owl:Class ;
     rdfs:comment "A single vital sign observation with value, unit, measurement period, timestamp, and source. Used for baseline readings and VO2 Max history entries."@en ;
     rdfs:subClassOf fhir:Observation .
 
-health:DailyActivitySnapshot a owl:Class ;
+health:DailyActivitySnapshot a owl:Class, cascade:RecordClass ;
     rdfs:label "Daily Activity Snapshot"@en ;
     rdfs:comment "A single day's activity data: steps, active energy, exercise minutes, and stand hours."@en ;
     rdfs:subClassOf prov:Entity .
 
-health:DailySleepSnapshot a owl:Class ;
+health:DailySleepSnapshot a owl:Class, cascade:RecordClass ;
     rdfs:label "Daily Sleep Snapshot"@en ;
     rdfs:comment "A single night's sleep data: duration in hours and quality classification."@en ;
     rdfs:subClassOf prov:Entity .
@@ -610,7 +610,7 @@ health:dailySleepHistory a owl:ObjectProperty ;
 # Base class for patient-reported daily check-ins and self-assessments.
 # Apps extend this with domain-specific response data.
 
-health:SelfReport a owl:Class ;
+health:SelfReport a owl:Class, cascade:RecordClass ;
     rdfs:label "Self Report"@en ;
     rdfs:comment "Base class for patient-reported daily check-ins and self-assessments. Provides common structure for timestamped self-reports across health domains. Apps extend this with domain-specific response data. Examples: medication adherence, symptom tracking, mood logging, sleep records."@en ;
     rdfs:subClassOf prov:Entity .
@@ -939,7 +939,7 @@ health:bpCategory a owl:DatatypeProperty ;
 # value-laden terms (improving/declining) — the ontology describes *what*
 # happened; the presentation layer interprets whether it's good or bad.
 
-health:MetricTrend a owl:Class ;
+health:MetricTrend a owl:Class, cascade:RecordClass ;
     rdfs:label "Metric Trend" ;
     rdfs:comment "A time-bounded trend for a single wellness metric, computed from a series of observations. Captures direction, magnitude, and comparison period." ;
     rdfs:subClassOf prov:Entity .
@@ -1049,7 +1049,7 @@ health:Unknown a health:WalkingSteadinessLevel ;
 # ============================================================================
 
 ###  Social History Record
-health:SocialHistoryRecord a owl:Class ;
+health:SocialHistoryRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Social History Record"@en ;
     rdfs:comment "A social history observation about a patient, including smoking status, alcohol use, exercise, occupation, and other lifestyle factors."@en ;
     owl:versionInfo "Added in health v2.4" .
@@ -1135,32 +1135,32 @@ health:occupationalExposure a owl:DatatypeProperty ;
 # Layer 1 alignment: each class states the FHIR R4 resource it corresponds to.
 # Layer 2: the properties below. Layer 3: checkup:/pots: aggregations.
 
-health:LabResultRecord a owl:Class ;
+health:LabResultRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Lab Result Record"@en ;
     rdfs:comment "A laboratory test result: the test performed, its value and unit, the reference range it is read against, and the specimen it came from. Emitted for both EHR-imported and patient-entered results; read cascade:dataProvenance to tell them apart."@en ;
     rdfs:subClassOf fhir:Observation ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/observation.html> ;
     owl:versionInfo "Added in health v2.5; emitted since schema 1.3" .
 
-health:ConditionRecord a owl:Class ;
+health:ConditionRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Condition Record"@en ;
     rdfs:comment "A diagnosed condition or problem-list entry, with its clinical status, onset, and coding. Emitted for both EHR-imported and self-reported conditions; read cascade:dataProvenance to tell them apart."@en ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/condition.html> ;
     owl:versionInfo "Added in health v2.5; emitted since schema 1.3" .
 
-health:AllergyRecord a owl:Class ;
+health:AllergyRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Allergy Record"@en ;
     rdfs:comment "An allergy or intolerance: the allergen, the reaction it provokes, and the severity of that reaction. Emitted for both EHR-imported and self-reported allergies; read cascade:dataProvenance to tell them apart."@en ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/allergyintolerance.html> ;
     owl:versionInfo "Added in health v2.5; emitted since schema 1.3" .
 
-health:ImmunizationRecord a owl:Class ;
+health:ImmunizationRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Immunization Record"@en ;
     rdfs:comment "An administered vaccine dose, with product identification, lot, route, site and administering party."@en ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/immunization.html> ;
     owl:versionInfo "Added in health v2.5; emitted since schema 1.3" .
 
-health:FamilyHistoryRecord a owl:Class ;
+health:FamilyHistoryRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Family History Record"@en ;
     rdfs:comment "A condition recorded for a relative of the patient, with the relationship and the relative's age at onset. The relationship is expressed with clinical:relationship, which is shared with coverage records."@en ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/familymemberhistory.html> ;
@@ -1486,37 +1486,37 @@ health:onsetAge a owl:DatatypeProperty ;
 # No serializer changes. No rdf:type changes. These subjects were already
 # being written with exactly these types.
 
-health:ActivityData a owl:Class ;
+health:ActivityData a owl:Class, cascade:RecordClass ;
     rdfs:label "Activity Data"@en ;
     rdfs:comment "Wellness container for daily activity history: steps, active energy, exercise minutes and stand hours."@en ;
     rdfs:subClassOf health:HealthProfile ;
     owl:versionInfo "Added in health v2.5; emitted since health v2.0" .
 
-health:SleepData a owl:Class ;
+health:SleepData a owl:Class, cascade:RecordClass ;
     rdfs:label "Sleep Data"@en ;
     rdfs:comment "Wellness container for nightly sleep history: duration and quality."@en ;
     rdfs:subClassOf health:HealthProfile ;
     owl:versionInfo "Added in health v2.5; emitted since health v2.0" .
 
-health:HeartRateData a owl:Class ;
+health:HeartRateData a owl:Class, cascade:RecordClass ;
     rdfs:label "Heart Rate Data"@en ;
     rdfs:comment "Wellness container for resting and walking heart rate history."@en ;
     rdfs:subClassOf health:HealthProfile ;
     owl:versionInfo "Added in health v2.5; emitted since health v2.0" .
 
-health:BloodPressureData a owl:Class ;
+health:BloodPressureData a owl:Class, cascade:RecordClass ;
     rdfs:label "Blood Pressure Data"@en ;
     rdfs:comment "Wellness container for blood pressure history from home monitors."@en ;
     rdfs:subClassOf health:HealthProfile ;
     owl:versionInfo "Added in health v2.5; emitted since health v2.0" .
 
-health:HRVData a owl:Class ;
+health:HRVData a owl:Class, cascade:RecordClass ;
     rdfs:label "HRV Data"@en ;
     rdfs:comment "Wellness container for heart rate variability (SDNN) history."@en ;
     rdfs:subClassOf health:HealthProfile ;
     owl:versionInfo "Added in health v2.5; emitted since health v2.0" .
 
-health:BodyMeasurements a owl:Class ;
+health:BodyMeasurements a owl:Class, cascade:RecordClass ;
     rdfs:label "Body Measurements"@en ;
     rdfs:comment "Wellness container for body mass and related anthropometric history."@en ;
     rdfs:subClassOf health:HealthProfile ;

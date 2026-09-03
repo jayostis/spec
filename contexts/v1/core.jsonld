@@ -237,6 +237,9 @@
     "coreLoincCode": { "@id": "cascade:loincCode", "@type": "@id" },
 
     "Attachment": "cascade:Attachment",
+    "AIGenerationActivity": "cascade:AIGenerationActivity",
+    "AdvisoryApplicationActivity": "cascade:AdvisoryApplicationActivity",
+    "ConflictDetail": "cascade:ConflictDetail",
     "hasAttachment": { "@id": "cascade:hasAttachment", "@type": "@id", "@container": "@set" },
     "attachmentPath": "cascade:attachmentPath",
     "attachmentMediaType": "cascade:attachmentMediaType",

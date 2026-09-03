@@ -19,35 +19,84 @@
     dct:description "Core vocabulary for schema versioning, data provenance, identity management, and patient demographics across all Cascade Protocol applications"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
-    dct:modified "2026-09-01"^^xsd:date ;
-    owl:versionInfo "3.12" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "3.13" ;
     rdfs:comment "This vocabulary defines cross-cutting concepts used by all Cascade Protocol health data applications: schema versioning, data provenance, patient demographics (PatientProfile), and supporting identity classes (Address, PharmacyInfo, AdvanceDirectives). Domain-specific vocabularies (e.g., pots:, ecg:, glucose:) import this core vocabulary."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/core/v1.0/> .
+
+# ============================================================================
+# Record-Bearing Class Marker
+# ============================================================================
+
+# THE ONE MACHINE-READABLE STATEMENT THAT A CLASS'S INSTANCES ARE STORED RECORDS.
+#
+# Added in core v3.13. A class carries `a cascade:RecordClass` when a pod stores
+# instances of it -- when there is data on disk for a shape to judge and for a
+# consumer to read. It is an explicit designation, not an inference: membership
+# is this triple and nothing else. scripts/check-class-coverage.py keys on it.
+#
+# WHAT THIS REPLACES, AND WHY
+#
+# Until core v3.13 nothing stated this, and rdfs:subClassOf prov:Entity was read
+# as if it did -- by scripts/check-class-coverage.py, by
+# scripts/known-unshaped-classes.json's $rule, and by two vocabulary changes
+# (jayostis/spec#12, jayostis/spec#13) made on that reading.
+#
+# jayostis/spec#34 (ASK-05) ruled it out:
+#
+#   "The reading 'subClassOf prov:Entity means instances are stored record data'
+#    is not the intent. The axiom is PROV-O alignment ... Your shape-coverage
+#    checker should key on that, or on an explicit list, never on prov:Entity,
+#    which will keep catching alignment axioms."
+#
+# rdfs:subClassOf prov:Entity IS PROV-O ALIGNMENT AND CONFERS NOTHING HERE. It
+# stays wherever it appears and it remains true; it simply no longer answers this
+# question. Adding or removing one to change what the coverage gate sees is the
+# defect ASK-05 corrected -- do not do it. Conversely a class may carry this
+# marker with no PROV superclass at all, and several do.
+#
+# The ruling named cascade:HealthRecord as an alternative marker. It is not used
+# as one: it has a single subclass, so keying on its subtree would have examined
+# one class. It is on the roster like any other record class.
+cascade:RecordClass a owl:Class ;
+    rdfs:label "Record Class"@en ;
+    rdfs:comment "Marker for a class whose instances are stored record data in a Pod. A class carries `a cascade:RecordClass` when instances of it are written to disk, which is what makes it something a SHACL shape owes a verdict on and something a consumer can expect to read. Membership is this triple alone and is never inferred from a superclass: in particular rdfs:subClassOf prov:Entity is PROV-O alignment and confers no membership here (see jayostis/spec#34). Instances of this class are themselves classes."@en ;
+    rdfs:seeAlso <https://github.com/jayostis/spec/issues/34> ;
+    owl:versionInfo "Added in core v3.13" .
 
 # ============================================================================
 # Data Provenance Classes
 # ============================================================================
 
-# NO PROV SUPERCLASS, DELIBERATELY (core v3.9). This is a CLASSIFICATION -- the
-# code list cascade:dataProvenance ranges over -- and not a record class. Through
-# core v3.8 it declared rdfs:subClassOf prov:Entity, which in this specification
-# asserts that instances of a class are stored record data. That was false of it
-# and, by inheritance, of all ten value terms below: nothing is ever typed
-# cascade:ClinicalGenerated, it is only ever the OBJECT of cascade:dataProvenance
-# (179 uses in the reference pod, every one as a value, none as a type).
+# PROV SUPERCLASS RESTORED (core v3.13), AND NO cascade:RecordClass MARKER.
+# This class is the clearest demonstration of what those two now mean separately.
 #
-# The claim cost something once scripts/check-class-coverage.py began reading it:
-# all eleven terms were reported as record classes with no shape and baselined as
-# debt that can never be discharged, because there is nothing about a code-list
-# member for a shape to constrain. Removing the axiom is a correction, not a
-# suppression -- see jayostis/spec#12.
+# core v3.9 removed rdfs:subClassOf prov:Entity from here (jayostis/spec#12) on
+# the reading that the axiom asserts instances of a class are stored record data.
+# That reading was wrong. jayostis/spec#34 (ASK-05) ruled on it:
+#
+#   "The reading 'subClassOf prov:Entity means instances are stored record data'
+#    is not the intent. The axiom is PROV-O alignment: a provenance
+#    classification is a thing PROV statements can reference, so
+#    cascade:DataProvenance sits in the PROV world for SPARQL and interop
+#    purposes."
+#
+# So the axiom is restored, and it is simply TRUE: this classification is a
+# conceptual thing PROV statements reference. It says nothing whatever about
+# whether anyone stores an instance of it.
+#
+# What says that is cascade:RecordClass, and this class deliberately does NOT
+# carry it -- correctly, for the reason core v3.9 gave and got right: nothing is
+# ever typed cascade:ClinicalGenerated, it is only ever the OBJECT of
+# cascade:dataProvenance (179 uses in the reference pod, every one as a value,
+# none as a type). The observation was sound; only the instrument was wrong.
 #
 # cascade:dataProvenance's rdfs:range cascade:DataProvenance is unaffected and
-# still true: the range says the value comes from this classification, which
-# holds whether or not the classification is itself a prov:Entity.
+# still true either way.
 cascade:DataProvenance a owl:Class ;
     rdfs:label "Data Provenance"@en ;
-    rdfs:comment "Classification of how health data was generated or collected"@en .
+    rdfs:comment "Classification of how health data was generated or collected"@en ;
+    rdfs:subClassOf prov:Entity .
 
 # --- Broad DataProvenance Categories (promoted from individuals to classes) ---
 
@@ -291,7 +340,7 @@ cascade:preferredUnits a owl:DatatypeProperty ;
 # The general profile may be shared; the health profile is always private.
 # See Schema Refactoring Plan WS6 for full architectural discussion.
 
-cascade:PatientProfile a owl:Class ;
+cascade:PatientProfile a owl:Class, cascade:RecordClass ;
     rdfs:label "Patient Profile"@en ;
     rdfs:comment "Health-specific patient demographics and identity extensions. Designed to complement a Solid-compatible foaf:Agent identity profile (linked via rdfs:seeAlso). Stored at /profile/health.ttl. Contains health-relevant demographic data that is always private."@en .
 
@@ -752,7 +801,7 @@ cascade:conflictDetail a owl:ObjectProperty ;
 # data" in this specification, so it is stated rather than left implicit -- and
 # scripts/check-class-coverage.py, which reads exactly that chain, can then see
 # the class instead of passing over it. See jayostis/spec#13.
-cascade:ConflictDetail a owl:Class ;
+cascade:ConflictDetail a owl:Class, cascade:RecordClass ;
     rdfs:label "Conflict Detail"@en ;
     rdfs:comment "A structured representation of conflicting values across source systems for a single property. Used as a blank node linked from cascade:conflictDetail."@en ;
     rdfs:subClassOf prov:Entity .
@@ -1417,7 +1466,7 @@ cascade:sourceRecordId a owl:DatatypeProperty ;
 # ============================================================================
 
 # Abstract base class for all patient health records (v3.0)
-cascade:HealthRecord a owl:Class ;
+cascade:HealthRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Health Record"@en ;
     rdfs:comment "Abstract base class for all patient health records. Both clinical:ClinicalRecord and clinical:SocialHistoryRecord subclass this. Enables cross-domain consent scoping and pod path policies."@en ;
     owl:versionInfo "Added in core v3.0" .
@@ -1431,7 +1480,7 @@ cascade:HealthRecord a owl:Class ;
 # the provenance classification of individual records.
 
 # AI Extraction Activity (v3.0) — DISTINCT from cascade:AIExtracted (existing DataProvenance marker)
-cascade:AIExtractionActivity a owl:Class ;
+cascade:AIExtractionActivity a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "AI Extraction Activity"@en ;
     rdfs:comment "An LLM-powered extraction activity that produced one or more clinical records from unstructured narrative text. Link from record to activity via prov:wasGeneratedBy. The record itself carries cascade:dataProvenance cascade:AIExtracted (existing DataProvenance marker)."@en ;
@@ -1471,7 +1520,7 @@ cascade:requiresLLMExtraction a owl:DatatypeProperty ;
 # is retained in and the patient action that reads it back, which is the
 # definition of stored record data. rdfs:subClassOf prov:Entity states that,
 # and scripts/check-class-coverage.py reads it. See jayostis/spec#13.
-cascade:AIDiscardedExtraction a owl:Class ;
+cascade:AIDiscardedExtraction a owl:Class, cascade:RecordClass ;
     rdfs:label "AI Discarded Extraction"@en ;
     rdfs:comment "A low-confidence extraction (confidence < 0.50) retained in the patient's pod at pod/analysis/discarded-extractions.ttl. Not auto-imported. Patient can review and rescue into the review queue."@en ;
     rdfs:subClassOf prov:Entity ;
@@ -1567,14 +1616,14 @@ cascade:consentScope a owl:ObjectProperty ;
 #     from regeneration after reclassification or audience retargeting.
 
 # Advisory Application Activity (v3.1) — records application of an advisory patch
-cascade:AdvisoryApplicationActivity a owl:Class ;
+cascade:AdvisoryApplicationActivity a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "Advisory Application Activity"@en ;
     rdfs:comment "An activity that applied a Cascade Advisory Patch to a pod. The activity joins to advisory provenance via prov:used <advisory-iri> and prov:used <matched-record-iri>, recording both the patch source and the record it was matched against. Use prov:wasGeneratedBy on records produced or modified by the patch."@en ;
     owl:versionInfo "Added in core v3.1" .
 
 # AI Generation Activity (v3.1) — sibling of AIExtractionActivity for LLM-generated content
-cascade:AIGenerationActivity a owl:Class ;
+cascade:AIGenerationActivity a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "AI Generation Activity"@en ;
     rdfs:comment "An LLM-powered generation activity that produced narrative or summary content (e.g., checkup:VariantNarrative chunks). Sibling of cascade:AIExtractionActivity: extraction pulls structured records out of unstructured text, generation produces new prose. Records the model identifier, prompt version, temperature, and a cascade:trigger value indicating why the generation ran. Link from generated content to activity via prov:wasGeneratedBy."@en ;
@@ -1642,7 +1691,7 @@ cascade:AIAsserted a owl:Class ;
 
 # ProxyAgent (v3.3) — a person operating a patient's Pod on the patient's behalf
 # (e.g. a parent for a minor child). Closes the caregiver-proxy gap.
-cascade:ProxyAgent a owl:Class ;
+cascade:ProxyAgent a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Agent ;
     rdfs:label "Proxy Agent"@en ;
     rdfs:comment "A person operating a patient's Pod on the patient's behalf (e.g. a parent for a minor child, a caregiver for a dependent adult). Distinct from the patient (cascade:PatientProfile). Records who is acting and under what authority and scope."@en ;
@@ -1718,7 +1767,7 @@ cascade:proxyRevokedAt a owl:DatatypeProperty ;
 #       models this. It stays Cascade-specific rather than being forced onto
 #       something that does not fit.
 
-cascade:ExportManifest a owl:Class ;
+cascade:ExportManifest a owl:Class, cascade:RecordClass ;
     rdfs:label "Export Manifest"@en ;
     rdfs:comment "Provenance and completeness metadata for a complete pod export: when it was generated, which schema versions it uses, how many records of each kind it contains, and which provenance layers are represented. Consumers should read this before processing individual resources."@en ;
     rdfs:subClassOf dcat:Dataset ;
@@ -1726,14 +1775,14 @@ cascade:ExportManifest a owl:Class ;
     rdfs:seeAlso <https://www.w3.org/TR/vocab-dcat-3/> ;
     owl:versionInfo "Added in core v3.4; emitted since schema 1.3" .
 
-cascade:RecordSummary a owl:Class ;
+cascade:RecordSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Record Summary"@en ;
     rdfs:comment "Per-domain record counts for one partition of a pod export. Modelled on void:Dataset because it is a statistical description of a dataset subset; each count property is a subproperty of void:entities scoped to a particular void:class."@en ;
     rdfs:subClassOf void:Dataset ;
     rdfs:seeAlso <https://www.w3.org/TR/void/> ;
     owl:versionInfo "Added in core v3.4; emitted since schema 1.3" .
 
-cascade:InteractionScenario a owl:Class ;
+cascade:InteractionScenario a owl:Class, cascade:RecordClass ;
     rdfs:label "Interaction Scenario"@en ;
     rdfs:comment "A clinically significant interaction that can only be detected by correlating resources of differing provenance, for example an EHR-prescribed drug against a self-reported supplement against a lab value. Cascade-specific: no ratified vocabulary models cross-provenance correlation as a first-class thing."@en ;
     rdfs:subClassOf prov:Entity ;
@@ -2028,7 +2077,7 @@ cascade:loincCode a owl:ObjectProperty ;
 # states nothing about it, so nothing here has to be revised when a ratified
 # answer arrives.
 
-cascade:Attachment a owl:Class ;
+cascade:Attachment a owl:Class, cascade:RecordClass ;
     rdfs:label "Attachment"@en ;
     rdfs:comment "Metadata for a binary document stored alongside a Pod's RDF: its media type, its content digest, and the pod-relative location of the bytes. Mirrors the FHIR R4 Attachment datatype (https://hl7.org/fhir/R4/datatypes.html#Attachment), with the bytes held as a content-addressed file rather than inline. Attached to the record it renders with cascade:hasAttachment."@en ;
     rdfs:subClassOf prov:Entity ;

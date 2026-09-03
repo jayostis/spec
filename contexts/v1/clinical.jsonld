@@ -363,6 +363,9 @@
     "dischargeDisposition": "clinical:dischargeDisposition",
 
     "EncounterParticipant": "clinical:EncounterParticipant",
+    "ImagingStudy": "clinical:ImagingStudy",
+    "ImplantedDevice": "clinical:ImplantedDevice",
+    "MedicationAdministration": "clinical:MedicationAdministration",
     "hasParticipant": {
       "@id": "clinical:hasParticipant",
       "@type": "@id",

@@ -14,6 +14,10 @@
     "InsurancePlan": "coverage:InsurancePlan",
     "Deductible": "coverage:Deductible",
     "CopaySchedule": "coverage:CopaySchedule",
+    "AppealRecord": "coverage:AppealRecord",
+    "BenefitStatement": "coverage:BenefitStatement",
+    "ClaimRecord": "coverage:ClaimRecord",
+    "DenialNotice": "coverage:DenialNotice",
 
     "coverageProviderName": "coverage:providerName",
     "coverageMemberId": "coverage:memberId",

@@ -21,8 +21,8 @@
     dct:description "Structured health data for patient intake forms and pre-visit preparation. Enables aggregation of EHR, HealthKit, and manually entered health data."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-01-03"^^xsd:date ;
-    dct:modified "2026-09-01"^^xsd:date ;
-    owl:versionInfo "3.4" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "3.5" ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/checkup/v1/> .
 
 # ============================================================================
@@ -87,19 +87,19 @@ checkup:SupplementSummary a owl:Class ;
 
 # --- Clinical Summary Classes (v1.7) ---
 
-checkup:ImmunizationSummary a owl:Class ;
+checkup:ImmunizationSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Immunization Summary" ;
     rdfs:comment "Patient-facing immunization record for intake forms. Uses mixed namespace pattern: checkup: properties for app-layer enrichment (vaccineCategory) alongside clinical data fields." ;
     cascade:subConcern "summary" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:LabResultSummary a owl:Class ;
+checkup:LabResultSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Lab Result Summary" ;
     rdfs:comment "Patient-facing lab result summary for intake forms. Uses mixed namespace pattern: checkup:labCategory for app-layer categorization, clinical: properties for standardized lab data." ;
     cascade:subConcern "summary" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:ProcedureSummary a owl:Class ;
+checkup:ProcedureSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Procedure Summary" ;
     rdfs:comment "Patient-facing procedure record for intake forms. Uses mixed namespace pattern: checkup: properties for app-layer fields (procedureName, procedureCategory, procedureLocation), clinical: properties for standardized clinical data (procedureStatus, performedDate, bodySite, performer, outcome, snomedCode, cptCode)." ;
     cascade:subConcern "summary" ;
@@ -1085,31 +1085,31 @@ checkup:tierClassificationReason a rdf:Property ;
 # insights. These enable MVP features F4 (Medication-Metric Timeline),
 # F5 (Health Score), F8 (Attention Items), and F9 (Visit Prep).
 
-checkup:WellnessSummary a owl:Class ;
+checkup:WellnessSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Wellness Summary" ;
     rdfs:comment "Layer 3 patient-facing summary of wellness data. Aggregates trends and baselines from health: Layer 2 properties into a patient-readable format." ;
     cascade:subConcern "analytics" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:TrendInsight a owl:Class ;
+checkup:TrendInsight a owl:Class, cascade:RecordClass ;
     rdfs:label "Trend Insight" ;
     rdfs:comment "A patient-readable observation derived from trend data. Example: 'Your resting heart rate has dropped 5 bpm since you started walking 10k steps/day.'" ;
     cascade:subConcern "analytics" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:CorrelationInsight a owl:Class ;
+checkup:CorrelationInsight a owl:Class, cascade:RecordClass ;
     rdfs:label "Correlation Insight" ;
     rdfs:comment "Links two data domains with an observed temporal relationship. Example: medication start date correlates with metric change. IMPORTANT: Temporal correlation only — never implies causation." ;
     cascade:subConcern "analytics" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:KeyIndicator a owl:Class ;
+checkup:KeyIndicator a owl:Class, cascade:RecordClass ;
     rdfs:label "Key Indicator" ;
     rdfs:comment "A distilled, patient-friendly health metric chosen for its predictive value and simplicity. Used for dashboard summaries and health scores." ;
     cascade:subConcern "analytics" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:AttentionItem a owl:Class ;
+checkup:AttentionItem a owl:Class, cascade:RecordClass ;
     rdfs:label "Attention Item" ;
     rdfs:comment "Flags when a metric deviates significantly from personal baseline, data has gone stale, or a trend crosses a threshold. Rule-based, not clinical advice." ;
     cascade:subConcern "analytics" ;
@@ -1233,7 +1233,7 @@ checkup:attentionSeverity a owl:DatatypeProperty ;
 # A curated clinical summary for appointments. Combines wellness trends,
 # medication context, and patient questions into a one-page document.
 
-checkup:VisitPrepSummary a owl:Class ;
+checkup:VisitPrepSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Visit Prep Summary" ;
     rdfs:comment "A curated, one-page clinical summary designed for a 15-minute appointment. Auto-generated from metric changes, medication context, and patient questions, then user-edited before export." ;
     cascade:subConcern "analytics" ;
@@ -1278,13 +1278,13 @@ checkup:noteContent a owl:DatatypeProperty ;
 # Patient-reported adherence tracking and visit discussion preparation.
 # Supports Bug 6/11 export overhaul Phase 4B serialization.
 
-checkup:DailyCheckIn a owl:Class ;
+checkup:DailyCheckIn a owl:Class, cascade:RecordClass ;
     rdfs:label "Daily Check-in" ;
     rdfs:comment "Patient-reported daily medication adherence check-in capturing response status, missed medications, and optional notes." ;
     cascade:subConcern "self-report" ;
     rdfs:subClassOf health:SelfReport .
 
-checkup:DiscussionTopic a owl:Class ;
+checkup:DiscussionTopic a owl:Class, cascade:RecordClass ;
     rdfs:label "Discussion Topic" ;
     rdfs:comment "AI-generated or user-created topic for discussion during a healthcare visit. Topics are derived from medication data, adherence patterns, supplement interactions, or user input." ;
     cascade:subConcern "analytics" ;
@@ -1308,7 +1308,7 @@ checkup:DiscussionTopic a owl:Class ;
 # record data" in this specification, and its absence made the class invisible
 # to scripts/check-class-coverage.py rather than exempt from it. Its immediate
 # sibling checkup:DiscussionTopic already declares it. See jayostis/spec#13.
-checkup:CheckInSettings a owl:Class ;
+checkup:CheckInSettings a owl:Class, cascade:RecordClass ;
     rdfs:label "Check-in Settings" ;
     rdfs:comment "Application configuration for daily check-in notification scheduling and day-of-week preferences." ;
     cascade:subConcern "app-config" ;
@@ -1456,14 +1456,14 @@ checkup:hasCheckInSettings a owl:ObjectProperty ;
 #
 # See: https://hl7.org/fhir/questionnaireresponse.html
 
-checkup:IntakeQuestionnaireResponse a owl:Class ;
+checkup:IntakeQuestionnaireResponse a owl:Class, cascade:RecordClass ;
     rdfs:label "Intake Questionnaire Response" ;
     rdfs:comment "Response to a standardized intake questionnaire section. Structure inspired by FHIR QuestionnaireResponse but uses native Cascade Protocol serialization. Uses LOINC panel codes as questionnaire identifiers and SNOMED CT codes for standardized answers." ;
     cascade:subConcern "intake" ;
     rdfs:subClassOf prov:Entity ;
     rdfs:seeAlso fhir:QuestionnaireResponse .
 
-checkup:ResponseItem a owl:Class ;
+checkup:ResponseItem a owl:Class, cascade:RecordClass ;
     rdfs:label "Response Item" ;
     rdfs:comment "A question-answer pair within an intake questionnaire response. Uses LOINC item codes as link identifiers and SNOMED CT codes for coded answers where available. Supports nested sub-items via childItem for hierarchical questionnaire structures." ;
     cascade:subConcern "intake" ;
@@ -1582,7 +1582,7 @@ checkup:hasProcedure a owl:ObjectProperty ;
 # Consumed by report generators (PlainTextReportGenerator, PatientBriefSections,
 # ProviderViews) for the "Changes Since Last Visit" section.
 
-checkup:MedicationChangeRecord a owl:Class ;
+checkup:MedicationChangeRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Medication Change Record" ;
     rdfs:comment "A recorded change to a medication or supplement since the last visit snapshot. Tracked for the Changes Since Last Visit report section." ;
     cascade:subConcern "analytics" ;
@@ -1630,13 +1630,13 @@ checkup:hasChange a owl:ObjectProperty ;
 # VISIT PREP TRAY (v3.1 — Task A7)
 # ============================================================================
 
-checkup:VisitPrepTray a owl:Class ;
+checkup:VisitPrepTray a owl:Class, cascade:RecordClass ;
     rdfs:label "Visit Prep Tray" ;
     rdfs:comment "Per-appointment visit preparation container grouping issues, discussion topics, questions, and notes. Uses a typed payload wrapper (VisitItemPayload) to preserve existing type richness from VisitIssue, DiscussionTopic, and SuggestedQuestion." ;
     cascade:subConcern "intake" ;
     rdfs:subClassOf prov:Entity .
 
-checkup:VisitTrayItem a owl:Class ;
+checkup:VisitTrayItem a owl:Class, cascade:RecordClass ;
     rdfs:label "Visit Tray Item" ;
     rdfs:comment "A typed item within a VisitPrepTray. Wraps VisitIssue, DiscussionTopic, SuggestedQuestion, note, or custom content with intent category and resolution tracking." ;
     rdfs:subClassOf prov:Entity .

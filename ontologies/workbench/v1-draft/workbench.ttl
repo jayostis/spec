@@ -153,8 +153,8 @@
     dct:description "Layer 3 vocabulary for the Cascade Workbench desktop investigation app."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-06-16"^^xsd:date ;
-    dct:modified "2026-09-01"^^xsd:date ;
-    owl:versionInfo "1.0-draft.0.8" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.9" ;
     rdfs:comment "Holds the app-specific workspace objects only: Investigation, ImportedConversation, Hypothesis, Pin, InvestigationNote, plus the append-only record-amendment overlays (Amendment, Annotation, Retraction, Tombstone). The assertion/evidence/verdict grounding model is deliberately NOT here (it is cross-cutting Layer 2 evidence:). Phenotype capture is NOT here (it extends genomics:). Per the Layer 3 graduation rule, any class here that proves useful to other apps should graduate to Layer 2. Draft: not in VOCAB_VERSIONS until v1.0 graduation."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/workbench/v1-draft/> .
 
@@ -162,13 +162,13 @@
 # Classes
 # ============================================================================
 
-workbench:Investigation a owl:Class ;
+workbench:Investigation a owl:Class, cascade:RecordClass ;
     rdfs:label "Investigation"@en ;
     rdfs:comment "A named, longitudinal inquiry over one patient's Pod: the top-level workspace object. Aggregates imported conversations, hypotheses, pinned evidence, and notes over time. Only the Workbench UI touches this class directly."@en ;
     owl:versionInfo "Added in workbench v1-draft.0.1" ;
     vs:term_status "unstable" .
 
-workbench:ImportedConversation a owl:Class ;
+workbench:ImportedConversation a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Imported Conversation"@en ;
     rdfs:comment "A conversation the user had with a general-purpose AI assistant (ChatGPT, Claude, Gemini, etc.), imported into an Investigation as a source. Discrete assertions extracted from it are evidence:Assertion instances produced by a cascade:AIExtractionActivity; those assertions carry cascade:dataProvenance cascade:AIAsserted (ungrounded by construction until graded)."@en ;
@@ -184,7 +184,7 @@ workbench:ImportedConversation a owl:Class ;
 # never written down cannot be retired later. rdfs:subClassOf prov:Entity is
 # what asserts stored record data in this specification, so it is stated here;
 # workbench:ImportedConversation already states it. See jayostis/spec#13.
-workbench:Hypothesis a owl:Class ;
+workbench:Hypothesis a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Hypothesis"@en ;
     rdfs:comment "A candidate explanation under active consideration in an Investigation, with a lifecycle status. Designed to support widening the differential and explicitly retiring or excluding hypotheses, not just confirming one."@en ;
@@ -199,7 +199,7 @@ workbench:Hypothesis a owl:Class ;
 # assembles evidence"), and workbench:pinNote is free text the user typed, which
 # no shape currently judges for so much as a length. rdfs:subClassOf prov:Entity
 # puts it in the population that gets asked.
-workbench:Pin a owl:Class ;
+workbench:Pin a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Pin"@en ;
     rdfs:comment "A curated bookmark within an Investigation pointing at any resource (a record, an assertion, a citation) with an optional note. The mechanism by which the user assembles evidence NotebookLM-style."@en ;
@@ -398,28 +398,28 @@ workbench:followUp a owl:NamedIndividual, oa:Motivation ;
 # actor, and a dct:created timestamp. Added in workbench v1-draft.0.2.
 # ============================================================================
 
-workbench:Amendment a owl:Class ;
+workbench:Amendment a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Amendment"@en ;
     rdfs:comment "An append-only overlay that overrides one property value on an existing record without mutating the original. Names the amended record, the predicate CURIE being overridden, and the new value. Discovered at query time so the effective value can be projected over the immutable original."@en ;
     owl:versionInfo "Added in workbench v1-draft.0.2" ;
     vs:term_status "unstable" .
 
-workbench:Annotation a owl:Class ;
+workbench:Annotation a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Annotation"@en ;
     rdfs:comment "An append-only overlay that ADDS a note or an extra attribute to an existing record without overriding any of its values. Use Amendment to override; use Annotation to augment."@en ;
     owl:versionInfo "Added in workbench v1-draft.0.2" ;
     vs:term_status "unstable" .
 
-workbench:Retraction a owl:Class ;
+workbench:Retraction a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Retraction"@en ;
     rdfs:comment "An append-only soft-delete / supersede overlay (the entered-in-error pattern). The retracted record's bytes are retained; the Retraction marks it as withdrawn and may point at the kept record when merging duplicates."@en ;
     owl:versionInfo "Added in workbench v1-draft.0.2" ;
     vs:term_status "unstable" .
 
-workbench:Tombstone a owl:Class ;
+workbench:Tombstone a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Tombstone"@en ;
     rdfs:comment "A content-free hard-erase audit marker. Unlike a Retraction, the erased record's bytes are gone from its bucket file; the Tombstone records only the EVENT of erasure — the erased record's opaque id, the actor (prov:wasAttributedTo), the timestamp (dct:created), and the action (workbench:erasureAction) — so the deletion is provably logged WITHOUT retaining any content of the erased record. It deliberately holds no content hash: a hash of an erased record's triples is still pseudonymised personal data (low-entropy health content is brute-forceable), which would re-create the erasure obligation the hard-erase just discharged."@en ;

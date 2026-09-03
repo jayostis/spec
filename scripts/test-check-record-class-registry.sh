@@ -1,0 +1,333 @@
+#!/bin/sh
+# test-check-record-class-registry.sh
+#
+# Regression suite for scripts/check-record-class-registry.py.
+#
+# The check compares two independently maintained enumerations of the same
+# fact -- pod-structure.md's solid:forClass registrations and the ontologies'
+# cascade:RecordClass markers -- so its whole value is that it FAILS when they
+# drift. A comparison that cannot report a difference is decoration.
+#
+# Every case runs against a throwaway copy of the repository. Nothing here
+# writes to the working tree.
+#
+# Usage: ./scripts/test-check-record-class-registry.sh
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SPEC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+CHECK="$SCRIPT_DIR/check-record-class-registry.py"
+PYTHON="${PYTHON:-python3}"
+
+PASSED=0
+FAILED=0
+pass() { PASSED=$((PASSED + 1)); echo "  PASS  $1"; }
+fail() { FAILED=$((FAILED + 1)); echo "  FAIL  $1"; echo "        $2"; }
+
+if ! "$PYTHON" -c "import rdflib" 2>/dev/null; then
+  echo "ERROR: $PYTHON cannot import rdflib, so this suite would test nothing."
+  echo "       Install it:  $PYTHON -m pip install -r scripts/requirements.txt"
+  exit 2
+fi
+
+# A scratch copy carrying only what the check reads.
+scratch() {
+  DIR="$(mktemp -d 2>/dev/null || mktemp -d -t rcregistry)"
+  cp -R "$SPEC_ROOT/ontologies" "$DIR/ontologies"
+  cp "$SPEC_ROOT/pod-structure.md" "$DIR/pod-structure.md"
+  echo "$DIR"
+}
+
+echo ""
+echo "=========================================================="
+echo "  check-record-class-registry.py regression suite"
+echo "=========================================================="
+
+# ---------------------------------------------------------------------------
+# 1. Green on the repository as it stands. Every later case breaks something
+#    specific, so this is what says the breakage caused the failure.
+# ---------------------------------------------------------------------------
+echo ""
+echo "1. The repository as it stands"
+
+OUT="$("$PYTHON" "$CHECK" "$SPEC_ROOT" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "exits 0 on the real tree"
+else
+  fail "exits non-zero on the real tree" "$OUT"
+fi
+
+REG="$(printf '%s\n' "$OUT" | sed -n 's/^[[:space:]]*registrations:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+if [ -n "$REG" ] && [ "$REG" -gt 0 ]; then
+  pass "found $REG registration(s) to compare"
+else
+  fail "found no registrations" "The check would pass vacuously. $OUT"
+fi
+
+# ---------------------------------------------------------------------------
+# 2. THE DEFECT. A registered class loses its marker: the ontology stops saying
+#    a Pod stores it while pod-structure.md still registers a path for it.
+#    This is the silent-omission failure mode an explicit list has, and the
+#    only reason this check exists.
+# ---------------------------------------------------------------------------
+echo ""
+echo "2. A registered class with its marker removed"
+
+DIR="$(scratch)"
+sed -i.bak 's/^health:LabResultRecord a owl:Class, cascade:RecordClass ;/health:LabResultRecord a owl:Class ;/' \
+  "$DIR/ontologies/health/v1/health.ttl"
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 with a registered class unmarked" "$OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "health:LabResultRecord"; then
+  pass "names health:LabResultRecord"
+else
+  fail "does not name the class it should have caught" "$OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 3. The other direction of drift: a registration is added for a class nobody
+#    marked. Same finding, different cause -- somebody laid out a pod path
+#    without declaring the class stores records.
+# ---------------------------------------------------------------------------
+echo ""
+echo "3. A registration added for an unmarked class"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#probe>
+        a solid:TypeRegistration ;
+        solid:forClass cascade:DataProvenance ;
+        solid:instanceContainer </clinical/probe.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 with an unmarked class registered" "$OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "cascade:DataProvenance"; then
+  pass "names cascade:DataProvenance"
+else
+  fail "does not name the newly registered class" "$OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 4. NO MATERIAL IS A FAILURE, NOT A PASS. If pod-structure.md stops carrying
+#    registrations -- a rewrite, a moved section, a regex that stops matching --
+#    the comparison has nothing to compare and must say so. Reporting PASS over
+#    an empty input is how a check dies without anyone noticing.
+# ---------------------------------------------------------------------------
+echo ""
+echo "4. A pod-structure.md with no registrations"
+
+DIR="$(scratch)"
+printf '# Pod Structure\n\nNo registrations here.\n' > "$DIR/pod-structure.md"
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if [ $? -ne 0 ]; then
+  pass "exits non-zero rather than passing vacuously"
+else
+  fail "exits 0 with nothing to compare" "$OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 5. The documented TEMPLATE is not a registration. pod-structure.md's
+#    registration-format section shows `solid:forClass {vocabulary}:{ClassName}`,
+#    which names no class. A regex that matched it would report a permanent
+#    unfixable finding and the check would be turned off.
+# ---------------------------------------------------------------------------
+echo ""
+echo "5. The {vocabulary}:{ClassName} template is not treated as a registration"
+
+DIR="$(scratch)"
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if printf '%s\n' "$OUT" | grep -q "{vocabulary}"; then
+  fail "the template placeholder was read as a registration" "$OUT"
+else
+  pass "the placeholder is ignored"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 6. A REGISTRATION THIS CHECK CANNOT RESOLVE IS A FINDING. Prefixes used to
+#    come from a hardcoded table of the six stable vocabularies and anything
+#    else was skipped -- so a mistyped prefix registered a pod path, matched no
+#    class, and was compared to nothing. That is the silent omission the whole
+#    check exists to catch, performed by the check.
+# ---------------------------------------------------------------------------
+echo ""
+echo "6. A registration with a mistyped prefix"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#typo-probe>
+        a solid:TypeRegistration ;
+        solid:forClass helth:LabResultRecord ;
+        solid:instanceContainer </health/lab-results.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 on a registration naming an unknown prefix" "$OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "helth:LabResultRecord"; then
+  pass "names helth:LabResultRecord"
+else
+  fail "does not name the unresolvable registration" "$OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 7. The same skip hid a whole VOCABULARY: any prefix outside the table -- a
+#    draft one, say -- registered a path and was never compared to a marker.
+#    Prefixes now come from the ontologies' own @prefix declarations, so a draft
+#    class resolves and is judged on its marker like any other.
+# ---------------------------------------------------------------------------
+echo ""
+echo "7. A registration for a draft-vocabulary class is judged, not skipped"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#draft-probe>
+        a solid:TypeRegistration ;
+        solid:forClass genomics:VariantRecord ;
+        solid:instanceContainer </genomics/variants.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if printf '%s\n' "$OUT" | grep -q "genomics:VariantRecord"; then
+  pass "genomics:VariantRecord reaches the comparison"
+else
+  fail "a draft-vocabulary registration was dropped" \
+"An unrecognised prefix is a finding, not a non-registration. $OUT"
+fi
+rm -rf "$DIR"
+
+# The cure, and proof the rule is satisfiable: a marked draft class registered
+# under its real prefix passes. If it did not, the only way to a green run
+# would be to stop registering draft classes.
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#draft-probe>
+        a solid:TypeRegistration ;
+        solid:forClass evidence:Citation ;
+        solid:instanceContainer </evidence/citations.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "a MARKED draft class registered under its real prefix passes"
+else
+  fail "a marked draft class was reported" \
+"evidence:Citation carries the marker, so the two sources agree. $OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 8. A TURTLE OBJECT LIST IS SEVERAL REGISTRATIONS. `solid:forClass a:X, b:Y ;`
+#    is legal Turtle and registers BOTH classes. The pattern used to require a
+#    single non-space token before the terminator, which does not merely lose
+#    the tail of such a line -- it fails to match it AT ALL, so every class in
+#    the list is dropped. A pod path registered for an unmarked class then
+#    reaches no comparison: the silent omission this check exists to catch,
+#    performed by the check.
+#
+#    The probe puts a MARKED class first and an unmarked one second, so a
+#    finding can only come from reading past the comma.
+# ---------------------------------------------------------------------------
+echo ""
+echo "8. A comma-separated registration is read as several registrations"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#object-list-probe>
+        a solid:TypeRegistration ;
+        solid:forClass health:LabResultRecord, cascade:DataProvenance ;
+        solid:instanceContainer </clinical/object-list.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 with an unmarked class registered after a comma" \
+"solid:forClass health:LabResultRecord, cascade:DataProvenance registers both.
+        cascade:DataProvenance carries no marker, so the two sources disagree
+        and this must be a finding. $OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "cascade:DataProvenance"; then
+  pass "names cascade:DataProvenance, the second object in the list"
+else
+  fail "the class after the comma never reached the comparison" \
+"Turtle permits an object list here and every object in it is a registration. $OUT"
+fi
+rm -rf "$DIR"
+
+# The cure, and proof the reading is satisfiable: an object list whose every
+# class is marked passes. Without this leg the fix could have turned a dropped
+# registration into a permanent unfixable finding.
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#object-list-probe>
+        a solid:TypeRegistration ;
+        solid:forClass health:LabResultRecord, health:ImmunizationRecord ;
+        solid:instanceContainer </clinical/object-list.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "an object list of MARKED classes passes"
+else
+  fail "an all-marked object list was reported" \
+"Both classes carry the marker, so the two sources agree. $OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 9. THE TWO CHECKS READ ONE CORPUS. check-context-coverage.py loads the same
+#    ontology corpus, and the loader was duplicated byte-for-byte in both
+#    files -- free to drift on the .shapes.ttl exclusion or the glob while both
+#    still claimed to read "the ontologies". It now lives in
+#    scripts/cascade_ontology.py; this asserts the two agree on what they read,
+#    which is the property the duplication put at risk.
+# ---------------------------------------------------------------------------
+echo ""
+echo "9. check-context-coverage.py parses the same ontology corpus"
+
+COVERAGE_CHECK="$SCRIPT_DIR/check-context-coverage.py"
+parsed() {
+  printf '%s\n' "$1" | \
+    sed -n 's/^[[:space:]]*ontologies parsed:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+}
+MINE="$(parsed "$("$PYTHON" "$CHECK" "$SPEC_ROOT" 2>&1)")"
+THEIRS="$(parsed "$("$PYTHON" "$COVERAGE_CHECK" "$SPEC_ROOT" 2>&1)")"
+if [ -n "$MINE" ] && [ "$MINE" = "$THEIRS" ]; then
+  pass "both checks parse $MINE ontology file(s)"
+else
+  fail "the two checks disagree on the corpus: $MINE vs $THEIRS" \
+"Both load the ontologies through scripts/cascade_ontology.py, so these cannot
+        differ unless one has been given a loader of its own again."
+fi
+
+echo ""
+echo "=========================================================="
+echo "  passed:  $PASSED"
+echo "  failed:  $FAILED"
+echo "  total:   $((PASSED + FAILED))"
+echo "=========================================================="
+echo ""
+
+[ "$FAILED" -eq 0 ] || exit 1
+exit 0

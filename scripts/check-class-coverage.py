@@ -4,12 +4,34 @@ some shape will judge.
 
 THE RULE
 
-A class declaring rdfs:subClassOf prov:Entity or rdfs:subClassOf prov:Activity
-has said what it is: a thing instances of which are record data. If no shape
-names it in sh:targetClass, then a record of that class is judged by nothing,
-and SHACL reports conforms:true over it. That verdict is indistinguishable from
-one earned by satisfying every constraint. It is the most expensive kind of
-green: a validator ran, said yes, and had looked at nothing.
+A class declaring `a cascade:RecordClass` has said what it is: a thing instances
+of which are stored record data. If no shape names it in sh:targetClass, then a
+record of that class is judged by nothing, and SHACL reports conforms:true over
+it. That verdict is indistinguishable from one earned by satisfying every
+constraint. It is the most expensive kind of green: a validator ran, said yes,
+and had looked at nothing.
+
+WHAT THIS CHECK USED TO KEY ON, AND WHY IT NO LONGER DOES
+
+Through core v3.12 this script keyed on rdfs:subClassOf prov:Entity /
+prov:Activity, on the reading that the axiom asserts a class bears record data.
+jayostis/spec#34 (ASK-05) ruled that reading out:
+
+  "The reading 'subClassOf prov:Entity means instances are stored record data'
+   is not the intent. The axiom is PROV-O alignment ... Your shape-coverage
+   checker should key on that, or on an explicit list, never on prov:Entity,
+   which will keep catching alignment axioms."
+
+Measured at the time of the change: 110 classes reached a PROV root, of which 96
+were registered nowhere as stored records -- alignment axioms, exactly as
+predicted. core v3.13 declares cascade:RecordClass as the explicit designation
+and 83 classes carry it.
+
+DO NOT REINTRODUCE ANY rdfs:subClassOf READING HERE. A PROV superclass is
+alignment and confers nothing; a class may carry the marker with no PROV
+superclass at all, and several do. test-record-class-declarations.sh asserts
+this directly: it adds prov:Entity to an unmarked scratch class and requires the
+population NOT to move.
 
 clinical:CoverageRecord is the worked example. Deprecated in favour of
 coverage:InsurancePlan but deliberately RETAINED for EHR-imported data, it went
@@ -25,8 +47,8 @@ That script enforces ENTAILMENT INDEPENDENCE: a shape must not reach a class
 through rdfs:subClassOf, because SHACL resolves class membership over the data
 graph and pod records carry no schema axioms. Its T assertion is conditional by
 design -- it fires only when a class has a proper superclass THAT SOME SHAPE
-ALREADY TARGETS. Almost every record class here is rdfs:subClassOf prov:Entity
-and no shape targets prov:Entity, so T never fires and the script is correctly
+ALREADY TARGETS. Many record classes here are rdfs:subClassOf prov:Entity
+and no shape targets prov:Entity, so T rarely fires and the script is correctly
 silent. It reports PASS 3/3 while dozens of classes are unshaped, and it is not
 wrong to: that is a different question, and folding this one into it would cost
 the entailment guarantee.
@@ -37,26 +59,23 @@ defect.
 
 SCOPE, AND WHAT IS DELIBERATELY OUT
 
-A class is in scope when its rdfs:subClassOf CHAIN reaches prov:Entity or
-prov:Activity, at any depth. The chain is walked rather than read one step deep,
-because subclassing a record class is a normal idiom here and not a corner case:
-the six clinical: document subtypes, six health: data classes,
-checkup:DailyCheckIn and diabetes:HbA1cResult all reach prov:Entity through an
-intermediate Cascade class. diabetes:HbA1cResult is the worked example -- it is
-rdfs:subClassOf diabetes:LabResult, which is rdfs:subClassOf prov:Entity, it has
-its own properties (diabetes:hba1cValue, diabetes:hba1cMmolMol), and no shape
-targets it. A one-step scope reported PASS straight over exactly the vacuous
-conforms:true this check was written to catch. Note that validation/index.md's
-own rule is what makes the gap real: a parent's shape does NOT reach the child,
-so the child is genuinely unjudged rather than covered by inheritance.
+A class is in scope when it carries `a cascade:RecordClass`. Membership is that
+triple and nothing else -- not inherited, not inferred, not walked. A subclass of
+a marked class is NOT in scope unless it carries its own marker, which is the
+same shape as validation/index.md's rule that a parent's shape does not reach a
+child: if inheritance does not carry the constraint, it must not carry the
+obligation either. The six clinical: document subtypes each carry their own
+marker for exactly this reason.
 
-Classes with no rdfs:subClassOf at all are still NOT checked: that set mixes
-genuine value enumerations (evidence:VerdictValue, diabetes:MealType), which no
-shape should target, with genuine record classes (coverage:ClaimRecord,
-clinical:ClinicalNarrative), which one should. Separating them means deciding
-what those classes ARE, which is a vocabulary judgement and not something a check
-can make. This check covers only the classes whose ancestry already declares them
-record-bearing, where the answer needs no judgement.
+That the population is now an enumeration rather than a derivation is the point,
+not a compromise. Deciding what a class IS is a vocabulary judgement, and this
+check is not the place to make one -- it reads the judgement the vocabulary has
+already recorded. A class that holds record data and lacks the marker is a
+vocabulary defect, and the fix is the marker, never a change here.
+
+test-record-class-declarations.sh is the suite that asserts the vocabulary keeps
+saying something true about itself, using this script unchanged as the
+instrument.
 
 Only Cascade-namespace classes are reported. A class from an imported external
 vocabulary is not this repository's to shape.
@@ -81,7 +100,7 @@ scripts/known-unshaped-classes.json enumerates the unshaped classes that predate
 this check. It is a GATE INPUT, not a filter: every class is still examined and
 counted. The run fails when
 
-  * a prov-rooted class is unshaped and the baseline does not list it,
+  * a marked class is unshaped and the baseline does not list it,
   * a baselined class has since been shaped, or
   * a baselined class no longer exists,
 
@@ -92,7 +111,7 @@ the list can only shrink, and shrinking it is an explicit committed edit.
 Every entry names the vocabulary that owns the fix. Nothing in it is acceptable
 in the long run: each entry is a class whose records validate vacuously today.
 
-Exit status: 0 if every prov-rooted class is shaped or baselined, 1 on any
+Exit status: 0 if every marked class is shaped or baselined, 1 on any
 finding, and 1 if the run examined no classes at all -- a check with no material
 to inspect has proven nothing.
 
@@ -112,7 +131,7 @@ import os
 import sys
 
 try:
-    from rdflib import Graph, RDFS, Namespace, URIRef
+    from rdflib import Graph, RDF, Namespace, URIRef
 except ImportError:  # pragma: no cover - environment guard
     sys.stderr.write(
         "ERROR: rdflib is not installed. This check parses Turtle and cannot\n"
@@ -122,16 +141,16 @@ except ImportError:  # pragma: no cover - environment guard
     sys.exit(2)
 
 SH = Namespace("http://www.w3.org/ns/shacl#")
-PROV = Namespace("http://www.w3.org/ns/prov#")
 CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
 
 ONTOLOGY_GLOB = "ontologies/*/v1*/*.ttl"
 BASELINE = "scripts/known-unshaped-classes.json"
 
-# The PROV superclasses that declare a class record-bearing. A class asserting
-# either has said its instances are data someone stores, which is exactly the
-# population a shape is for.
-RECORD_ROOTS = (PROV.Entity, PROV.Activity)
+# The marker that declares a class record-bearing. A class carrying it has said
+# its instances are data someone stores, which is exactly the population a shape
+# is for. Declared in core v3.13; see the module docstring for why this replaced
+# a reading of rdfs:subClassOf prov:Entity, and jayostis/spec#34 for the ruling.
+RECORD_CLASS_MARKER = URIRef(CASCADE_NS_PREFIX + "core/v1#RecordClass")
 
 # The SHACL core constraint parameters. A shape carrying none of these asks
 # nothing of the nodes it targets, so naming a class in its sh:targetClass does
@@ -218,46 +237,24 @@ def load(root):
 # Graph facts
 # ---------------------------------------------------------------------------
 
-def superclass_edges(ontology):
-    """direct[c] = the classes c is declared a DIRECT rdfs:subClassOf of.
-
-    Blank-node superclasses (owl:Restriction and friends) are dropped: they are
-    not classes this check can ask anyone to shape, and they cannot lead to
-    prov:Entity by a named edge.
-    """
-    direct = {}
-    for sub_, sup in ontology.subject_objects(RDFS.subClassOf):
-        if isinstance(sub_, URIRef) and isinstance(sup, URIRef):
-            direct.setdefault(sub_, set()).add(sup)
-    return direct
-
-
-def reaches_record_root(cls, direct):
-    """True if cls reaches prov:Entity or prov:Activity by any number of
-    rdfs:subClassOf steps. Cycles terminate: a node is expanded once."""
-    seen, stack = set(), list(direct.get(cls, ()))
-    while stack:
-        node = stack.pop()
-        if node in RECORD_ROOTS:
-            return True
-        if node not in seen:
-            seen.add(node)
-            stack.extend(direct.get(node, ()))
-    return False
-
-
 def record_bearing_classes(ontology):
-    """Cascade classes whose rdfs:subClassOf CHAIN reaches a PROV record root.
+    """Cascade classes carrying `a cascade:RecordClass`.
 
-    Transitive, not one step: see SCOPE in the module docstring. A class that
-    inherits prov:Entity through an intermediate Cascade class has inherited
-    exactly the declaration this check keys on, and identifying it needs no
-    vocabulary judgement.
+    A direct read of one triple per class. Deliberately NOT transitive and
+    deliberately not reading rdfs:subClassOf at all: membership is the explicit
+    designation the vocabulary makes, per jayostis/spec#34. A subclass of a
+    marked class must carry its own marker, matching validation/index.md's rule
+    that a parent's shape does not reach a child.
+
+    cascade:RecordClass itself is excluded. It is the marker, not a record
+    class, and nothing marks it -- but excluding it explicitly means a future
+    stray triple cannot put the marker into its own population.
     """
-    direct = superclass_edges(ontology)
     return {
-        cls for cls in direct
-        if is_cascade(cls) and reaches_record_root(cls, direct)
+        cls for cls in ontology.subjects(RDF.type, RECORD_CLASS_MARKER)
+        if isinstance(cls, URIRef)
+        and is_cascade(cls)
+        and cls != RECORD_CLASS_MARKER
     }
 
 
@@ -321,7 +318,7 @@ def main():
     print("  root:              %s" % root)
     print("  ontologies parsed: %d" % len(onto_files))
     print("  shapes parsed:     %d" % len(shape_files))
-    print("  record classes:    %d  (rdfs:subClassOf* prov:Entity | prov:Activity)"
+    print("  record classes:    %d  (a cascade:RecordClass)"
           % len(record_classes))
     print("  shaped:            %d" % (len(record_classes) - len(unshaped)))
     print("  unshaped:          %d" % len(unshaped))
@@ -332,7 +329,7 @@ def main():
     print()
 
     if not record_classes:
-        print("EMPTY: no class declares a PROV record superclass.")
+        print("EMPTY: no class carries a cascade:RecordClass marker.")
         print("A check with no material to inspect has not verified anything.")
         return 1
 
@@ -364,13 +361,13 @@ def main():
         for name in new:
             print("        %s" % name)
         print()
-        print("      A class whose rdfs:subClassOf chain reaches prov:Entity or")
-        print("      prov:Activity holds record data, and no shape names it in")
+        print("      A class carrying a cascade:RecordClass marker holds record")
+        print("      data, and no shape names it in")
         print("      sh:targetClass with a constraint beside it, so SHACL reports")
         print("      conforms:true over its records having examined nothing. Give it")
         print("      a shape -- its OWN sh:targetClass, since a parent shape does not")
-        print("      reach it -- or, if it genuinely holds no record data, reconsider")
-        print("      the PROV superclass, which is what declares that it does.")
+        print("      reach it -- or, if it genuinely holds no record data, remove")
+        print("      the cascade:RecordClass marker, which is what declares it does.")
         print()
 
     if stale_shaped:

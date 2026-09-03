@@ -15,14 +15,22 @@ name: shapes
 #     a Violation on the referring shape. clinical v1.16 shipped that defect on
 #     six document classes; clinical v1.17 fixed it and added the check.
 #
-#  3. RECORD-CLASS SHAPE COVERAGE: a class declaring rdfs:subClassOf prov:Entity
-#     or prov:Activity holds record data, so some shape must name it in
-#     sh:targetClass. Without that, SHACL reports conforms:true over its records
-#     having examined nothing -- a verdict indistinguishable from an earned one.
+#  3. RECORD-CLASS SHAPE COVERAGE: a class carrying `a cascade:RecordClass`
+#     holds record data, so some shape must name it in sh:targetClass. Without
+#     that, SHACL reports conforms:true over its records having examined nothing
+#     -- a verdict indistinguishable from an earned one.
 #     check-shape-targets.py reports PASS straight over this by design: its T
-#     assertion fires only for a superclass some shape already targets, and
-#     nothing targets prov:Entity. clinical:CoverageRecord lived its whole life
-#     unshaped; clinical v1.18 shaped it and added this check.
+#     assertion fires only for a superclass some shape already targets.
+#     clinical:CoverageRecord lived its whole life unshaped; clinical v1.18
+#     shaped it and added this check. Through core v3.12 the check keyed on
+#     rdfs:subClassOf prov:Entity; jayostis/spec#34 ruled that reading out (the
+#     axiom is PROV-O alignment) and core v3.13 moved it onto the marker.
+#
+#  4. RECORD-CLASS REGISTRY AGREEMENT: pod-structure.md registers classes with
+#     solid:forClass, which says a Pod stores them -- the same claim the marker
+#     makes. The two must agree. An explicit list's failure mode is silent
+#     omission, and a second independently maintained enumeration is what
+#     catches it.
 
 on:
   push:
@@ -39,6 +47,10 @@ on:
       - 'scripts/test-check-class-coverage.sh'
       - 'scripts/test-record-class-declarations.sh'
       - 'scripts/known-unshaped-classes.json'
+      - 'scripts/check-record-class-registry.py'
+      - 'scripts/test-check-record-class-registry.sh'
+      - 'scripts/cascade_ontology.py'
+      - 'pod-structure.md'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'
   workflow_dispatch:
@@ -121,3 +133,29 @@ jobs:
 
       - name: Record-class shape coverage check
         run: python3 scripts/check-class-coverage.py
+
+  record-class-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # pod-structure.md and the ontologies are two independently maintained
+      # enumerations of the same fact: which classes a Pod stores. Comparing
+      # them catches the omission neither catches alone -- a class added to the
+      # vocabulary and the pod layout that nobody marked, which is
+      # indistinguishable from a considered exclusion unless something else
+      # knows. The negative controls break the agreement in BOTH directions and
+      # require a named failure, and one asserts that an empty pod-structure.md
+      # fails rather than passing vacuously.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-record-class-registry.sh
+
+      - name: Record-class registry agreement check
+        run: python3 scripts/check-record-class-registry.py

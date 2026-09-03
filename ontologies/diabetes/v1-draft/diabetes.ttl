@@ -33,8 +33,8 @@
     dct:description "Unified vocabulary for diabetes and pre-diabetes management, aggregating data from CGMs, glucose meters, insulin delivery systems, and lifestyle tracking devices"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-12-12"^^xsd:date ;
-    dct:modified "2026-08-20"^^xsd:date ;
-    owl:versionInfo "1.0-draft.0.2" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.3" ;
     rdfs:comment "DRAFT - This vocabulary is under development and subject to change. Domain-specific vocabulary for diabetes wellness tracking. Designed to unify data from multiple wearables and apps into a coherent, analyzable format."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/diabetes/v1-draft/> .
 
@@ -75,7 +75,7 @@ diabetes:LADA a diabetes:DiabetesType ;
 # Core Classes - Glucose Measurements
 # ============================================================================
 
-diabetes:GlucoseReading a owl:Class ;
+diabetes:GlucoseReading a owl:Class, cascade:RecordClass ;
     rdfs:label "Glucose Reading"@en ;
     rdfs:comment "Single blood glucose measurement from any source (CGM, finger stick, lab)"@en ;
     rdfs:subClassOf fhir:Observation ;
@@ -150,7 +150,7 @@ diabetes:trendRate a owl:DatatypeProperty ;
 # CGM Session
 # ============================================================================
 
-diabetes:CGMSession a owl:Class ;
+diabetes:CGMSession a owl:Class, cascade:RecordClass ;
     rdfs:label "CGM Session"@en ;
     rdfs:comment "A continuous glucose monitoring session (typically 10-14 days per sensor)"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -194,7 +194,7 @@ diabetes:sensorWearLocation a owl:DatatypeProperty ;
 # Insulin Delivery
 # ============================================================================
 
-diabetes:InsulinDose a owl:Class ;
+diabetes:InsulinDose a owl:Class, cascade:RecordClass ;
     rdfs:label "Insulin Dose"@en ;
     rdfs:comment "Record of insulin delivery from pump, pen, or injection"@en ;
     rdfs:subClassOf fhir:MedicationAdministration ;
@@ -284,13 +284,13 @@ diabetes:deliveryDevice a owl:DatatypeProperty ;
 # Carbohydrate/Meal Tracking
 # ============================================================================
 
-diabetes:CarbEntry a owl:Class ;
+diabetes:CarbEntry a owl:Class, cascade:RecordClass ;
     rdfs:label "Carbohydrate Entry"@en ;
     rdfs:comment "Record of carbohydrate intake for bolus calculation"@en ;
     rdfs:subClassOf prov:Entity ;
     vs:term_status "unstable" .
 
-diabetes:MealEvent a owl:Class ;
+diabetes:MealEvent a owl:Class, cascade:RecordClass ;
     rdfs:label "Meal Event"@en ;
     rdfs:comment "Complete meal record with timing, macros, and context"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -372,7 +372,7 @@ diabetes:mealType a owl:ObjectProperty ;
 # Daily Summary - Time in Range Metrics
 # ============================================================================
 
-diabetes:DailyGlucoseSummary a owl:Class ;
+diabetes:DailyGlucoseSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Daily Glucose Summary"@en ;
     rdfs:comment "Aggregated glucose metrics for a single day following ADA/EASD consensus standards"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -505,7 +505,7 @@ diabetes:totalCarbs a owl:DatatypeProperty ;
 # Pattern Detection
 # ============================================================================
 
-diabetes:GlucosePattern a owl:Class ;
+diabetes:GlucosePattern a owl:Class, cascade:RecordClass ;
     rdfs:label "Glucose Pattern"@en ;
     rdfs:comment "Identified recurring pattern in glucose data"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -573,14 +573,14 @@ diabetes:suggestedAction a owl:DatatypeProperty ;
 # Hypo/Hyper Events
 # ============================================================================
 
-diabetes:HypoglycemicEvent a owl:Class ;
+diabetes:HypoglycemicEvent a owl:Class, cascade:RecordClass ;
     rdfs:label "Hypoglycemic Event"@en ;
     rdfs:comment "Episode of low blood glucose (<70 mg/dL)"@en ;
     rdfs:subClassOf prov:Entity ;
     owl:sameAs sct:302866003 ;
     vs:term_status "unstable" .
 
-diabetes:HyperglycemicEvent a owl:Class ;
+diabetes:HyperglycemicEvent a owl:Class, cascade:RecordClass ;
     rdfs:label "Hyperglycemic Event"@en ;
     rdfs:comment "Episode of high blood glucose (>250 mg/dL)"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -636,14 +636,14 @@ diabetes:treatmentCarbs a owl:DatatypeProperty ;
 # Lab Results
 # ============================================================================
 
-diabetes:LabResult a owl:Class ;
+diabetes:LabResult a owl:Class, cascade:RecordClass ;
     rdfs:label "Lab Result"@en ;
     rdfs:comment "Clinical laboratory test result"@en ;
     rdfs:subClassOf fhir:Observation ;
     rdfs:subClassOf prov:Entity ;
     vs:term_status "unstable" .
 
-diabetes:HbA1cResult a owl:Class ;
+diabetes:HbA1cResult a owl:Class, cascade:RecordClass ;
     rdfs:label "HbA1c Result"@en ;
     rdfs:comment "Hemoglobin A1c test result (3-month glucose average)"@en ;
     rdfs:subClassOf diabetes:LabResult ;
@@ -676,7 +676,7 @@ diabetes:fastingGlucose a owl:DatatypeProperty ;
 # Diabetes Profile
 # ============================================================================
 
-diabetes:DiabetesProfile a owl:Class ;
+diabetes:DiabetesProfile a owl:Class, cascade:RecordClass ;
     rdfs:label "Diabetes Profile"@en ;
     rdfs:comment "User's diabetes-specific health profile and treatment settings"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -771,7 +771,7 @@ diabetes:activeInsulinPump a owl:DatatypeProperty ;
 # Activity Correlation
 # ============================================================================
 
-diabetes:ActivityCorrelation a owl:Class ;
+diabetes:ActivityCorrelation a owl:Class, cascade:RecordClass ;
     rdfs:label "Activity Correlation"@en ;
     rdfs:comment "Correlation between physical activity and glucose response"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -821,7 +821,7 @@ diabetes:glucoseChangeRate a owl:DatatypeProperty ;
 # Sleep Correlation
 # ============================================================================
 
-diabetes:SleepCorrelation a owl:Class ;
+diabetes:SleepCorrelation a owl:Class, cascade:RecordClass ;
     rdfs:label "Sleep Correlation"@en ;
     rdfs:comment "Correlation between sleep and glucose patterns"@en ;
     rdfs:subClassOf prov:Entity ;
@@ -865,7 +865,7 @@ diabetes:wakingGlucose a owl:DatatypeProperty ;
 # Device Data Sources
 # ============================================================================
 
-diabetes:DeviceDataSource a owl:Class ;
+diabetes:DeviceDataSource a owl:Class, cascade:RecordClass ;
     rdfs:label "Device Data Source"@en ;
     rdfs:comment "Registered device or app providing diabetes-related data"@en ;
     rdfs:subClassOf prov:Entity ;

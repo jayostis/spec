@@ -117,6 +117,49 @@ Two things to know before changing that check:
 
 If you want a section marker, `@` followed by **letters only** is ignored by a processor — `@commentCore` works, `@comment_core` fails exactly as the original did. Prefer no marker: the terms under a heading already carry the prefix it names.
 
+### Record-bearing is DECLARED with `cascade:RecordClass`, never inferred
+
+A class whose instances a Pod stores carries `a cascade:RecordClass` (core v3.13):
+
+```turtle
+health:AllergyRecord a owl:Class, cascade:RecordClass ;
+```
+
+That triple is the only machine-readable statement of "instances of this class are
+stored records". `scripts/check-class-coverage.py` keys on it to decide which classes
+owe a shape. Membership is the triple and nothing else — **not inherited**. A subclass
+of a marked class needs its own marker, for the same reason a parent's shape does not
+reach a child.
+
+**Do not read `rdfs:subClassOf prov:Entity` as this claim.** It is PROV-O alignment and
+confers nothing here. That misreading was the rule through core v3.12, in the checker
+and in `known-unshaped-classes.json`'s `$rule`, and two vocabulary changes were made on
+the strength of it (#12, #13). [ASK-05](https://github.com/jayostis/spec/issues/34)
+ruled it out:
+
+> The axiom is PROV-O alignment … Your shape-coverage checker should key on that, or on
+> an explicit list, never on `prov:Entity`, which will keep catching alignment axioms.
+
+Measured at the time: 110 classes reached a PROV root and **96 of them were registered
+nowhere as stored records**. PROV superclasses stay and stay true; they simply do not
+answer this question. Never add or remove one to change what the gate sees — that is the
+defect, not a fix.
+
+`cascade:DataProvenance` is the worked example of the two claims being separate: it
+declares `rdfs:subClassOf prov:Entity` (true — a classification is a thing PROV can
+reference) and carries no marker (also true — nothing is ever typed with it).
+
+```sh
+python3 scripts/check-class-coverage.py            # the rule
+sh scripts/test-record-class-declarations.sh       # incl. the guard on the above
+python3 scripts/check-record-class-registry.py     # pod-structure.md must agree
+python3 scripts/check-context-coverage.py          # every record class has a JSON name
+```
+
+Two things a new record class needs beyond the marker: an entry in its vocabulary's
+context **and** in `cascade.jsonld` (or `check-context-coverage.py` fails), and either a
+shape or a `known-unshaped-classes.json` entry (or `check-class-coverage.py` fails).
+
 ### Version Bumping
 
 When modifying an ontology:
@@ -140,6 +183,7 @@ Before committing any change to an ontology (`.ttl`) file, you MUST:
 - [ ] Run `python3 scripts/check-shape-targets.py` and get exit 0 (the `shapes` CI job runs it, and its regression suite, on every PR touching `ontologies/`)
 - [ ] Run `python3 scripts/check-nested-severity.py` and get exit 0 — same CI job. Required whenever you add or move an `sh:severity`, and whenever you add an `sh:node`
 - [ ] Run `python3 scripts/check-context-validity.py` and get exit 0 — the `contexts` CI job runs it, and its regression suite, on every PR touching `contexts/`. **Required whenever you touch a context, which is not the same trigger as the rest of this list**: a context change need not accompany a `.ttl` change, and this was the one gate with no `.ttl` in front of it
+- [ ] If you added a class whose instances a Pod stores, mark it `a cascade:RecordClass` and run all four record-class checks — `check-class-coverage.py`, `test-record-class-declarations.sh`, `check-record-class-registry.py`, `check-context-coverage.py`. A new record class needs the marker, a context entry in **both** its own context and `cascade.jsonld`, and either a shape or a `known-unshaped-classes.json` entry. Three separate gates will tell you which one you missed
 - [ ] Tag the commit: `git tag vocab/{name}-v{X.Y}` after committing
 
 After committing, complete the downstream update sequence (in order):
