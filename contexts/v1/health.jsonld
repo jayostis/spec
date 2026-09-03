@@ -293,8 +293,6 @@
     "healthUcumCode": "health:ucumCode",
     "trendPolarity": "health:trendPolarity",
 
-    "_comment_v2_5": "health v2.5 — clinical record classes, wellness containers, daily snapshot properties",
-
     "LabResultRecord": "health:LabResultRecord",
     "ConditionRecord": "health:ConditionRecord",
     "AllergyRecord": "health:AllergyRecord",
