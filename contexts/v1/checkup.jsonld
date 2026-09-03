@@ -41,6 +41,8 @@
     "IntakeQuestionnaireResponse": "checkup:IntakeQuestionnaireResponse",
     "ResponseItem": "checkup:ResponseItem",
     "MedicationChangeRecord": "checkup:MedicationChangeRecord",
+    "VisitPrepTray": "checkup:VisitPrepTray",
+    "VisitTrayItem": "checkup:VisitTrayItem",
 
     "insuranceProvider": "checkup:insuranceProvider",
     "checkupMemberId": "checkup:memberId",
