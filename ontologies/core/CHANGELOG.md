@@ -1,5 +1,45 @@
 # Core Vocabulary Changelog
 
+## v3.13 - 2026-09-03
+
+Record-bearing became something a class SAYS rather than something a checker infers.
+
+- **`cascade:RecordClass` is added**, a marker whose instances are the classes a Pod
+  stores records of. Twelve core classes carry it. It is an explicit designation:
+  membership is the one triple and is never inherited, mirroring
+  `validation/index.md`'s rule that a parent's shape does not reach a child.
+- **`cascade:DataProvenance` gets `rdfs:subClassOf prov:Entity` back**, reversing
+  jayostis/spec#12, and deliberately does NOT carry the marker.
+- **Why.** Through v3.12 `rdfs:subClassOf prov:Entity` was read as the assertion that a
+  class bears record data -- by `scripts/check-class-coverage.py`, by
+  `scripts/known-unshaped-classes.json`'s `$rule`, and by the vocabulary changes in
+  jayostis/spec#12 and #13. jayostis/spec#34 (ASK-05) ruled that reading out: the axiom
+  is PROV-O alignment, and a checker keying on it "will keep catching alignment axioms".
+  Measured: 110 classes reached a PROV root and 96 of them were registered nowhere as
+  stored records.
+- **`cascade:DataProvenance` is the demonstration.** The axiom is true of it -- a
+  classification is a conceptual thing PROV statements can reference -- and it says
+  nothing about whether anyone stores an instance. Nothing is ever typed
+  `cascade:ClinicalGenerated`; it is only ever the object of `cascade:dataProvenance`
+  (179 uses in the reference pod, every one as a value). v3.9's observation was right and
+  its instrument was wrong, so the axiom returns and the marker stays off.
+- **No axiom is removed anywhere.** PROV superclasses stay and stay true across every
+  vocabulary. Adding or deleting one to change what the coverage gate sees is now
+  explicitly the defect, and `scripts/test-record-class-declarations.sh` case 5 asserts
+  it: a scratch class with `prov:Entity` and no marker must not move the population.
+- The twelve marked: `cascade:AIDiscardedExtraction`, `cascade:AIExtractionActivity`,
+  `cascade:AIGenerationActivity`, `cascade:AdvisoryApplicationActivity`,
+  `cascade:Attachment`, `cascade:ConflictDetail`, `cascade:ExportManifest`,
+  `cascade:HealthRecord`, `cascade:InteractionScenario`, `cascade:PatientProfile`,
+  `cascade:ProxyAgent`, `cascade:RecordSummary`.
+- `cascade:HealthRecord` enters `known-unshaped-classes.json`: `pod-structure.md`
+  registers it with `solid:forClass` and no shape targets it.
+  `checkup:WellnessProfileReference` leaves it -- no properties, no shape, and its own
+  comment calls it a "lightweight pointer". The file stays at 41 entries.
+
+See the top-level `CHANGELOG.md` for the whole change and `VOCAB_VERSIONS` for the other
+ten vocabularies moving with it.
+
 ## v3.12 - 2026-09-01
 
 Two classes held record data and no axiom said so.

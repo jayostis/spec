@@ -22,8 +22,11 @@ on:
   pull_request:
     paths:
       - 'contexts/**'
+      - 'ontologies/**'
       - 'scripts/check-context-validity.py'
       - 'scripts/test-check-context-validity.sh'
+      - 'scripts/check-context-coverage.py'
+      - 'scripts/test-check-context-coverage.sh'
       - 'scripts/requirements.txt'
       - '.github/workflows/contexts.yml'
   workflow_dispatch:
@@ -51,3 +54,30 @@ jobs:
 
       - name: Every context loads in a strict processor
         run: python3 scripts/check-context-validity.py
+
+  context-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python3 -m pip install -r scripts/requirements.txt
+
+      # A separate job from the validity check above, and separately triggered
+      # on ontologies/**, because this rule is about the RELATIONSHIP between
+      # two artifacts: every record class must have a published JSON name. A
+      # class absent from all seven contexts has none, so a consumer either
+      # invents one -- which is how two spellings of a class get into
+      # circulation -- or cannot address it. Twelve were in that state.
+      #
+      # Kept out of check-context-validity.py deliberately: that check needs no
+      # ontology and must keep working while the vocabulary is mid-edit.
+      - name: Regression suite (check + negative controls)
+        run: sh scripts/test-check-context-coverage.sh
+
+      - name: Every record class has a published JSON name
+        run: python3 scripts/check-context-coverage.py

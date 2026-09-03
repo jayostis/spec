@@ -31,7 +31,7 @@ import glob
 import sys
 
 from rdflib import Graph, Namespace, URIRef
-from rdflib.namespace import OWL, RDF
+from rdflib.namespace import OWL, RDF, RDFS
 
 VS = Namespace("http://www.w3.org/2003/06/sw-vocab-status/ns#")
 TERM_STATUS = VS.term_status
@@ -46,6 +46,12 @@ TERM_TYPES = {
 }
 
 VALID = {"unstable", "testing", "stable", "archaic"}
+
+CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
+
+
+def is_cascade(term):
+    return str(term).startswith(CASCADE_NS_PREFIX)
 
 
 def local(term):
@@ -90,8 +96,79 @@ def check(path):
     return len(missing) + len(bad) + len(deprecated_not_archaic)
 
 
+def check_successors(paths):
+    """A deprecated class must name its replacement in a triple.
+
+    rdfs:seeAlso on a deprecated class is what lets a reader map an old spelling
+    onto the live one. Four of the five deprecated classes carried it correctly
+    and clinical:CoverageRecord did not: its only rdfs:seeAlso pointed at
+    fhir:Coverage, a documentation link, while the supersession by
+    coverage:InsurancePlan was stated in prose and in no triple. That is the one
+    deprecation whose replacement lives in a different vocabulary -- the case
+    where a consumer is least able to guess -- and it is how sdk-typescript's
+    InsurancePlan spent five releases pointing at the dead class.
+
+    A DOCUMENTATION LINK IS NOT A SUCCESSOR. The rule needs at least one
+    rdfs:seeAlso resolving to a live Cascade TERM, so fhir:Coverage does not
+    satisfy it and does not have to be removed to satisfy it.
+
+    A SUCCESSOR NEED NOT BE A CLASS. evidence:VerdictValue is the worked example
+    for that: a flat enumeration replaced by five facet PROPERTIES
+    (evidence:direction / basis / strength / settled / reason), so a
+    class-only rule would have demanded a replacement that does not exist and
+    been relaxed or switched off. What matters is that the vocabulary says what
+    to use instead in a triple, not that the answer has the same arity.
+
+    SCOPE IS EVERY VOCABULARY, NOT JUST THE DRAFTS. The vs:term_status rules
+    above run over v1-draft only, because stable vocabularies do not annotate
+    maturity per term and checking them would report every stable term as
+    missing. Deprecation is the opposite: all five deprecated classes are in
+    stable clinical:, so a draft-only scope would have examined none of them.
+    """
+    graph = Graph()
+    for path in paths:
+        graph.parse(path, format="turtle")
+
+    # Every Cascade term, so a successor may be a property as well as a class.
+    terms = {
+        s for s, _, o in graph.triples((None, RDF.type, None))
+        if o in TERM_TYPES and isinstance(s, URIRef) and is_cascade(s)
+    }
+    is_dead = {
+        t for t in terms
+        if any(bool(o) for o in graph.objects(t, OWL.deprecated))
+    }
+    # Only CLASSES are required to name a successor. A deprecated property is
+    # usually dropped rather than replaced one-for-one, and demanding a triple
+    # for each would be a rule nobody could satisfy honestly.
+    deprecated = {c for c in is_dead if (c, RDF.type, OWL.Class) in graph}
+
+    findings = []
+    for cls in sorted(deprecated):
+        successors = [
+            o for o in graph.objects(cls, RDFS.seeAlso)
+            if isinstance(o, URIRef) and is_cascade(o) and o not in is_dead
+        ]
+        if not successors:
+            seen = [str(o) for o in graph.objects(cls, RDFS.seeAlso)]
+            findings.append((cls, seen))
+
+    print(f"{'deprecation successors':22s} {len(deprecated):4d} deprecated "
+          f"class(es), {len(deprecated) - len(findings):4d} naming a successor, "
+          f"{len(findings):3d} not")
+    for cls, seen in findings:
+        print(f"      NO SUCCESSOR TRIPLE on {local(cls)} "
+              f"(rdfs:seeAlso: {seen or 'none'})", file=sys.stderr)
+        print(f"      A deprecated class must name its replacement with an "
+              f"rdfs:seeAlso resolving to a live Cascade class. A link to "
+              f"external documentation does not say what to use instead.",
+              file=sys.stderr)
+    return len(findings)
+
+
 def main():
     paths = sys.argv[1:]
+    explicit = bool(paths)
     if not paths:
         paths = sorted(p for p in glob.glob("ontologies/*/v1-draft/*.ttl")
                        if not p.endswith(".shapes.ttl"))
@@ -101,11 +178,26 @@ def main():
         return 1
 
     problems = sum(check(p) for p in paths)
+
+    # The successor rule reads every vocabulary, stable included -- see
+    # check_successors. When files were named explicitly, honour that scope
+    # rather than silently widening past what the caller asked about.
+    successor_paths = paths if explicit else sorted(
+        p for p in glob.glob("ontologies/*/v1*/*.ttl")
+        if not p.endswith(".shapes.ttl")
+    )
+    if not successor_paths:
+        print("Error: no ontologies found for the successor check.",
+              file=sys.stderr)
+        return 1
+    problems += check_successors(successor_paths)
+
     print()
     if problems:
         print(f"FAILED: {problems} problem(s).", file=sys.stderr)
         return 1
-    print("All draft terms declare a valid vs:term_status.")
+    print("All draft terms declare a valid vs:term_status, and every deprecated "
+          "class names a live successor.")
     return 0
 
 

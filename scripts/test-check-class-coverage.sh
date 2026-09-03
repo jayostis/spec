@@ -3,13 +3,16 @@
 #
 # Regression suite for check-class-coverage.py.
 #
-# The defect under test: a class declaring rdfs:subClassOf prov:Entity or
-# prov:Activity holds record data, but if no shape names it in sh:targetClass
-# then SHACL reports conforms:true over its records having examined nothing.
-# That verdict is indistinguishable from one earned by satisfying every
-# constraint, and check-shape-targets.py reports PASS 3/3 straight over it,
-# because its T assertion fires only for a superclass some shape already
-# targets and nothing targets prov:Entity.
+# The defect under test: a class carrying `a cascade:RecordClass` holds record
+# data, but if no shape names it in sh:targetClass then SHACL reports
+# conforms:true over its records having examined nothing. That verdict is
+# indistinguishable from one earned by satisfying every constraint, and
+# check-shape-targets.py reports PASS 3/3 straight over it, because its T
+# assertion fires only for a superclass some shape already targets.
+#
+# The marker replaced a reading of rdfs:subClassOf prov:Entity in core v3.13
+# (jayostis/spec#34, #50). Case 13 asserts the consequence that is easiest to
+# undo by accident: membership is not inherited.
 #
 # clinical:CoverageRecord lived its whole life that way. clinical v1.18 shaped
 # it, so this suite cannot assert the live defect directly -- instead case 3
@@ -164,14 +167,13 @@ fi
 #    regression the whole check exists to prevent.
 # ---------------------------------------------------------------------------
 echo ""
-echo "4. A new prov-rooted class with no shape, baseline present"
+echo "4. A newly marked class with no shape, baseline present"
 
 DIR="$(scratch new-class)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
 
-clinical:ScratchTestRecord a owl:Class ;
-    rdfs:label "Scratch Test Record"@en ;
-    rdfs:subClassOf prov:Entity .
+clinical:ScratchTestRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Test Record"@en .
 EOF
 
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
@@ -197,9 +199,8 @@ echo "5. Negative control: the same new class, shaped"
 DIR="$(scratch new-class-shaped)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
 
-clinical:ScratchTestRecord a owl:Class ;
-    rdfs:label "Scratch Test Record"@en ;
-    rdfs:subClassOf prov:Entity .
+clinical:ScratchTestRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Test Record"@en .
 EOF
 cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 
@@ -284,13 +285,13 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 8. A class with NO rdfs:subClassOf is out of scope and must not be reported.
-#    This is the scope boundary the issue drew deliberately: that population
-#    mixes value enumerations with record classes and separating them is a
-#    vocabulary judgement, not a check's.
+# 8. AN UNMARKED CLASS IS OUT OF SCOPE and must not be reported. This is the
+#    scope boundary drawn deliberately: the unmarked population mixes value
+#    enumerations with record classes, and separating them is a vocabulary
+#    judgement rather than a check's. Marking one is how it enters.
 # ---------------------------------------------------------------------------
 echo ""
-echo "8. Scope boundary: a class with no PROV superclass is not reported"
+echo "8. Scope boundary: an unmarked class is not reported"
 
 DIR="$(scratch no-superclass)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
@@ -302,9 +303,9 @@ EOF
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
 STATUS=$?
 if [ $STATUS -eq 0 ]; then
-  pass "a class with no PROV superclass is out of scope (exit 0)"
+  pass "an unmarked class is out of scope (exit 0)"
 else
-  fail "a class with no PROV superclass was reported" "$OUT"
+  fail "an unmarked class was reported" "$OUT"
 fi
 
 # ---------------------------------------------------------------------------
@@ -371,9 +372,8 @@ echo "12. A constraint-free shape does not count as coverage"
 DIR="$(scratch empty-shape)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
 
-clinical:ScratchHollowRecord a owl:Class ;
-    rdfs:label "Scratch Hollow Record"@en ;
-    rdfs:subClassOf prov:Entity .
+clinical:ScratchHollowRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Hollow Record"@en .
 EOF
 cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 
@@ -400,9 +400,8 @@ fi
 DIR="$(scratch empty-shape-control)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
 
-clinical:ScratchHollowRecord a owl:Class ;
-    rdfs:label "Scratch Hollow Record"@en ;
-    rdfs:subClassOf prov:Entity .
+clinical:ScratchHollowRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Hollow Record"@en .
 EOF
 cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 
@@ -425,22 +424,28 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 13. A class reaching prov:Entity through an INTERMEDIATE Cascade class is in
-#     scope. Subclassing a record class is a normal idiom here -- the six
-#     clinical: document subtypes, six health: data classes and
-#     diabetes:HbA1cResult all do it -- and such a class has inherited exactly
-#     the declaration this check keys on, so no vocabulary judgement is needed.
-#     The parent is shaped and the child is not, which isolates the child.
+# 13. THE MARKER IS NOT INHERITED. An unmarked subclass of a marked class is
+#     OUT of scope, and this case asserts it in both directions.
+#
+#     Through core v3.12 the population was the transitive rdfs:subClassOf
+#     closure over prov:Entity, so a child inherited membership from its parent.
+#     core v3.13 made membership an explicit triple (jayostis/spec#34, #50) and
+#     inheritance went with it, deliberately: validation/index.md's rule is that
+#     a parent's shape does NOT reach a child over a pod's data graph, so a
+#     child that inherited the OBLIGATION while inheriting none of the
+#     constraint would be owed a verdict nothing could ever deliver.
+#
+#     The six clinical: document subtypes are the live case, and they each carry
+#     their own marker.
 # ---------------------------------------------------------------------------
 echo ""
-echo "13. Transitive scope: a class whose ANCESTOR is prov-rooted is in scope"
+echo "13. The marker is not inherited: an unmarked child is out of scope"
 
-DIR="$(scratch transitive)"
+DIR="$(scratch not-inherited)"
 cat >> "$DIR/$CLIN_TTL" <<'EOF'
 
-clinical:ScratchParentRecord a owl:Class ;
-    rdfs:label "Scratch Parent Record"@en ;
-    rdfs:subClassOf prov:Entity .
+clinical:ScratchParentRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Parent Record"@en .
 
 clinical:ScratchChildRecord a owl:Class ;
     rdfs:label "Scratch Child Record"@en ;
@@ -451,59 +456,6 @@ cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
 clinical:ScratchParentRecordShape a sh:NodeShape ;
     sh:targetClass clinical:ScratchParentRecord ;
     rdfs:label "Scratch Parent Record Shape"@en ;
-    sh:property [
-        sh:path cascade:schemaVersion ;
-        sh:datatype xsd:string ;
-        sh:minCount 1
-    ] .
-EOF
-
-OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
-STATUS=$?
-if [ $STATUS -ne 0 ]; then
-  pass "a transitively prov-rooted unshaped class fails (exit $STATUS)"
-else
-  fail "a transitively prov-rooted unshaped class PASSED" "$OUT"
-fi
-if echo "$OUT" | grep -q "clinical:ScratchChildRecord"; then
-  pass "names clinical:ScratchChildRecord"
-else
-  fail "failed without naming clinical:ScratchChildRecord" "$OUT"
-fi
-# The parent IS shaped, so it must not be reported. Without this the case would
-# pass for the wrong reason the moment the parent's shape stopped counting.
-if echo "$OUT" | grep -qE "clinical:ScratchParentRecord$"; then
-  fail "reported the shaped parent as unshaped" "$OUT"
-else
-  pass "does not report the shaped parent"
-fi
-
-# Negative control for case 13: shape the child too and the same tree passes.
-DIR="$(scratch transitive-control)"
-cat >> "$DIR/$CLIN_TTL" <<'EOF'
-
-clinical:ScratchParentRecord a owl:Class ;
-    rdfs:label "Scratch Parent Record"@en ;
-    rdfs:subClassOf prov:Entity .
-
-clinical:ScratchChildRecord a owl:Class ;
-    rdfs:label "Scratch Child Record"@en ;
-    rdfs:subClassOf clinical:ScratchParentRecord .
-EOF
-cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
-
-clinical:ScratchParentRecordShape a sh:NodeShape ;
-    sh:targetClass clinical:ScratchParentRecord ;
-    rdfs:label "Scratch Parent Record Shape"@en ;
-    sh:property [
-        sh:path cascade:schemaVersion ;
-        sh:datatype xsd:string ;
-        sh:minCount 1
-    ] .
-
-clinical:ScratchChildRecordShape a sh:NodeShape ;
-    sh:targetClass clinical:ScratchChildRecord ;
-    rdfs:label "Scratch Child Record Shape"@en ;
     sh:property [
         sh:path cascade:schemaVersion ;
         sh:datatype xsd:string ;
@@ -514,9 +466,55 @@ EOF
 OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
 STATUS=$?
 if [ $STATUS -eq 0 ]; then
-  pass "negative control: shaping the child passes"
+  pass "an unmarked child of a marked class is out of scope (exit 0)"
 else
-  fail "negative control failed, so case 13 proves nothing" "$OUT"
+  fail "an unmarked child was reported" "Membership is the marker triple alone. If the child entered the population
+        it was inherited through rdfs:subClassOf, which is the pre-v3.13 rule
+        jayostis/spec#34 ruled out. $OUT"
+fi
+if echo "$OUT" | grep -q "clinical:ScratchChildRecord"; then
+  fail "named the unmarked child" "$OUT"
+else
+  pass "does not name clinical:ScratchChildRecord"
+fi
+
+# The other direction, and what makes the case above mean something: MARK the
+# child and it is in scope immediately. Without this, case 13 would also pass on
+# a check that had stopped seeing scratch classes at all.
+DIR="$(scratch marked-child)"
+cat >> "$DIR/$CLIN_TTL" <<'EOF'
+
+clinical:ScratchParentRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Parent Record"@en .
+
+clinical:ScratchChildRecord a owl:Class, cascade:RecordClass ;
+    rdfs:label "Scratch Child Record"@en ;
+    rdfs:subClassOf clinical:ScratchParentRecord .
+EOF
+cat >> "$DIR/$CLIN_SHAPES" <<'EOF'
+
+clinical:ScratchParentRecordShape a sh:NodeShape ;
+    sh:targetClass clinical:ScratchParentRecord ;
+    rdfs:label "Scratch Parent Record Shape"@en ;
+    sh:property [
+        sh:path cascade:schemaVersion ;
+        sh:datatype xsd:string ;
+        sh:minCount 1
+    ] .
+EOF
+
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ] && echo "$OUT" | grep -q "clinical:ScratchChildRecord"; then
+  pass "marking the child brings it into scope and it is named"
+else
+  fail "a MARKED unshaped child was not reported" "If this passes the check is not seeing scratch classes at all, and the
+        assertion above proves nothing. $OUT"
+fi
+if echo "$OUT" | grep -qE "clinical:ScratchParentRecord$"; then
+  fail "reported the shaped parent as unshaped" "$OUT"
+else
+  pass "does not report the shaped parent"
 fi
 
 # ---------------------------------------------------------------------------
@@ -533,7 +531,7 @@ DIR="$(scratch removed-class)"
 import re, sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-block = re.search(r"^coverage:DenialNotice a owl:Class ;.*?\.\n", text, re.S | re.M)
+block = re.search(r"^coverage:DenialNotice a owl:Class[^;]*;.*?\.\n", text, re.S | re.M)
 if not block:
     sys.exit("coverage:DenialNotice declaration not found to delete")
 open(path, "w", encoding="utf-8").write(text[:block.start()] + text[block.end():])

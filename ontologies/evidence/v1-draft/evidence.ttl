@@ -94,7 +94,12 @@ evidence:VerdictValue a owl:Class ;
     owl:deprecated true ;
     rdfs:label "Verdict Value (deprecated)"@en ;
     rdfs:comment "DEPRECATED in v1-draft.0.2: the flat verdict enumeration is superseded by the facet model (evidence:direction / evidence:basis / evidence:strength / evidence:settled / evidence:reason). Retained one release so draft-period data carrying evidence:verdict still validates; clients derive the flat value from the facets in code and MUST NOT serialize it going forward. Scheduled for removal at v1.0 graduation."@en ;
-    owl:versionInfo "Added in evidence v1-draft.0.1; deprecated in v1-draft.0.2" ;
+    rdfs:seeAlso evidence:direction ;
+    rdfs:seeAlso evidence:basis ;
+    rdfs:seeAlso evidence:strength ;
+    rdfs:seeAlso evidence:settled ;
+    rdfs:seeAlso evidence:reason ;
+    owl:versionInfo "Added in evidence v1-draft.0.1; deprecated in v1-draft.0.2; successor facets named in triples in v1-draft.0.4" ;
     vs:term_status "archaic" .
 
 evidence:StanceValue a owl:Class ;

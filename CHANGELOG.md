@@ -6,6 +6,46 @@ Format: each entry is one milestone, dated, with a short prose summary and point
 
 ---
 
+## 2026-09-03: A class now says whether a Pod stores it, instead of a checker guessing
+
+**core v3.13, health v2.9, clinical v1.20, coverage v1.9, checkup v3.5, pots v1.5, and
+the five drafts.** `cascade:RecordClass` is declared in core and 127 classes carry it --
+83 across the six stable vocabularies, 44 across the drafts. No term is renamed or
+removed, no shape changes, and no `rdfs:subClassOf` axiom is deleted anywhere.
+
+**What was wrong.** Nothing in the published ontologies stated that a class's instances
+are stored record data, and `rdfs:subClassOf prov:Entity` was standing in for the missing
+statement -- in `scripts/check-class-coverage.py`, in `known-unshaped-classes.json`'s
+`$rule`, and in two vocabulary changes made on the strength of it (#12, #13).
+[ASK-05](https://github.com/jayostis/spec/issues/34) ruled the reading out: the axiom is
+PROV-O alignment, and a checker keying on it "will keep catching alignment axioms".
+Measured before the change: 110 classes reached a PROV root and 96 of them were
+registered nowhere as stored records.
+
+**The roster is derived from evidence already in the repository**, not invented:
+`pod-structure.md`'s 21 `solid:forClass` type-index registrations (audited at v1.1
+against the reference patient pod), classes carrying their own data properties, and
+classes targeted by their own SHACL shape. `genomics:ReviewStatus` was a candidate and is
+deliberately unmarked -- seven named individuals are typed with it, so it is a ClinVar
+code list and baselining it would record an obligation nothing can discharge.
+
+**Also in this release**
+
+- `clinical:CoverageRecord` states `coverage:InsurancePlan` as its successor in a triple,
+  beside the `fhir:Coverage` documentation link it already had. `evidence:VerdictValue`
+  names its five replacement facet properties. Both found by a new deprecation-successor
+  rule in `check-term-status.py`.
+- Twelve record classes that were named by no JSON-LD context are now published, in their
+  own vocabulary's context and in `cascade.jsonld`.
+- Two new gates with regression suites: `check-record-class-registry.py` (pod-structure's
+  registrations and the markers must agree) and `check-context-coverage.py` (every record
+  class has a published JSON name).
+- `scripts/test-record-class-declarations.sh` case 5 is the guard on the correction: a
+  scratch class given `rdfs:subClassOf prov:Entity` and no marker must not move the
+  population.
+
+Per-vocab detail: `ontologies/core/CHANGELOG.md`, `ontologies/evidence/CHANGELOG.md`.
+
 ## 2026-09-02: Three of seven published contexts could not be loaded at all (no vocabulary version moves)
 
 **No term is added, removed or renamed, no ontology file is touched, and no shape changes.** Eight keys are deleted from `contexts/v1/cascade.jsonld`, `core.jsonld` and `health.jsonld`, and a new `contexts` CI workflow asserts that every published context loads. `VOCAB_VERSIONS` is unchanged, deliberately: the vocabularies did not move, their published mapping did.

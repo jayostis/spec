@@ -118,6 +118,86 @@ else
        "expected a zero-term report: $OUT"
 fi
 
+# ── 6. A deprecated class must name a live successor ─────────────────────────
+#
+# The defect: clinical:CoverageRecord was deprecated in favour of
+# coverage:InsurancePlan and its only rdfs:seeAlso pointed at fhir:Coverage, a
+# documentation link. The shipped data could say "this class is dead" and not
+# "use this instead" -- for the one deprecation whose replacement lives in
+# another vocabulary. See jayostis/spec#50.
+cat > "$WORK/dead-no-successor.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix probe: <https://ns.cascadeprotocol.org/probe/v1#> .
+@prefix fhir: <http://hl7.org/fhir/> .
+probe:DeadClass a owl:Class ;
+    rdfs:label "Dead Class"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso fhir:Coverage ;
+    vs:term_status "archaic" .
+TTL
+OUT="$("$PYTHON" "$CHECK" "$WORK/dead-no-successor.ttl" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "DeadClass"; then
+  pass "a deprecated class whose only rdfs:seeAlso is external is reported"
+else
+  fail "a deprecated class whose only rdfs:seeAlso is external is reported" \
+       "an external documentation link is not a successor: $OUT"
+fi
+
+# The cure, and the proof the rule is satisfiable: a seeAlso to a live Cascade
+# term clears it. The successor is a PROPERTY here, not a class -- which is the
+# evidence:VerdictValue case, a flat enumeration replaced by facet properties.
+cat > "$WORK/dead-with-successor.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix probe: <https://ns.cascadeprotocol.org/probe/v1#> .
+@prefix fhir: <http://hl7.org/fhir/> .
+probe:DeadClass a owl:Class ;
+    rdfs:label "Dead Class"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso fhir:Coverage ;
+    rdfs:seeAlso probe:livePredicate ;
+    vs:term_status "archaic" .
+probe:livePredicate a owl:DatatypeProperty ;
+    rdfs:label "Live Predicate"@en ;
+    vs:term_status "stable" .
+TTL
+OUT="$("$PYTHON" "$CHECK" "$WORK/dead-with-successor.ttl" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "an rdfs:seeAlso to a live Cascade term clears it, property or class"
+else
+  fail "an rdfs:seeAlso to a live Cascade term clears it, property or class" \
+       "the rule must be satisfiable without deleting the external link: $OUT"
+fi
+
+# A successor that is itself deprecated is not a successor: it forwards the
+# reader to another dead end.
+cat > "$WORK/dead-chain.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix probe: <https://ns.cascadeprotocol.org/probe/v1#> .
+probe:DeadClass a owl:Class ;
+    rdfs:label "Dead Class"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso probe:AlsoDead ;
+    vs:term_status "archaic" .
+probe:AlsoDead a owl:Class ;
+    rdfs:label "Also Dead"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso probe:DeadClass ;
+    vs:term_status "archaic" .
+TTL
+OUT="$("$PYTHON" "$CHECK" "$WORK/dead-chain.ttl" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "DeadClass"; then
+  pass "a successor that is itself deprecated does not satisfy the rule"
+else
+  fail "a successor that is itself deprecated does not satisfy the rule" \
+       "pointing at another dead class forwards the reader nowhere: $OUT"
+fi
+
 echo ""
 echo "passed: $PASSED   failed: $FAILED"
 [ "$FAILED" -eq 0 ] || exit 1
