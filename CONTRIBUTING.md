@@ -63,7 +63,7 @@ cascade validate ontologies/clinical/v1/clinical.shapes.ttl
 
 ## What must be green before review
 
-Three CI workflows gate this repository, and the `shapes` one runs three independent jobs. Run their commands locally before opening a PR.
+Four CI workflows gate this repository, and the `shapes` one runs three independent jobs. Run their commands locally before opening a PR.
 
 ```bash
 source .venv/bin/activate                  # every check shells out to `python3`
@@ -82,12 +82,21 @@ sh scripts/test-check-class-coverage.sh    # record-class shape coverage
 sh scripts/test-record-class-declarations.sh   # the vocabulary fact beneath it
 python3 scripts/check-class-coverage.py
 
+# contexts: every published JSON-LD context loads in a STRICT processor. The
+# suite runs first because it is what proves the check can still fail; control 6
+# fails if the strict processor is ever swapped for rdflib, which accepts a
+# context a conformant processor refuses. Both must exit 0.
+sh scripts/test-check-context-validity.sh  # negative controls for the check
+python3 scripts/check-context-validity.py  # the rule
+
 # drift-checker: only if you touched the downstream drift check itself.
 # POSIX sh, not bash. CI runs it under dash to catch bashisms.
 dash scripts/test-check-downstream-versions.sh
 ```
 
 `scripts/check-shape-targets.py` runs on every PR touching `ontologies/`, together with its own negative controls, so a check that has stopped being able to fail is caught here rather than in a consumer. Do not "fix" the frozen specimens in `scripts/testdata/`; their bugs are what make the controls meaningful.
+
+**`scripts/check-context-validity.py` must not be rewritten against `rdflib`.** It is the obvious move -- rdflib is already pinned here and it parses JSON-LD -- and it is wrong: rdflib's parser accepted all three contexts that shipped invalid, so a check built on it sits green over the exact defect it exists to catch. `PyLD` is pinned separately for strictness, and control 6 of the suite fails if the two are ever consolidated. Note what this check does *not* do: it asserts that a context **loads**, never that it maps a term to the right IRI. A context that resolves `dateOfBirth` to the wrong predicate is valid JSON-LD and passes here.
 
 **`scripts/test-record-class-declarations.sh` is the one to run before you push, not after.** The other six ask whether a *check* can still fail, and a normal vocabulary edit does not move them. This one asserts a fact about the *ontologies* -- that every class carrying its own data properties declares the PROV superclass saying it holds record data -- and it pins the population it measures, so a **legitimate** edit reddens it: adding a record class moves `record classes`, and writing a shape against a baselined one moves `shaped`. Either puts the run off the counts pinned in `HEAD_RECORD_CLASSES` / `HEAD_SHAPED`, and updating those in the same commit is the point of the pin rather than an inconvenience -- it is what makes a silent change in the population impossible. The suite's MAINTENANCE block says which count each kind of change moves.
 
@@ -119,7 +128,7 @@ Tag format for a ratified vocabulary version: `vocab/{name}-v{X.Y}`, for example
 
 1. Branch from `main`.
 2. Make the change, and complete the in-repo checklist below in the same PR.
-3. Run the commands under "What must be green" and confirm all seven exit 0.
+3. Run the commands under "What must be green" and confirm all nine exit 0.
 4. Push and open a PR. `.github/PULL_REQUEST_TEMPLATE.md` fills in with the checklist; keep the items and tick them.
 5. Say in the PR body which downstream repositories you are able to update and which you are not. A contributor who cannot open PRs against all seven should still say so, so a maintainer can carry the rest rather than discovering the gap later.
 6. One maintainer approval is required for vocabulary changes. Documentation-only changes need one review.
@@ -137,6 +146,7 @@ Before committing any change to an ontology (`.ttl`) file:
 - [ ] Add a changelog comment block at the top of the TTL file
 - [ ] Update the corresponding `.shapes.ttl`. This is **not** conditional on something having been added: every class that remains instantiable must be targeted by a shape, including one you are deprecating and retaining. `check-class-coverage.py` enforces it for any class declaring a PROV superclass
 - [ ] Update the JSON-LD context (`contexts/v1/{name}.jsonld`) if new terms need `@type` / `@id` mappings
+- [ ] `python3 scripts/check-context-validity.py` exits 0 -- required whenever you touch `contexts/`. Every non-keyword key in a context **is** a term definition, so a section header written as one is a term whose IRI is a sentence and a conformant processor refuses the whole file. Three of the seven published contexts shipped that way and stayed broken for months, because nothing in this repository had ever passed them to a processor
 - [ ] Update `VOCAB_VERSIONS` and stage it explicitly: `git add VOCAB_VERSIONS`
 - [ ] `python3 scripts/check-shape-targets.py` exits 0
 - [ ] `python3 scripts/check-nested-severity.py` exits 0
