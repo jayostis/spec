@@ -34,6 +34,25 @@ against the file's own prefixes, and names every term that cannot stand alone.
 Those prefixes are themselves checked first: a broken entry that happens to be
 prefix-shaped would otherwise break every term it is tested against and be the
 one entry never tested alone, naming 710 innocents and not the culprit.
+
+An @-prefixed key is a candidate like any other. Only the eight keywords below
+are configuration; every other @-key is either reserved-and-ignored (letters
+only) or an error, and "keep the name, prepend an @" is the rescue this
+repository's own docs single out as tempting. Skipping @-keys wholesale left
+that one spelling -- the likeliest a contributor will write -- as the only
+defect the check could detect but not name.
+
+WHAT A FAILURE TO FETCH IS NOT
+------------------------------
+A context layer may be a remote IRI, and that is the one part of a file this
+process does not hold. When retrieval fails the processor raises the same
+JsonLdError it raises for a malformed term, so reporting every JsonLdError as
+"invalid" blames the file for the network. Those are separated below and the
+run exits 2 -- "nothing was verified" -- rather than 1.
+
+That path is not exotic. scripts/requirements.txt pins neither requests nor
+aiohttp, so PyLD has no default document loader at all: in the environment CI
+builds, every remote layer fails to load on a machine that is perfectly online.
 """
 
 import glob
@@ -59,6 +78,53 @@ CONTEXT_KEYWORDS = {
     "@import", "@propagate",
 }
 
+# JSON-LD error codes meaning the processor could not RETRIEVE something, as
+# opposed to having read something wrong. The distinction is the whole point:
+# one is a fact about the file, the other is a fact about this machine.
+LOAD_FAILURE_CODES = {
+    "loading document failed",
+    "loading remote context failed",
+    "no default document loader",
+}
+
+
+def load_failure(exc):
+    """The innermost retrieval failure behind a JsonLdError, else None.
+
+    PyLD wraps the cause, so the outermost error on an unreachable IRI is the
+    generic "Dereferencing a URL did not result in a valid JSON-LD object";
+    the chain below it carries the actual reason, which is the useful line.
+    """
+    found = None
+    while exc is not None:
+        if (isinstance(exc, JsonLdError)
+                and getattr(exc, "code", None) in LOAD_FAILURE_CODES):
+            found = exc
+        exc = exc.__cause__
+    return found
+
+
+def install_caching_loader(inner=None):
+    """Fetch each remote IRI at most once per run.
+
+    culprits() re-expands the whole context once per candidate term, and PyLD
+    resolves remote layers afresh on every expand() -- it caches nothing
+    between calls. So narrowing a failure on a context with a remote layer
+    refetched that IRI once per term: 710 times on a cascade-sized file.
+
+    `inner` exists so the regression suite can count fetches without a socket.
+    """
+    if inner is None:
+        inner = jsonld.get_document_loader()
+    cache = {}
+
+    def loader(url, options=None):
+        if url not in cache:
+            cache[url] = inner(url, options if options is not None else {})
+        return cache[url]
+
+    jsonld.set_document_loader(loader)
+
 
 def is_prefix_entry(value):
     """A term usable as the prefix of a compact IRI elsewhere in the file."""
@@ -78,17 +144,22 @@ def load_context(path):
         raise ValueError(
             f"top level is {type(doc).__name__}, expected a JSON object")
     ctx = doc.get("@context")
-    if not isinstance(ctx, (dict, list)):
-        raise ValueError(
-            f"@context is {type(ctx).__name__}, expected an object or an array")
+    # A bare string is a remote context reference, as legal as the array form
+    # and rejected here for months as "NOT A CONTEXT: @context is str" -- a
+    # false statement about the file, reddening the gate on anything the
+    # default contexts/**/*.jsonld glob reaches: a latest.jsonld alias, or any
+    # example instance document dropped under contexts/.
+    if not isinstance(ctx, (dict, list, str)):
+        raise ValueError(f"@context is {type(ctx).__name__}, expected an "
+                         "object, an array, or a remote context IRI")
     return ctx
 
 
 def layers(ctx):
-    """A context is one object OR an array of objects and remote IRIs.
+    """A context is one object, one remote IRI, OR an array of either.
 
-    Both forms are legal, so nothing below may assume a bare object: treating
-    the array form as malformed would block a valid change on a file a
+    All three forms are legal, so nothing below may assume a bare object:
+    treating another form as malformed would block a valid change on a file a
     conformant processor loads.
     """
     return ctx if isinstance(ctx, list) else [ctx]
@@ -137,13 +208,20 @@ def failing_entries(base, candidates, skip=()):
     The base must already expand on its own. If it does not, every candidate
     fails and every one of them is reported innocent-of-nothing, so the caller
     checks the base first rather than emitting that list.
+
+    Only the eight CONTEXT_KEYWORDS are exempt. Every OTHER @-prefixed key is
+    tested like any term: a processor ignores an @-key only when what follows
+    the @ is letters only, so "@comment_core" is a definition and fails exactly
+    as "__comment_core" does. Skipping the whole @ namespace meant that one --
+    the spelling a contributor reaches for first, since it looks like the fix
+    -- was the single defect this check could detect and never name.
     """
     bad = []
     for layer in candidates:
         if not isinstance(layer, dict):
             continue
         for key, value in layer.items():
-            if key.startswith("@") or key in skip:
+            if key in CONTEXT_KEYWORDS or key in skip:
                 continue
             if not expands(base + [{key: value}]):
                 bad.append((key, value))
@@ -189,7 +267,14 @@ def culprits(ctx):
 
 
 def check(path):
-    name = path.replace("\\", "/").rsplit("/", 1)[-1]
+    """Report on one file. Returns (problems, unchecked) -- see main()."""
+    # The whole path, not the basename. The default glob deliberately reaches
+    # past contexts/v1/, so contexts/v1/core.jsonld and contexts/v2/core.jsonld
+    # are both opened -- and a basename label printed two lines both reading
+    # "core.jsonld", one OK and one FAILED, with nothing saying which file to
+    # open. The 22-wide field overflows gracefully, as it already does for any
+    # basename longer than that.
+    name = path.replace("\\", "/")
 
     try:
         ctx = load_context(path)
@@ -201,7 +286,7 @@ def check(path):
         label = "UNREADABLE" if isinstance(exc, OSError) else "NOT A CONTEXT"
         print(f"{name:22s}    -- FAILED")
         print(f"      {label}: {exc}", file=sys.stderr)
-        return 1
+        return (1, 0)
 
     terms = local_terms(ctx)
     remote = [layer for layer in layers(ctx) if isinstance(layer, str)]
@@ -213,11 +298,26 @@ def check(path):
         print(f"{name:22s} {0:4d} terms -- FAILED")
         print("      EMPTY: no term definitions, so nothing was checked",
               file=sys.stderr)
-        return 1
+        return (1, 0)
 
     try:
         exercise(ctx)
     except JsonLdError as exc:
+        unfetched = load_failure(exc)
+        if unfetched is not None:
+            # Not FAILED: the file has not been found wrong, it has not been
+            # read in full. Narrowing to a culprit below would be meaningless
+            # -- every candidate fails against a base that cannot load -- and
+            # would refetch the same unreachable IRI once per term.
+            url = (unfetched.details or {}).get("url", "the remote layer")
+            print(f"{name:22s} {len(terms):4d} terms -- NOT CHECKED")
+            print(f"      COULD NOT FETCH {url}", file=sys.stderr)
+            print(f"      {str(unfetched).splitlines()[0]}", file=sys.stderr)
+            print("      (a layer of this context is remote and was not "
+                  "retrieved, so nothing here was verified -- this file is "
+                  "not being called invalid)", file=sys.stderr)
+            return (0, 1)
+
         print(f"{name:22s} {len(terms):4d} terms -- FAILED")
         print(f"      {str(exc).splitlines()[0]}", file=sys.stderr)
         bad = culprits(ctx)
@@ -229,13 +329,14 @@ def check(path):
         if not bad:
             print("      (no single term reproduces it; the fault is in the "
                   "context as a whole)", file=sys.stderr)
-        return max(len(bad), 1)
+        return (max(len(bad), 1), 0)
 
     print(f"{name:22s} {len(terms):4d} terms -- OK")
-    return 0
+    return (0, 0)
 
 
 def main():
+    install_caching_loader()
     paths = sys.argv[1:]
     if not paths:
         # Every context under contexts/, not just contexts/v1/: the
@@ -248,11 +349,24 @@ def main():
               file=sys.stderr)
         return 1
 
-    problems = sum(check(p) for p in paths)
+    results = [check(p) for p in paths]
+    problems = sum(r[0] for r in results)
+    unchecked = sum(r[1] for r in results)
+
     print()
     if problems:
         print(f"FAILED: {problems} problem(s).", file=sys.stderr)
+    if unchecked:
+        print(f"NOT CHECKED: {unchecked} context(s) have a remote layer that "
+              "could not be retrieved, so nothing about them was verified.",
+              file=sys.stderr)
+    if problems:
         return 1
+    # Exit 2, the same code a missing PyLD uses, and for the same reason: a run
+    # that examined nothing must not report success. It is deliberately NOT
+    # exit 1 -- these files have not been found invalid.
+    if unchecked:
+        return 2
     print(f"All {len(paths)} context(s) load in a strict JSON-LD processor.")
     return 0
 

@@ -110,6 +110,29 @@ PY
   fixture_ready $? "array-valued @context"
 }
 
+# remote_split <src> <dst> <iri> [extra-json] -- rewrite a context into the
+# ARRAY form with a REMOTE first layer: [ "<iri>", { ...everything... } ].
+# Legal JSON-LD, and the one layer this process does not hold a copy of.
+remote_split() {
+  "$PYTHON" - "$1" "$2" "$3" "${4:-null}" <<'PY'
+import json, sys
+src, dst, iri, extra = sys.argv[1:5]
+with open(src, encoding="utf-8") as fh:
+    ctx = json.load(fh)["@context"]
+ctx = dict(ctx)
+ctx.update(json.loads(extra) or {})
+with open(dst, "w", encoding="utf-8") as fh:
+    json.dump({"@context": [iri, ctx]}, fh, indent=2, ensure_ascii=False)
+PY
+  fixture_ready $? "remote-layer @context"
+}
+
+# An IRI nothing can dereference, chosen so the controls below stay offline and
+# fast: port 1 on the loopback interface refuses immediately, with no DNS
+# lookup and no timeout. A control that reaches the network would fail in the
+# same circumstances it exists to describe.
+UNREACHABLE="http://127.0.0.1:1/base.jsonld"
+
 echo "check-context-validity.py regression suite"
 echo ""
 
@@ -138,13 +161,21 @@ fi
 # A processor ignores an @-prefixed key only when what follows the @ is LETTERS
 # ONLY. "@comment_core" is the obvious way to rescue the old names and it fails
 # exactly as the original did, which is why deletion was chosen over re-keying.
+#
+# The key must be NAMED, not merely counted. This control once asserted only a
+# non-zero exit, and passed while the check printed "(no single term reproduces
+# it; the fault is in the context as a whole)" -- false, and on a 1,500-line
+# cascade.jsonld precisely the un-navigable first-error message the NAMING THE
+# CULPRIT docstring says it replaces. Since "keep the name, prepend an @" is
+# the rescue CHANGELOG.md and CLAUDE.md single out, it is the failure a
+# contributor is most likely to meet, and the one that named nobody.
 inject "$SUBJECT" "$WORK/atunderscore.jsonld" "@comment_section" "=== Section ==="
 OUT="$("$PYTHON" "$CHECK" "$WORK/atunderscore.jsonld" 2>&1)"
-if [ $? -ne 0 ]; then
-  pass "an @-key with an underscore is still rejected"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "INVALID TERM '@comment_section'"; then
+  pass "an @-key with an underscore is still rejected, and named"
 else
-  fail "an @-key with an underscore is still rejected" \
-       "check passed a context a processor refuses: $OUT"
+  fail "an @-key with an underscore is still rejected, and named" \
+       "check passed it, or failed without naming the key: $OUT"
 fi
 
 # -- 4. Positive control: a letters-only @-key IS ignored ---------------------
@@ -312,6 +343,126 @@ if [ "$STATUS" -eq 2 ] \
 else
   fail "a missing PyLD exits 2 with a message, not a traceback" \
        "expected exit 2 and a diagnostic, got exit $STATUS: $OUT"
+fi
+
+# -- 15. Positive control: a string-valued @context is a legal context -------
+# "@context": "https://…/cascade.jsonld" is a remote context reference, as
+# legal as the array form control 8 covers, and load_context() rejected it with
+# NOT A CONTEXT: @context is str. That is a false statement about the file, and
+# it reddens the gate on anything the default contexts/**/*.jsonld glob picks
+# up -- a contexts/v1/latest.jsonld alias, or any example instance document
+# dropped under contexts/.
+#
+# What happens NEXT is control 16's subject, not this one's: the reference
+# still cannot be dereferenced here. This asserts only that the file is no
+# longer turned away for the TYPE of its @context.
+printf '{ "@context": "%s" }' "$UNREACHABLE" > "$WORK/stringctx.jsonld"
+OUT="$("$PYTHON" "$CHECK" "$WORK/stringctx.jsonld" 2>&1)"
+if ! echo "$OUT" | grep -q "NOT A CONTEXT"; then
+  pass "a string-valued @context is not rejected as malformed"
+else
+  fail "a string-valued @context is not rejected as malformed" \
+       "check called a legal remote context reference malformed: $OUT"
+fi
+
+# -- 16. A remote layer that cannot be fetched is NOT the file being invalid --
+# layers() goes out of its way to support ["https://…/base.jsonld", {…}], and
+# exercise() hands that IRI to PyLD's document loader. Every failure to
+# retrieve it used to arrive as a JsonLdError like any other, so the check
+# printed the file as FAILED and added "(no single term reproduces it; the
+# fault is in the context as a whole)" -- blaming the file for the network.
+#
+# This is not a rare path. scripts/requirements.txt pins neither requests nor
+# aiohttp, so PyLD has NO default document loader at all: in the environment CI
+# builds and CONTRIBUTING tells contributors to build, EVERY remote layer fails
+# this way, on a machine that is perfectly online.
+#
+# The distinct status matters more than the exit code: exit 2 is this
+# repository's "the run examined nothing", the same code control 14 asserts for
+# a missing processor, and it must not be exit 1's "your file is wrong".
+printf '{ "@context": ["%s", { "a": "http://example.org/a" }] }' "$UNREACHABLE" \
+  > "$WORK/remote.jsonld"
+OUT="$("$PYTHON" "$CHECK" "$WORK/remote.jsonld" 2>&1)"
+STATUS=$?
+if [ "$STATUS" -eq 2 ] \
+   && echo "$OUT" | grep -q "COULD NOT FETCH" \
+   && ! echo "$OUT" | grep -q "no single term reproduces it" \
+   && ! echo "$OUT" | grep -q "INVALID TERM"; then
+  pass "an unfetchable remote layer is reported as unfetched, not as invalid"
+else
+  fail "an unfetchable remote layer is reported as unfetched, not as invalid" \
+       "expected exit 2 and COULD NOT FETCH with nothing blamed, got exit $STATUS: $OUT"
+fi
+
+# -- 17. A remote layer is fetched once per RUN, not once per candidate term --
+# culprits() re-expands the whole context once per candidate term, and PyLD
+# resolves remote layers afresh on every expand() -- it caches nothing between
+# calls (measured: 5 expands, 5 fetches). So a failing context with a remote
+# layer refetched that IRI once per term: 710 times on a cascade-sized file.
+#
+# The loader is injected rather than served, so this control needs no socket
+# and no port: the fake counts what a real one would fetch. The fixture must
+# FAIL, since a context that expands cleanly never reaches culprits() and would
+# fetch once however the loader behaves.
+remote_split "$SUBJECT" "$WORK/remotecul.jsonld" "http://x.example/base.jsonld" \
+  '{"__comment_section": "=== Section ==="}'
+# The counter goes in a file rather than a heredoc inside a command
+# substitution: that construct is the one shape in this suite that has been
+# seen to misparse on a stricter /bin/sh, and a control that dies on its own
+# quoting proves nothing about the check.
+cat > "$WORK/countfetch.py" <<'PY'
+import importlib.util, sys
+
+spec = importlib.util.spec_from_file_location("ccv", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+calls = []
+
+
+def fake(url, options=None):
+    calls.append(url)
+    return {"contextUrl": None, "documentUrl": url,
+            "document": {"@context": {"remotebase": "http://example.org/remote#"}}}
+
+
+mod.install_caching_loader(fake)
+mod.check(sys.argv[2])
+
+# To a file, not to a stream: check() writes its own diagnostics to both, and
+# a count fished back out of that with tail is a control that can pass on the
+# wrong line.
+with open(sys.argv[3], "w", encoding="utf-8") as fh:
+    fh.write("%d" % len(calls))
+PY
+rm -f "$WORK/count.txt"
+"$PYTHON" "$WORK/countfetch.py" "$CHECK" "$WORK/remotecul.jsonld" "$WORK/count.txt" \
+  >/dev/null 2>&1
+COUNT="$(tr -d '\r\n' < "$WORK/count.txt" 2>/dev/null)"
+if [ "$COUNT" = "1" ]; then
+  pass "a remote layer is fetched once per run, not once per candidate term"
+else
+  fail "a remote layer is fetched once per run, not once per candidate term" \
+       "expected 1 fetch while narrowing the culprit, got: $COUNT"
+fi
+
+# -- 18. Two contexts with the same basename must be told apart --------------
+# Control 13 widened the default glob past contexts/v1/ precisely so a
+# contexts/v2/core.jsonld is opened -- and then check() labelled its line with
+# the BASENAME, so the run printed two lines both reading "core.jsonld", one OK
+# and one FAILED, with nothing saying which file to open. The ambiguity arrives
+# in exactly the case the widening was for.
+mkdir -p "$WORK/dup/contexts/v1" "$WORK/dup/contexts/v2"
+cp "$SUBJECT" "$WORK/dup/contexts/v1/core.jsonld"
+inject "$SUBJECT" "$WORK/dup/contexts/v2/core.jsonld" "__comment_section" "=== Section ==="
+OUT="$(cd "$WORK/dup" && "$PYTHON" "$CHECK" 2>&1)"
+if [ $? -ne 0 ] \
+   && echo "$OUT" | grep -q "contexts/v1/core.jsonld" \
+   && echo "$OUT" | grep -q "contexts/v2/core.jsonld"; then
+  pass "same-named contexts in different directories are reported by path"
+else
+  fail "same-named contexts in different directories are reported by path" \
+       "expected both paths named, not two bare 'core.jsonld' lines: $OUT"
 fi
 
 echo ""
