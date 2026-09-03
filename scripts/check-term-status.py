@@ -96,7 +96,20 @@ def check(path):
     return len(missing) + len(bad) + len(deprecated_not_archaic)
 
 
-def check_successors(paths):
+def cascade_terms(graph):
+    """Every Cascade term the graph DEFINES, by its rdf:type.
+
+    Being the object of a triple is not being defined: an IRI nobody typed is a
+    string, not a term, which is what makes this set the test for whether a
+    successor pointer resolves.
+    """
+    return {
+        s for s, _, o in graph.triples((None, RDF.type, None))
+        if o in TERM_TYPES and isinstance(s, URIRef) and is_cascade(s)
+    }
+
+
+def check_successors(paths, corpus=()):
     """A deprecated class must name its replacement in a triple.
 
     rdfs:seeAlso on a deprecated class is what lets a reader map an old spelling
@@ -124,30 +137,50 @@ def check_successors(paths):
     maturity per term and checking them would report every stable term as
     missing. Deprecation is the opposite: all five deprecated classes are in
     stable clinical:, so a draft-only scope would have examined none of them.
+
+    A SUCCESSOR IRI MUST NAME A TERM THAT EXISTS. Being under
+    ns.cascadeprotocol.org is not enough: a typo, a class since renamed, or a
+    docs path is a Cascade-looking IRI that resolves to nothing, and a consumer
+    following it lands exactly where the deprecation left them. So the pointer
+    is checked against the terms the corpus DEFINES, not against its spelling.
+
+    RESOLUTION IS CORPUS-WIDE, REPORTING IS NOT. Whether an IRI names a term is
+    a fact about the vocabularies, not about the files this run was handed --
+    clinical:CoverageRecord's successor lives in coverage.ttl, so a single-file
+    invocation could not answer it. `corpus` supplies the wider graph used for
+    that question alone; findings are still reported only for the classes in
+    `paths`, so naming files still narrows what the run talks about.
     """
     graph = Graph()
     for path in paths:
         graph.parse(path, format="turtle")
 
+    wider = graph
+    extra = [p for p in corpus if p not in paths]
+    if extra:
+        wider = Graph()
+        for path in list(paths) + extra:
+            wider.parse(path, format="turtle")
+
     # Every Cascade term, so a successor may be a property as well as a class.
-    terms = {
-        s for s, _, o in graph.triples((None, RDF.type, None))
-        if o in TERM_TYPES and isinstance(s, URIRef) and is_cascade(s)
-    }
+    terms = cascade_terms(wider)
     is_dead = {
         t for t in terms
-        if any(bool(o) for o in graph.objects(t, OWL.deprecated))
+        if any(bool(o) for o in wider.objects(t, OWL.deprecated))
     }
     # Only CLASSES are required to name a successor. A deprecated property is
     # usually dropped rather than replaced one-for-one, and demanding a triple
     # for each would be a rule nobody could satisfy honestly.
-    deprecated = {c for c in is_dead if (c, RDF.type, OWL.Class) in graph}
+    deprecated = {
+        c for c in cascade_terms(graph)
+        if c in is_dead and (c, RDF.type, OWL.Class) in graph
+    }
 
     findings = []
     for cls in sorted(deprecated):
         successors = [
             o for o in graph.objects(cls, RDFS.seeAlso)
-            if isinstance(o, URIRef) and is_cascade(o) and o not in is_dead
+            if isinstance(o, URIRef) and o in terms and o not in is_dead
         ]
         if not successors:
             seen = [str(o) for o in graph.objects(cls, RDFS.seeAlso)]
@@ -160,9 +193,10 @@ def check_successors(paths):
         print(f"      NO SUCCESSOR TRIPLE on {local(cls)} "
               f"(rdfs:seeAlso: {seen or 'none'})", file=sys.stderr)
         print(f"      A deprecated class must name its replacement with an "
-              f"rdfs:seeAlso resolving to a live Cascade class. A link to "
-              f"external documentation does not say what to use instead.",
-              file=sys.stderr)
+              f"rdfs:seeAlso resolving to a live Cascade TERM the corpus "
+              f"defines. A link to external documentation does not say what to "
+              f"use instead, and a Cascade-looking IRI that names no term "
+              f"resolves nowhere at all.", file=sys.stderr)
     return len(findings)
 
 
@@ -181,16 +215,17 @@ def main():
 
     # The successor rule reads every vocabulary, stable included -- see
     # check_successors. When files were named explicitly, honour that scope
-    # rather than silently widening past what the caller asked about.
-    successor_paths = paths if explicit else sorted(
-        p for p in glob.glob("ontologies/*/v1*/*.ttl")
-        if not p.endswith(".shapes.ttl")
-    )
+    # rather than silently widening past what the caller asked about; the wider
+    # corpus is still passed, because it answers whether a successor IRI names
+    # a term and not which classes this run reports on.
+    corpus = sorted(p for p in glob.glob("ontologies/*/v1*/*.ttl")
+                    if not p.endswith(".shapes.ttl"))
+    successor_paths = paths if explicit else corpus
     if not successor_paths:
         print("Error: no ontologies found for the successor check.",
               file=sys.stderr)
         return 1
-    problems += check_successors(successor_paths)
+    problems += check_successors(successor_paths, corpus)
 
     print()
     if problems:

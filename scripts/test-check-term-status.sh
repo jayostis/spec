@@ -198,6 +198,65 @@ else
        "pointing at another dead class forwards the reader nowhere: $OUT"
 fi
 
+# A successor IRI that names no term is a dangling pointer. Being under
+# ns.cascadeprotocol.org is a spelling, not an existence proof: a typo, a class
+# since renamed, or a docs path all look Cascade and resolve to nothing, and the
+# consumer following one lands exactly where the deprecation left them.
+cat > "$WORK/dead-dangling.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix probe: <https://ns.cascadeprotocol.org/probe/v1#> .
+probe:DeadClass a owl:Class ;
+    rdfs:label "Dead Class"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso <https://ns.cascadeprotocol.org/coverage/v1#InsurancePlanTYPO> ;
+    vs:term_status "archaic" .
+TTL
+OUT="$("$PYTHON" "$CHECK" "$WORK/dead-dangling.ttl" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "DeadClass"; then
+  pass "a successor IRI naming no term is reported"
+else
+  fail "a successor IRI naming no term is reported" \
+       "coverage:InsurancePlanTYPO is Cascade-shaped and resolves nowhere: $OUT"
+fi
+
+# The pointer must still resolve when the successor lives in ANOTHER FILE, which
+# is the clinical:CoverageRecord -> coverage:InsurancePlan case the whole rule
+# was written for. Naming a file narrows what the run REPORTS, never what the
+# vocabularies define, so resolution reads the corpus. Requiring the successor
+# to be defined in the named file would have made that case a false finding.
+CORPUS="$WORK/corpus"
+mkdir -p "$CORPUS/ontologies/probe/v1" "$CORPUS/ontologies/other/v1"
+cat > "$CORPUS/ontologies/probe/v1/dead.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix probe: <https://ns.cascadeprotocol.org/probe/v1#> .
+@prefix other: <https://ns.cascadeprotocol.org/other/v1#> .
+probe:DeadClass a owl:Class ;
+    rdfs:label "Dead Class"@en ;
+    owl:deprecated true ;
+    rdfs:seeAlso other:LiveClass ;
+    vs:term_status "archaic" .
+TTL
+cat > "$CORPUS/ontologies/other/v1/live.ttl" <<'TTL'
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix vs: <http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix other: <https://ns.cascadeprotocol.org/other/v1#> .
+other:LiveClass a owl:Class ;
+    rdfs:label "Live Class"@en ;
+    vs:term_status "stable" .
+TTL
+OUT="$(cd "$CORPUS" && "$PYTHON" "$CHECK" "ontologies/probe/v1/dead.ttl" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "a successor defined in another file of the corpus still resolves"
+else
+  fail "a successor defined in another file of the corpus still resolves" \
+       "naming a file must narrow what is reported, not what exists: $OUT"
+fi
+
 echo ""
 echo "passed: $PASSED   failed: $FAILED"
 [ "$FAILED" -eq 0 ] || exit 1

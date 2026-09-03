@@ -48,6 +48,17 @@ the ontology load, and a class named here that no ontology declares is reported
 as unmarked -- which is the right answer for a different reason, and the message
 says so.
 
+NOTHING IS SKIPPED
+
+A registration this check cannot resolve to a class is reported and fails. It
+used to be dropped, because prefixes came from a hardcoded table of the six
+stable vocabularies: a draft class, or a typo like `helth:LabResultRecord`,
+registered a pod path and was compared to nothing, which is precisely the
+silent omission above. Prefixes now come from the ontologies' own @prefix
+declarations, and whatever still does not resolve is a finding. The single
+exception is the documented TEMPLATE `solid:forClass {vocabulary}:{ClassName}`,
+which names no class by design.
+
 Exit status: 0 if every registered class carries the marker, 1 on any finding,
 and 1 if no registration was found at all -- a check with no material to inspect
 has proven nothing.
@@ -78,26 +89,45 @@ RECORD_CLASS_MARKER = URIRef(CASCADE_NS_PREFIX + "core/v1#RecordClass")
 ONTOLOGY_GLOB = "ontologies/*/v1*/*.ttl"
 POD_STRUCTURE = "pod-structure.md"
 
-# Prefix -> namespace segment. `cascade:` is the core vocabulary, whose
-# directory is `core/`; the rest are named after their directory.
-PREFIX_SEGMENT = {
-    "cascade": "core/v1#",
-    "health": "health/v1#",
-    "clinical": "clinical/v1#",
-    "coverage": "coverage/v1#",
-    "checkup": "checkup/v1#",
-    "pots": "pots/v1#",
-}
-
-# `solid:forClass {vocabulary}:{ClassName}` is the documented TEMPLATE in the
-# registration-format section, not a registration. A brace in either position
-# means the line is showing the shape rather than making a claim.
-REGISTRATION = re.compile(r"solid:forClass\s+([a-z]+):([A-Za-z][A-Za-z0-9]*)\s*[;.]")
+# The whole token after solid:forClass, whatever shape it is. Reading it and
+# then JUDGING it is the point: a narrower pattern makes an unrecognised
+# registration invisible instead of reporting it (see registered_classes).
+REGISTRATION = re.compile(r"solid:forClass\s+(\S+)\s*[;.]")
+QNAME = re.compile(r"^([A-Za-z][A-Za-z0-9]*):([A-Za-z][A-Za-z0-9_-]*)$")
 
 
-def registered_classes(root):
-    """(prefixed name, IRI) for every solid:forClass registration, deduplicated
-    and in first-seen order so the report reads in document order."""
+def cascade_namespaces(graph):
+    """prefix -> namespace IRI, as the ontology files themselves declare it.
+
+    DERIVED, NOT TABULATED. This was a six-entry table of the stable
+    vocabularies, which meant a registration for a draft class resolved to
+    nothing and was skipped -- silently, by the check whose stated purpose is to
+    catch silent omission. Reading the @prefix declarations out of the parsed
+    ontologies covers every vocabulary that exists, drafts included, and keeps
+    covering the next one without an edit here.
+    """
+    out = {}
+    for prefix, namespace in graph.namespaces():
+        if str(namespace).startswith(CASCADE_NS_PREFIX):
+            out[str(prefix)] = str(namespace)
+    return out
+
+
+def registered_classes(root, namespaces):
+    """(registrations, unresolved) for every solid:forClass in pod-structure.md.
+
+    Registrations are (prefixed name, IRI), deduplicated and in first-seen order
+    so the report reads in document order. `unresolved` holds the tokens that
+    name no resolvable class -- an unknown prefix, a typo like `helth:`, a
+    spelling that is not a qname at all.
+
+    AN UNRESOLVED REGISTRATION IS A FINDING, NOT A NON-REGISTRATION. Skipping it
+    is how `helth:LabResultRecord` or a draft class registers a pod path and is
+    compared to nothing, which is the exact failure mode this check exists to
+    catch. The one thing that is genuinely not a registration is the documented
+    TEMPLATE, `solid:forClass {vocabulary}:{ClassName}`: a brace means the line
+    is showing the shape rather than making a claim.
+    """
     path = os.path.join(root, POD_STRUCTURE)
     if not os.path.exists(path):
         sys.stderr.write("ERROR: %s not found under %s\n" % (POD_STRUCTURE, root))
@@ -105,16 +135,19 @@ def registered_classes(root):
     with open(path, encoding="utf-8") as handle:
         text = handle.read()
 
-    seen, out = set(), []
-    for prefix, local in REGISTRATION.findall(text):
-        if prefix not in PREFIX_SEGMENT:
+    seen, out, unresolved = set(), [], []
+    for token in REGISTRATION.findall(text):
+        if "{" in token or "}" in token:
             continue
-        name = "%s:%s" % (prefix, local)
-        if name in seen:
+        if token in seen:
             continue
-        seen.add(name)
-        out.append((name, URIRef(CASCADE_NS_PREFIX + PREFIX_SEGMENT[prefix] + local)))
-    return out
+        seen.add(token)
+        match = QNAME.match(token)
+        if match and match.group(1) in namespaces:
+            out.append((token, URIRef(namespaces[match.group(1)] + match.group(2))))
+        else:
+            unresolved.append(token)
+    return out, unresolved
 
 
 def load_ontology(root):
@@ -140,7 +173,8 @@ def main():
     root = os.path.abspath(root)
 
     ontology, onto_files = load_ontology(root)
-    registrations = registered_classes(root)
+    namespaces = cascade_namespaces(ontology)
+    registrations, unresolved = registered_classes(root, namespaces)
     marked = set(ontology.subjects(RDF.type, RECORD_CLASS_MARKER))
     declared = set(ontology.subjects(RDF.type, URIRef(
         "http://www.w3.org/2002/07/owl#Class")))
@@ -148,19 +182,45 @@ def main():
     print("Record-class registry agreement check")
     print("  root:              %s" % root)
     print("  ontologies parsed: %d" % len(onto_files))
+    print("  vocabularies:      %d  (Cascade @prefix declarations found)"
+          % len(namespaces))
     print("  registrations:     %d  (solid:forClass in %s)"
           % (len(registrations), POD_STRUCTURE))
+    print("  unresolved:        %d  (solid:forClass naming no resolvable class)"
+          % len(unresolved))
     print("  marked classes:    %d  (a cascade:RecordClass)" % len(marked))
     print()
 
-    if not registrations:
+    if not registrations and not unresolved:
         print("EMPTY: no solid:forClass registration found in %s." % POD_STRUCTURE)
         print("RESULT: FAIL")
         return 1
 
+    findings = 0
+
+    if unresolved:
+        findings += len(unresolved)
+        print("FAIL  %d registration(s) name no class this check can resolve:"
+              % len(unresolved))
+        for token in unresolved:
+            print("        solid:forClass %s" % token)
+        print()
+        print("      The prefix is declared by no ontology under %s, or the token"
+              % ONTOLOGY_GLOB)
+        print("      is not a qname at all. Either way the registration claims a Pod")
+        print("      stores instances of something, and this check cannot say what.")
+        print()
+        print("      Skipping it would make this check perform the silent omission")
+        print("      it exists to catch: `helth:LabResultRecord` registers a path,")
+        print("      matches no class, and gets compared to nothing. Correct the")
+        print("      prefix, or publish the vocabulary under ontologies/ so its")
+        print("      namespace declaration is loaded.")
+        print()
+
     unmarked = [(n, u) for n, u in registrations if u not in marked]
 
     if unmarked:
+        findings += len(unmarked)
         print("FAIL  %d registered class(es) carry no cascade:RecordClass marker:"
               % len(unmarked))
         for name, uri in unmarked:
@@ -176,6 +236,8 @@ def main():
         print("      not in fact store it, remove the registration. Two sources")
         print("      disagreeing is the finding; which one is wrong is a judgement.")
         print()
+
+    if findings:
         print("RESULT: FAIL")
         return 1
 

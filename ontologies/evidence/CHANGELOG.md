@@ -10,8 +10,8 @@
   jayostis/spec#50, which was written for `clinical:CoverageRecord` and caught this as
   its second instance. It is why that rule accepts a PROPERTY as a successor: a flat
   enumeration replaced by five facets has no single class to point at.
-- Classes marked `a cascade:RecordClass` (core v3.13): `evidence:Citation`,
-  `evidence:EvidenceLink`, `evidence:GroundingActivity`, `evidence:RetrievalQuery`.
+- Classes marked `a cascade:RecordClass` (core v3.13): `evidence:Assertion`,
+  `evidence:Citation`, `evidence:EvidenceLink`, `evidence:GroundingActivity`.
 
 All notable changes to the `evidence:` vocabulary. Draft status: not registered in `spec/VOCAB_VERSIONS` until v1.0 graduation (per the `genomics:` / `advisory:` draft policy).
 

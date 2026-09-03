@@ -156,6 +156,84 @@ else
 fi
 rm -rf "$DIR"
 
+# ---------------------------------------------------------------------------
+# 6. A REGISTRATION THIS CHECK CANNOT RESOLVE IS A FINDING. Prefixes used to
+#    come from a hardcoded table of the six stable vocabularies and anything
+#    else was skipped -- so a mistyped prefix registered a pod path, matched no
+#    class, and was compared to nothing. That is the silent omission the whole
+#    check exists to catch, performed by the check.
+# ---------------------------------------------------------------------------
+echo ""
+echo "6. A registration with a mistyped prefix"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#typo-probe>
+        a solid:TypeRegistration ;
+        solid:forClass helth:LabResultRecord ;
+        solid:instanceContainer </health/lab-results.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 on a registration naming an unknown prefix" "$OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "helth:LabResultRecord"; then
+  pass "names helth:LabResultRecord"
+else
+  fail "does not name the unresolvable registration" "$OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 7. The same skip hid a whole VOCABULARY: any prefix outside the table -- a
+#    draft one, say -- registered a path and was never compared to a marker.
+#    Prefixes now come from the ontologies' own @prefix declarations, so a draft
+#    class resolves and is judged on its marker like any other.
+# ---------------------------------------------------------------------------
+echo ""
+echo "7. A registration for a draft-vocabulary class is judged, not skipped"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#draft-probe>
+        a solid:TypeRegistration ;
+        solid:forClass genomics:VariantRecord ;
+        solid:instanceContainer </genomics/variants.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if printf '%s\n' "$OUT" | grep -q "genomics:VariantRecord"; then
+  pass "genomics:VariantRecord reaches the comparison"
+else
+  fail "a draft-vocabulary registration was dropped" \
+"An unrecognised prefix is a finding, not a non-registration. $OUT"
+fi
+rm -rf "$DIR"
+
+# The cure, and proof the rule is satisfiable: a marked draft class registered
+# under its real prefix passes. If it did not, the only way to a green run
+# would be to stop registering draft classes.
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#draft-probe>
+        a solid:TypeRegistration ;
+        solid:forClass evidence:Citation ;
+        solid:instanceContainer </evidence/citations.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "a MARKED draft class registered under its real prefix passes"
+else
+  fail "a marked draft class was reported" \
+"evidence:Citation carries the marker, so the two sources agree. $OUT"
+fi
+rm -rf "$DIR"
+
 echo ""
 echo "=========================================================="
 echo "  passed:  $PASSED"
