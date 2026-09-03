@@ -22,10 +22,16 @@ spec/
     pots/v1/pots.ttl              # POTS-specific ontology
     pots/v1/pots.shapes.ttl
   serialization/
-    turtle-rules.md               # Serialization conventions
-    pod-structure.md              # Pod directory layout
-  contexts/
-    cascade-v1.jsonld             # JSON-LD context
+    index.md                      # Serialization conventions
+  pod-structure.md                # Pod directory layout (repo root, not nested)
+  contexts/v1/
+    cascade.jsonld                # Every vocabulary in one context
+    core.jsonld                   # Per-vocabulary contexts
+    health.jsonld
+    clinical.jsonld
+    coverage.jsonld
+    checkup.jsonld
+    pots.jsonld
 ```
 
 ## Key Concepts
