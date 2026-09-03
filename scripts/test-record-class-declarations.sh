@@ -8,22 +8,38 @@
 #
 # THE RULE
 #
-# rdfs:subClassOf prov:Entity means, in this specification, that instances of
-# the class are stored record data. A class that carries its own data
-# properties is a record class, so it must declare one of the PROV record
-# superclasses -- and is then either judged by a shape or recorded in
-# scripts/known-unshaped-classes.json as owing one.
+# `a cascade:RecordClass` means, in this specification, that instances of the
+# class are stored record data. A class that carries its own data properties is
+# a record class, so it must carry the marker -- and is then either judged by a
+# shape or recorded in scripts/known-unshaped-classes.json as owing one.
+#
+# Membership is that one triple. It is NEVER inherited and never read off a
+# superclass, which mirrors validation/index.md's rule that a parent's shape
+# does not reach a child: if inheritance does not carry the constraint it must
+# not carry the obligation either.
 #
 # THE DEFECT UNDER TEST
 #
 # Seven classes carried data properties, held record data, were targeted by no
-# shape, and declared no rdfs:subClassOf at all. check-class-coverage.py reads
-# that chain to decide what bears records, so it could not see them: the gate
-# reported PASS over all seven, and they were absent from the baseline too,
-# because that file is the gate's output. Invisible in both directions.
+# shape, and were invisible to check-class-coverage.py -- the gate reported PASS
+# over all seven, and they were absent from the baseline too, because that file
+# is the gate's output. Invisible in both directions.
 # conformance/KNOWN_FAILURES.json had been carrying two of them
 # (coverage:ClaimRecord, coverage:BenefitStatement) as UNSHAPED ownedBy spec --
 # a downstream repository reporting a gap this repository's own gate could not.
+#
+# THE SECOND DEFECT UNDER TEST, ADDED IN core v3.13
+#
+# The instrument that made those seven visible was rdfs:subClassOf prov:Entity,
+# read as the record-bearing claim. jayostis/spec#34 (ASK-05) ruled that reading
+# out: the axiom is PROV-O alignment, and a checker keying on it "will keep
+# catching alignment axioms" -- measured, 96 of 110 prov-rooted classes were
+# registered nowhere as stored records.
+#
+# So case 5 is the guard on the correction. It adds rdfs:subClassOf prov:Entity
+# to a scratch class carrying NO marker and requires the population not to move.
+# Case 2 asserts the same thing from the other side, on real vocabulary:
+# cascade:DataProvenance declares that axiom today and must stay out.
 #
 # WHY THE FIX IS IN THE VOCABULARY AND NOT IN THE CHECK
 #
@@ -34,22 +50,23 @@
 # record 43 obligations that can never be discharged, because a code-list
 # member has nothing for a shape to constrain. That is verbatim the defect
 # jayostis/spec#12 removed for eleven terms when cascade:DataProvenance and its
-# ten values lost a prov:Entity claim they should never have made.
+# ten values were classified as record data they never held.
 #
 # So case 2 is not decoration. It is the assertion that catches someone
 # reaching for the easier change later, and case 3's exact count is the same
-# assertion stated as a number: the population grows by the seven declared and
-# by nothing else.
+# assertion stated as a number: the population is the marked set and nothing
+# else.
 #
 # MAINTENANCE
 #
-# HEAD_RECORD_CLASSES and HEAD_SHAPED pin the population measured at ff27770.
+# EXPECTED_RECORD_CLASSES and EXPECTED_SHAPED pin the population measured at
+# core v3.13 (jayostis/spec#50).
 # A later change that legitimately adds or shapes a record class updates them
 # in the same commit -- that edit is the point, not an inconvenience: it is
 # what makes a silent change in the population impossible.
 #
 # Case 3 is the ONLY case a shape-writing commit touches. Discharging a
-# known-unshaped-classes.json entry moves `shaped`, so HEAD_SHAPED goes up
+# known-unshaped-classes.json entry moves `shaped`, so EXPECTED_SHAPED goes up
 # by one and nothing else in this file changes: cases 1 and 2 read the
 # population, which shaping does not move, and case 4 reads the gate, which
 # stays green because the entry left the baseline in the same commit.
@@ -63,9 +80,9 @@ TARGETS_CHECK="$SCRIPT_DIR/check-shape-targets.py"
 SEVERITY_CHECK="$SCRIPT_DIR/check-nested-severity.py"
 PYTHON="${PYTHON:-python3}"
 
-# The seven classes this suite requires to declare a PROV record superclass,
-# with the count of data properties declaring rdfs:domain of each and whether
-# anything declares it as an rdfs:range, measured over ontologies/**/*.ttl:
+# The seven classes jayostis/spec#13 brought into the population, with the count
+# of data properties declaring rdfs:domain of each and whether anything declares
+# it as an rdfs:range, measured over ontologies/**/*.ttl:
 #
 #   props  isRangeOf  class
 #       9          0  coverage:BenefitStatement
@@ -75,28 +92,48 @@ PYTHON="${PYTHON:-python3}"
 #       4          1  workbench:Hypothesis
 #       3          1  cascade:ConflictDetail
 #       2          1  workbench:Pin
+#
+# They entered it in core v3.12 / coverage v1.8 / checkup v3.4 / workbench
+# v1-draft.0.8 by declaring rdfs:subClassOf prov:Entity, which was then read as
+# the record-bearing claim. core v3.13 moved that claim onto cascade:RecordClass
+# (jayostis/spec#50) and all seven carry the marker. They stay named here because
+# the OBSERVATION #13 made was right -- these classes hold record data -- and only
+# the instrument changed. If a future edit drops one, that is the #13 defect
+# returning under a new spelling.
 DECLARED_RECORD_CLASSES="coverage:BenefitStatement coverage:ClaimRecord \
 cascade:AIDiscardedExtraction checkup:CheckInSettings workbench:Hypothesis \
 cascade:ConflictDetail workbench:Pin"
 
-# Value enumerations: zero properties, each the range of some predicate,
-# nothing for a shape to constrain. These must NOT enter the population. The
-# cascade: terms after ConsentScope are the ones jayostis/spec#12 removed from
-# it, and cascade:ConsentScope is core v3.11's code list, kept out under the
-# same rule when it was added.
+# Value enumerations: nothing for a shape to constrain, each the range of some
+# predicate and/or with named individuals typed with it. These must NOT enter the
+# population. The cascade: terms after ConsentScope are the ones
+# jayostis/spec#12 removed from it, cascade:ConsentScope is core v3.11's code
+# list, and genomics:ReviewStatus is the ClinVar code list that came up as a
+# candidate during #50 and was deliberately left unmarked -- seven named
+# individuals are typed with it.
+#
+# cascade:DataProvenance is the SHARPEST member of this list as of core v3.13,
+# because it now declares rdfs:subClassOf prov:Entity again (restored per
+# jayostis/spec#34) and still must not appear. Under the old rule that axiom put
+# it in the population; under the marker it does not. Case 2 passing on this one
+# term is the whole ASK-05 correction, asserted.
 VALUE_ENUMERATIONS="evidence:VerdictValue diabetes:MealType \
-genomics:ZygosityValue cascade:DataProvenance cascade:ConsentScope \
-cascade:ConsumerGenerated cascade:ClinicalGenerated cascade:DeviceGenerated \
-cascade:SelfReported cascade:PatientReported cascade:ConsumerWellness \
-cascade:EHRVerified cascade:ScannedDocument cascade:AIExtracted"
+genomics:ZygosityValue genomics:ReviewStatus cascade:DataProvenance \
+cascade:ConsentScope cascade:ConsumerGenerated cascade:ClinicalGenerated \
+cascade:DeviceGenerated cascade:SelfReported cascade:PatientReported \
+cascade:ConsumerWellness cascade:EHRVerified cascade:ScannedDocument \
+cascade:AIExtracted"
 
-# Measured at ff27770, before any class in DECLARED_RECORD_CLASSES declares a
-# PROV superclass.
-HEAD_RECORD_CLASSES=103
-HEAD_SHAPED=69
-DECLARED_COUNT=7
-
-EXPECTED_RECORD_CLASSES=$((HEAD_RECORD_CLASSES + DECLARED_COUNT))
+# Measured at core v3.13 (jayostis/spec#50), the commit that declared
+# cascade:RecordClass and marked the population. 127 classes carry the marker --
+# 83 across the six stable vocabularies, 44 across the five drafts -- and 86 of
+# them are shaped.
+#
+# A later change that legitimately marks or shapes a class updates these in the
+# same commit. That edit is the point, not an inconvenience: it is what makes a
+# silent change in the population impossible.
+EXPECTED_RECORD_CLASSES=127
+EXPECTED_SHAPED=86
 
 PASSED=0
 FAILED=0
@@ -123,8 +160,8 @@ echo "=========================================================="
 #
 # Cases 1 and 2 assert MEMBERSHIP of the set check-class-coverage.py examines.
 # That is a fact about the ontology graph alone: a class is in the population
-# because its rdfs:subClassOf chain reaches a PROV record root, and whether
-# anything shapes it is a separate question.
+# because it carries `a cascade:RecordClass`, and whether anything shapes it is
+# a separate question.
 #
 # `--no-baseline` prints only the UNSHAPED members, so keying these cases on it
 # couples them to the DEBT rather than to the population, in both directions:
@@ -188,8 +225,8 @@ for CLS in $DECLARED_RECORD_CLASSES; do
     pass "$CLS is a record class the gate can see"
   else
     fail "$CLS is invisible to the gate" \
-"it carries data properties and holds record data, but declares no
-        rdfs:subClassOf prov:Entity, so check-class-coverage.py never
+"it carries data properties and holds record data, but carries no
+        cascade:RecordClass marker, so check-class-coverage.py never
         examines it and it is neither shaped nor recorded as owing a shape."
   fi
 done
@@ -231,7 +268,7 @@ fi
 #    declared record-bearing alongside it.
 # ---------------------------------------------------------------------------
 echo ""
-echo "3. The population grows by exactly $DECLARED_COUNT, shaped unchanged"
+echo "3. The population is exactly $EXPECTED_RECORD_CLASSES, shaped exactly $EXPECTED_SHAPED"
 
 OUT="$("$PYTHON" "$CHECK" "$SPEC_ROOT" 2>&1)"
 STATUS=$?
@@ -239,20 +276,21 @@ COUNT="$(printf '%s\n' "$OUT" | sed -n 's/^[[:space:]]*record classes:[[:space:]
 SHAPED="$(printf '%s\n' "$OUT" | sed -n 's/^[[:space:]]*shaped:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
 
 if [ "$COUNT" = "$EXPECTED_RECORD_CLASSES" ]; then
-  pass "record classes: $COUNT ($HEAD_RECORD_CLASSES + $DECLARED_COUNT)"
+  pass "record classes: $COUNT (a cascade:RecordClass)"
 else
   fail "record classes: $COUNT, expected $EXPECTED_RECORD_CLASSES" \
-"$HEAD_RECORD_CLASSES at ff27770 plus the $DECLARED_COUNT this suite requires.
+"The count measured when core v3.13 marked the population.
         Below expected means a declaration is missing; above means something
         was declared record-bearing that this suite does not name."
 fi
 
-if [ "$SHAPED" = "$HEAD_SHAPED" ]; then
+if [ "$SHAPED" = "$EXPECTED_SHAPED" ]; then
   pass "shaped: $SHAPED, unchanged"
 else
-  fail "shaped: $SHAPED, expected $HEAD_SHAPED" \
-"No previously-visible class may change state. The declared classes are
-        unshaped and belong in the baseline, not in shaped."
+  fail "shaped: $SHAPED, expected $EXPECTED_SHAPED" \
+"A class changed state without this suite being updated. Marking a class
+        moves the population; writing a shape moves this number and clears a
+        known-unshaped-classes.json entry in the same commit."
 fi
 
 # ---------------------------------------------------------------------------
@@ -285,6 +323,59 @@ if [ $STATUS -eq 0 ]; then
 else
   fail "check-nested-severity.py exits $STATUS" "$OUT"
 fi
+
+# ---------------------------------------------------------------------------
+# 5. rdfs:subClassOf prov:Entity DOES NOT ENTER THE POPULATION.
+#
+#    The guard on jayostis/spec#34. Through core v3.12 this axiom WAS the
+#    membership rule, and restoring that reading is the single most likely way
+#    for this correction to be undone -- it is one line in
+#    check-class-coverage.py and it would look like a bug fix, because it makes
+#    the gate examine more classes.
+#
+#    A scratch class is given the axiom and NO marker, in a throwaway copy of
+#    the ontology tree. The population must not move. Case 2 asserts the same
+#    thing on real vocabulary (cascade:DataProvenance carries the axiom today);
+#    this asserts it on a class whose only property is the axiom, so a pass
+#    cannot be an accident of that term's other features.
+# ---------------------------------------------------------------------------
+echo ""
+echo "5. A PROV superclass alone does not make a class record-bearing"
+
+SCRATCH="$(mktemp -d 2>/dev/null || mktemp -d -t recordclass)"
+mkdir -p "$SCRATCH/scripts"
+cp -R "$SPEC_ROOT/ontologies" "$SCRATCH/ontologies"
+cp "$SPEC_ROOT/scripts/known-unshaped-classes.json" "$SCRATCH/scripts/"
+
+cat >> "$SCRATCH/ontologies/core/v1/core.ttl" <<'SCRATCH_TTL'
+
+# --- injected by test-record-class-declarations.sh case 5 ---
+cascade:ProvAlignmentOnlyProbe a owl:Class ;
+    rdfs:label "PROV Alignment Only Probe"@en ;
+    rdfs:subClassOf prov:Entity .
+SCRATCH_TTL
+
+PROBE_OUT="$("$PYTHON" "$CHECK" "$SCRATCH" 2>&1)"
+PROBE_COUNT="$(printf '%s\n' "$PROBE_OUT" | sed -n 's/^[[:space:]]*record classes:[[:space:]]*\([0-9][0-9]*\).*/\1/p')"
+
+if [ "$PROBE_COUNT" = "$EXPECTED_RECORD_CLASSES" ]; then
+  pass "population unchanged at $PROBE_COUNT with an unmarked prov:Entity subclass present"
+else
+  fail "population moved to $PROBE_COUNT, expected $EXPECTED_RECORD_CLASSES" \
+"cascade:ProvAlignmentOnlyProbe declares rdfs:subClassOf prov:Entity and no
+        cascade:RecordClass marker. If it entered the population, the check has
+        been keyed back onto the PROV chain -- the reading jayostis/spec#34
+        ruled out, which reports alignment axioms as record classes."
+fi
+
+if printf '%s\n' "$PROBE_OUT" | grep -q "cascade:ProvAlignmentOnlyProbe"; then
+  fail "the probe class was named in the check's output" \
+"An unmarked class must be invisible to this gate, not merely uncounted."
+else
+  pass "the probe class is not reported by the gate"
+fi
+
+rm -rf "$SCRATCH"
 
 # ---------------------------------------------------------------------------
 echo ""
