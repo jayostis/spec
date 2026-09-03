@@ -91,6 +91,24 @@ PY
   fixture_ready $? "$3"
 }
 
+# expand_prefix <src> <dst> <prefix> -- rewrite one string-valued prefix into
+# the equally legal EXPANDED form, {"@id": "<iri>"}. A contributor writes this
+# the moment a prefix needs a @type or @prefix flag beside its IRI.
+expand_prefix() {
+  "$PYTHON" - "$1" "$2" "$3" <<'PY'
+import json, sys
+src, dst, prefix = sys.argv[1:4]
+with open(src, encoding="utf-8") as fh:
+    doc = json.load(fh)
+iri = doc["@context"][prefix]
+assert isinstance(iri, str), "%r is not a string-valued prefix" % prefix
+doc["@context"][prefix] = {"@id": iri}
+with open(dst, "w", encoding="utf-8") as fh:
+    json.dump(doc, fh, indent=2, ensure_ascii=False)
+PY
+  fixture_ready $? "expanded-form prefix"
+}
+
 # split <src> <dst> [extra-json] -- rewrite a context into the ARRAY form,
 # prefixes in the first layer and everything else in the second, optionally
 # merging one more object into the second layer.
@@ -463,6 +481,46 @@ if [ $? -ne 0 ] \
 else
   fail "same-named contexts in different directories are reported by path" \
        "expected both paths named, not two bare 'core.jsonld' lines: $OUT"
+fi
+
+# -- 19. An expanded-form prefix accuses nobody, though it is not scaffolded --
+# is_prefix_entry() recognises only a prefix written as a plain string, so the
+# equally legal expanded form -- "coverage": {"@id": "...#"} -- is NOT copied
+# into the scaffold culprits() narrows against. That sounds like control 11's
+# failure arriving by a second route, and it is not: a term compacted on a
+# prefix the scaffold lacks still expands, because "coverage:InsurancePlan"
+# with no "coverage" defined is a well-formed absolute IRI whose scheme is
+# "coverage". So the term passes in isolation and is never accused. This
+# control pins that, because the reasoning is not obvious from the code and
+# the safe-looking "fix" -- widening is_prefix_entry() to carry the expanded
+# form -- would instead put a BROKEN expanded prefix into the scaffold, where
+# control 11 proves it becomes the one key never tested alone.
+expand_prefix "$SUBJECT" "$WORK/expanded-base.jsonld" "coverage"
+inject "$WORK/expanded-base.jsonld" "$WORK/expanded.jsonld" \
+       "__comment_x" "=== Coverage terms ==="
+OUT="$("$PYTHON" "$CHECK" "$WORK/expanded.jsonld" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "INVALID TERM '__comment_x'" \
+   && ! echo "$OUT" | grep -q "INVALID TERM 'InsurancePlan'"; then
+  pass "an expanded-form prefix is left out of the scaffold and still accuses nobody"
+else
+  fail "an expanded-form prefix is left out of the scaffold and still accuses nobody" \
+       "expected '__comment_x' named and 'InsurancePlan' not: $OUT"
+fi
+
+# -- 20. Finding no contexts is examining nothing, which is exit 2 -----------
+# main() returned 1 when the glob matched nothing. Exit 1 is this script's
+# "a published context is invalid"; exit 2 is its "nothing was verified", used
+# for a missing PyLD and an unfetchable remote layer. A run from the wrong
+# working directory examines no file at all, so reporting it as 1 tells CI a
+# context went bad and points the reader at the files instead of at the cwd.
+mkdir -p "$WORK/empty-root"
+OUT="$(cd "$WORK/empty-root" && "$PYTHON" "$CHECK" 2>&1)"
+STATUS=$?
+if [ "$STATUS" -eq 2 ] && echo "$OUT" | grep -q "no contexts found"; then
+  pass "finding no contexts exits 2, not the exit 1 that means a file is invalid"
+else
+  fail "finding no contexts exits 2, not the exit 1 that means a file is invalid" \
+       "expected exit 2 and a 'no contexts found' message, got $STATUS: $OUT"
 fi
 
 echo ""

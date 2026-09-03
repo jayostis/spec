@@ -345,9 +345,14 @@ def main():
         # the file.
         paths = sorted(glob.glob("contexts/**/*.jsonld", recursive=True))
     if not paths:
+        # Exit 2, not 1, and for the reason spelled out at the bottom of this
+        # function: 1 is "a published context is invalid", 2 is "nothing was
+        # verified". A run that matched no file has examined nothing, so
+        # reporting 1 sends whoever reads the red run at contexts/ when the
+        # fault is the working directory it was launched from.
         print("Error: no contexts found. Run from the spec repo root.",
               file=sys.stderr)
-        return 1
+        return 2
 
     results = [check(p) for p in paths]
     problems = sum(r[0] for r in results)
