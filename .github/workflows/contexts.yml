@@ -1,7 +1,9 @@
 name: contexts
 
-# Asserts that every published JSON-LD context under contexts/v1/ loads in a
-# strict JSON-LD processor.
+# Asserts that every published JSON-LD context under contexts/ loads in a
+# strict JSON-LD processor. The check's default glob is contexts/**, matching
+# the `paths` trigger below: a narrower one would leave a context outside
+# contexts/v1/ running this job, passing it, and never being opened.
 #
 # Without this job nothing in the repository ever passes these files to a
 # processor, which is exactly how three of the seven came to be published

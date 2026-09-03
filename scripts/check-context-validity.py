@@ -2,7 +2,7 @@
 """check-context-validity.py -- every published JSON-LD context must load.
 
 Run from the spec repo root:
-    python3 scripts/check-context-validity.py                  # all of contexts/v1/
+    python3 scripts/check-context-validity.py                  # all of contexts/
     python3 scripts/check-context-validity.py path/to/x.jsonld # specific files
 
 WHY THIS EXISTS
@@ -31,6 +31,9 @@ A processor reports the first error and stops, without saying which term caused
 it -- "@context @id value must be an absolute IRI" over a 1,500-line file is a
 poor place to start looking. So on failure this re-tests each term in isolation
 against the file's own prefixes, and names every term that cannot stand alone.
+Those prefixes are themselves checked first: a broken entry that happens to be
+prefix-shaped would otherwise break every term it is tested against and be the
+one entry never tested alone, naming 710 innocents and not the culprit.
 """
 
 import glob
@@ -57,6 +60,13 @@ def is_prefix_entry(value):
 def load_context(path):
     with open(path, encoding="utf-8") as fh:
         doc = json.load(fh)
+    # json.load returns whatever the file holds. A top-level array, string or
+    # number has no .get, and the AttributeError that follows is not in the
+    # except tuple in check(), so it escapes as a traceback and takes the
+    # whole run down before the remaining files are checked.
+    if not isinstance(doc, dict):
+        raise ValueError(
+            f"top level is {type(doc).__name__}, expected a JSON object")
     ctx = doc.get("@context")
     if not isinstance(ctx, (dict, list)):
         raise ValueError(
@@ -98,12 +108,54 @@ def exercise(ctx):
     jsonld.expand({"@context": ctx, "@id": "urn:x:check-context-validity"})
 
 
+def expands(ctx):
+    """Whether a context processes cleanly, as a question rather than a raise.
+
+    Used to establish that a base works BEFORE anything is appended to it and
+    blamed for the failure.
+    """
+    try:
+        exercise(ctx)
+    except JsonLdError:
+        return False
+    return True
+
+
+def failing_entries(base, candidates, skip=()):
+    """Entries that fail when appended, one at a time, to a base that works.
+
+    The base must already expand on its own. If it does not, every candidate
+    fails and every one of them is reported innocent-of-nothing, so the caller
+    checks the base first rather than emitting that list.
+    """
+    bad = []
+    for layer in candidates:
+        if not isinstance(layer, dict):
+            continue
+        for key, value in layer.items():
+            if key.startswith("@") or key in skip:
+                continue
+            if not expands(base + [{key: value}]):
+                bad.append((key, value))
+    return bad
+
+
 def culprits(ctx):
-    """Which individual terms cannot be processed, given the file's prefixes.
+    """Which individual entries cannot be processed, given a base that works.
 
     The scaffold keeps the shape of the original: each object layer reduced to
-    its keywords and prefixes, each remote layer left where it was. The term
+    its keywords and prefixes, each remote layer left where it was. The entry
     under test is then appended as a final layer.
+
+    THE SCAFFOLD IS TESTED FIRST, before any term, because it is the base every
+    term test depends on. is_prefix_entry() admits any string containing ':'
+    that ends in '#' or '/', so a BROKEN entry of that shape -- prose ending in
+    a path, a real prefix with a stray space -- is copied into the scaffold.
+    Blaming terms against it then accuses every innocent one while the entry
+    itself, being in the scaffold, is the single key never tested alone: 710
+    false culprits on cascade.jsonld with the real one named nowhere. So a
+    scaffold that does not expand is the finding, and its own entries -- prefix
+    entries very much included -- are what gets narrowed down.
     """
     scaffold = [
         {k: v for k, v in layer.items()
@@ -111,22 +163,19 @@ def culprits(ctx):
         if isinstance(layer, dict) else layer
         for layer in layers(ctx)
     ]
+
+    if not expands(scaffold):
+        # The fault is in the shared layer, so no term test below would mean
+        # anything. Narrow it against the smallest base there is: the remote
+        # layers, which contribute prefixes but no local definitions.
+        remote = [layer for layer in layers(ctx) if not isinstance(layer, dict)]
+        if not expands(remote):
+            return []          # not even that loads; check() says so instead.
+        return failing_entries(remote, scaffold)
+
     carried = {k for layer in scaffold if isinstance(layer, dict)
                for k in layer}
-
-    bad = []
-    for layer in layers(ctx):
-        if not isinstance(layer, dict):
-            continue
-        for key, value in layer.items():
-            if key.startswith("@") or key in carried:
-                continue
-            try:
-                jsonld.expand({"@context": scaffold + [{key: value}],
-                               "@id": "urn:x:check-context-validity"})
-            except JsonLdError as exc:
-                bad.append((key, value, str(exc).splitlines()[0]))
-    return bad
+    return failing_entries(scaffold, layers(ctx), skip=carried)
 
 
 def check(path):
@@ -135,8 +184,10 @@ def check(path):
     try:
         ctx = load_context(path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        # FileNotFoundError, IsADirectoryError and UnicodeDecodeError are not
+        # FileNotFoundError and IsADirectoryError are OSError, not
         # ValueError. A typo in a CI invocation must arrive as a FAILED line.
+        # UnicodeDecodeError IS a ValueError, so a file that is not UTF-8 is
+        # labelled NOT A CONTEXT rather than UNREADABLE.
         label = "UNREADABLE" if isinstance(exc, OSError) else "NOT A CONTEXT"
         print(f"{name:22s}    -- FAILED")
         print(f"      {label}: {exc}", file=sys.stderr)
@@ -160,7 +211,7 @@ def check(path):
         print(f"{name:22s} {len(terms):4d} terms -- FAILED")
         print(f"      {str(exc).splitlines()[0]}", file=sys.stderr)
         bad = culprits(ctx)
-        for key, value, _ in bad:
+        for key, value in bad:
             shown = value if isinstance(value, str) else json.dumps(value)
             if len(shown) > 60:
                 shown = shown[:57] + "..."
@@ -177,7 +228,11 @@ def check(path):
 def main():
     paths = sys.argv[1:]
     if not paths:
-        paths = sorted(glob.glob("contexts/v1/*.jsonld"))
+        # Every context under contexts/, not just contexts/v1/: the
+        # workflow triggers on contexts/**, so a narrower glob leaves a
+        # context outside v1/ running this job, passing it, and never opening
+        # the file.
+        paths = sorted(glob.glob("contexts/**/*.jsonld", recursive=True))
     if not paths:
         print("Error: no contexts found. Run from the spec repo root.",
               file=sys.stderr)

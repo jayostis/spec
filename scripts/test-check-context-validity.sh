@@ -245,6 +245,56 @@ else
   fail "an unreadable path is reported, not raised as a traceback"        "expected a FAILED line and no traceback: $OUT"
 fi
 
+# -- 11. Negative control: a broken entry that is PREFIX-SHAPED --------------
+# is_prefix_entry() copies any string containing ':' and ending in '#' or '/'
+# into the scaffold that every per-term test is run against. A BROKEN entry of
+# that shape -- prose ending in a path, a real prefix with a stray space --
+# therefore poisons the base: every innocent term fails against it, and the
+# entry itself, being in the scaffold, is the one key never tested alone. On
+# cascade.jsonld that was 710 false accusations with the real culprit named
+# nowhere, which is strictly worse than the raw first-error message the
+# NAMING THE CULPRIT docstring says it replaces.
+inject "$SUBJECT" "$WORK/prefixprose.jsonld" "__comment_x" "=== Coverage terms, see: docs/schemas/"
+OUT="$("$PYTHON" "$CHECK" "$WORK/prefixprose.jsonld" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "INVALID TERM '__comment_x'" && ! echo "$OUT" | grep -q "INVALID TERM 'InsurancePlan'"; then
+  pass "a prefix-shaped broken entry is named, and no innocent term accused"
+else
+  fail "a prefix-shaped broken entry is named, and no innocent term accused" \
+       "expected '__comment_x' named and 'InsurancePlan' not: $OUT"
+fi
+
+# -- 12. A .jsonld whose top level is not an object is a FAILED line ---------
+# doc.get("@context") assumes json.load returned a dict. AttributeError is not
+# in the except tuple in check(), so a top-level array, string or number
+# escaped as a traceback and took the whole run down before the remaining
+# files were checked -- the thing control 10 exists to prevent, one printf
+# away from any hand-written file.
+printf '[]' > "$WORK/toplevel-array.jsonld"
+OUT="$("$PYTHON" "$CHECK" "$WORK/toplevel-array.jsonld" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "FAILED" && ! echo "$OUT" | grep -q "Traceback"; then
+  pass "a top-level JSON array is reported, not raised as a traceback"
+else
+  fail "a top-level JSON array is reported, not raised as a traceback" \
+       "expected a FAILED line and no traceback: $OUT"
+fi
+
+# -- 13. The default glob must cover everything the workflow triggers on -----
+# .github/workflows/contexts.yml fires on any change under contexts/**, so a
+# PR adding contexts/v2/core.jsonld runs this job. A default glob pinned to
+# contexts/v1/ never opens the new file, the job passes, and the run still
+# prints "All N context(s) load" -- the same vacuous pass control 5 exists to
+# prevent, one directory up.
+mkdir -p "$WORK/root/contexts/v1" "$WORK/root/contexts/v2"
+cp "$SUBJECT" "$WORK/root/contexts/v1/ok.jsonld"
+inject "$SUBJECT" "$WORK/root/contexts/v2/broken.jsonld" "__comment_section" "=== Section ==="
+OUT="$(cd "$WORK/root" && "$PYTHON" "$CHECK" 2>&1)"
+if [ $? -ne 0 ] && echo "$OUT" | grep -q "INVALID TERM '__comment_section'"; then
+  pass "the default glob reaches a context outside contexts/v1/"
+else
+  fail "the default glob reaches a context outside contexts/v1/" \
+       "a broken contexts/v2/ file was never opened: $OUT"
+fi
+
 echo ""
 echo "passed: $PASSED   failed: $FAILED"
 [ "$FAILED" -eq 0 ] || exit 1
