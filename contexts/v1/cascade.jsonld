@@ -1,5 +1,7 @@
 {
   "@context": {
+    "@version": 1.1,
+
     "cascade": "https://ns.cascadeprotocol.org/core/v1#",
     "clinical": "https://ns.cascadeprotocol.org/clinical/v1#",
     "health": "https://ns.cascadeprotocol.org/health/v1#",
@@ -44,7 +46,8 @@
     "schemaVersion": "cascade:schemaVersion",
     "dataProvenance": {
       "@id": "cascade:dataProvenance",
-      "@type": "@id"
+      "@type": "@vocab",
+      "@context": { "@vocab": "https://ns.cascadeprotocol.org/core/v1#" }
     },
     "creatorWebID": {
       "@id": "cascade:creatorWebID",
@@ -106,19 +109,51 @@
     "contactPhone": "cascade:contactPhone",
     "emergencyContact": {
       "@id": "cascade:emergencyContact",
-      "@type": "@id"
+      "@type": "cascade:EmergencyContact",
+      "@context": {
+        "contactName":         "cascade:contactName",
+        "contactRelationship": "cascade:contactRelationship",
+        "contactPhone":        "cascade:contactPhone"
+      }
     },
     "advanceDirectives": {
       "@id": "cascade:advanceDirectives",
-      "@type": "@id"
+      "@type": "cascade:AdvanceDirectives",
+      "@context": {
+        "hasLivingWill":        { "@id": "cascade:hasLivingWill", "@type": "xsd:boolean" },
+        "hasPowerOfAttorney":   { "@id": "cascade:hasPowerOfAttorney", "@type": "xsd:boolean" },
+        "hasDNR":               { "@id": "cascade:hasDNR", "@type": "xsd:boolean" },
+        "advanceDirectiveNotes": "cascade:advanceDirectiveNotes"
+      }
     },
     "preferredPharmacy": {
       "@id": "cascade:preferredPharmacy",
-      "@type": "@id"
+      "@type": "cascade:PharmacyInfo",
+      "@context": {
+        "pharmacyName":    "cascade:pharmacyName",
+        "pharmacyPhone":   "cascade:pharmacyPhone",
+        "pharmacyAddress": "cascade:pharmacyAddress"
+      }
     },
     "address": {
       "@id": "cascade:address",
-      "@type": "@id"
+      "@type": "cascade:Address",
+      "@context": {
+        "streetAddress":      "cascade:streetAddress",
+        "city":               "cascade:city",
+        "state":              "cascade:state",
+        "postalCode":         "cascade:postalCode",
+        "country":            "cascade:country",
+        "addressUse":         "cascade:addressUse",
+        "addressType":        "cascade:addressType",
+        "addressText":        "cascade:addressText",
+        "addressLine":        "cascade:addressLine",
+        "addressCity":        "cascade:addressCity",
+        "addressDistrict":    "cascade:addressDistrict",
+        "addressState":       "cascade:addressState",
+        "addressPostalCode":  "cascade:addressPostalCode",
+        "addressCountry":     "cascade:addressCountry"
+      }
     },
     "preferredLanguage": "cascade:preferredLanguage",
     "streetAddress": "cascade:streetAddress",
@@ -159,6 +194,52 @@
     "RecordSummary": "cascade:RecordSummary",
     "ExportManifest": "cascade:ExportManifest",
     "InteractionScenario": "cascade:InteractionScenario",
+    "provenanceLayers": {
+      "@id": "cascade:provenanceLayers",
+      "@container": "@list",
+      "@type": "@vocab",
+      "@context": { "@vocab": "https://ns.cascadeprotocol.org/core/v1#" }
+    },
+    "clinicalSummary": {
+      "@id": "cascade:clinicalSummary",
+      "@type": "cascade:RecordSummary",
+      "@context": {
+        "domain":            "cascade:domain",
+        "notes":             "cascade:notes",
+        "conditionCount":    { "@id": "cascade:conditionCount", "@type": "xsd:integer" },
+        "medicationCount":   { "@id": "cascade:medicationCount", "@type": "xsd:integer" },
+        "allergyCount":      { "@id": "cascade:allergyCount", "@type": "xsd:integer" },
+        "labResultCount":    { "@id": "cascade:labResultCount", "@type": "xsd:integer" },
+        "immunizationCount": { "@id": "cascade:immunizationCount", "@type": "xsd:integer" },
+        "coverageCount":     { "@id": "cascade:coverageCount", "@type": "xsd:integer" },
+        "supplementCount":   { "@id": "cascade:supplementCount", "@type": "xsd:integer" },
+        "vitalSignDays":     { "@id": "cascade:vitalSignDays", "@type": "xsd:integer" },
+        "heartRateDays":     { "@id": "cascade:heartRateDays", "@type": "xsd:integer" },
+        "bloodPressureDays": { "@id": "cascade:bloodPressureDays", "@type": "xsd:integer" },
+        "activityDays":      { "@id": "cascade:activityDays", "@type": "xsd:integer" },
+        "sleepDays":         { "@id": "cascade:sleepDays", "@type": "xsd:integer" }
+      }
+    },
+    "wellnessSummary": {
+      "@id": "cascade:wellnessSummary",
+      "@type": "cascade:RecordSummary",
+      "@context": {
+        "domain":            "cascade:domain",
+        "notes":             "cascade:notes",
+        "conditionCount":    { "@id": "cascade:conditionCount", "@type": "xsd:integer" },
+        "medicationCount":   { "@id": "cascade:medicationCount", "@type": "xsd:integer" },
+        "allergyCount":      { "@id": "cascade:allergyCount", "@type": "xsd:integer" },
+        "labResultCount":    { "@id": "cascade:labResultCount", "@type": "xsd:integer" },
+        "immunizationCount": { "@id": "cascade:immunizationCount", "@type": "xsd:integer" },
+        "coverageCount":     { "@id": "cascade:coverageCount", "@type": "xsd:integer" },
+        "supplementCount":   { "@id": "cascade:supplementCount", "@type": "xsd:integer" },
+        "vitalSignDays":     { "@id": "cascade:vitalSignDays", "@type": "xsd:integer" },
+        "heartRateDays":     { "@id": "cascade:heartRateDays", "@type": "xsd:integer" },
+        "bloodPressureDays": { "@id": "cascade:bloodPressureDays", "@type": "xsd:integer" },
+        "activityDays":      { "@id": "cascade:activityDays", "@type": "xsd:integer" },
+        "sleepDays":         { "@id": "cascade:sleepDays", "@type": "xsd:integer" }
+      }
+    },
     "ProxyAgent": "cascade:ProxyAgent",
     "AIExtractionActivity": "cascade:AIExtractionActivity",
     "AIDiscardedExtraction": "cascade:AIDiscardedExtraction",
@@ -243,7 +324,17 @@
     "ImplantedDevice": "clinical:ImplantedDevice",
     "MedicationAdministration": "clinical:MedicationAdministration",
     "ClinicalSocialHistoryRecord": "clinical:SocialHistoryRecord",
-    "hasParticipant": { "@id": "clinical:hasParticipant", "@type": "@id", "@container": "@set" },
+    "hasParticipant": {
+      "@id": "clinical:hasParticipant",
+      "@type": "clinical:EncounterParticipant",
+      "@container": "@set",
+      "@context": {
+        "participantName":      "clinical:participantName",
+        "participantRole":      "clinical:participantRole",
+        "participantRoleCode":  { "@id": "clinical:participantRoleCode", "@container": "@set" },
+        "participantSpecialty": "clinical:participantSpecialty"
+      }
+    },
     "participantName": "clinical:participantName",
     "participantRole": "clinical:participantRole",
     "participantRoleCode": { "@id": "clinical:participantRoleCode", "@container": "@set" },

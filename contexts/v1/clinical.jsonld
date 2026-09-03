@@ -1,5 +1,7 @@
 {
   "@context": {
+    "@version": 1.1,
+
     "clinical": "https://ns.cascadeprotocol.org/clinical/v1#",
     "cascade": "https://ns.cascadeprotocol.org/core/v1#",
     "health": "https://ns.cascadeprotocol.org/health/v1#",
@@ -368,8 +370,14 @@
     "MedicationAdministration": "clinical:MedicationAdministration",
     "hasParticipant": {
       "@id": "clinical:hasParticipant",
-      "@type": "@id",
-      "@container": "@set"
+      "@type": "clinical:EncounterParticipant",
+      "@container": "@set",
+      "@context": {
+        "participantName":         "clinical:participantName",
+        "participantRole":         "clinical:participantRole",
+        "participantRoleCode":     { "@id": "clinical:participantRoleCode", "@container": "@set" },
+        "participantSpecialty":    "clinical:participantSpecialty"
+      }
     },
     "participantName": "clinical:participantName",
     "participantRole": "clinical:participantRole",
