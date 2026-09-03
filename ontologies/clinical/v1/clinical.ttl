@@ -21,8 +21,8 @@
     dct:description "Vocabulary for clinical documents, narratives, and structured notes imported from EHR systems via Apple HealthKit"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-12-26"^^xsd:date ;
-    dct:modified "2026-08-30"^^xsd:date ;
-    owl:versionInfo "1.19" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.20" ;
     rdfs:comment "Domain-specific vocabulary for clinical documentation and structured records imported from patient portals (MyChart, Epic, etc.). Contains EHR-verified clinical data."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/clinical/v1.0/> .
 
@@ -30,7 +30,7 @@
 # Core Classes
 # ============================================================================
 
-clinical:ClinicalDocument a owl:Class ;
+clinical:ClinicalDocument a owl:Class, cascade:RecordClass ;
     rdfs:label "Clinical Document"@en ;
     rdfs:comment "Clinical documentation imported from EHR systems, including narratives and structured data"@en ;
     rdfs:subClassOf fhir:DocumentReference ;
@@ -58,33 +58,33 @@ clinical:ClinicalNarrative a owl:Class ;
 # Document Type Classes (LOINC-aligned)
 # ============================================================================
 
-clinical:ProgressNote a owl:Class ;
+clinical:ProgressNote a owl:Class, cascade:RecordClass ;
     rdfs:label "Progress Note"@en ;
     rdfs:comment "Provider progress note documenting a patient encounter"@en ;
     rdfs:subClassOf clinical:ClinicalDocument .
 
-clinical:DischargeSummary a owl:Class ;
+clinical:DischargeSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Discharge Summary"@en ;
     rdfs:comment "Hospital discharge summary document"@en ;
     rdfs:subClassOf clinical:ClinicalDocument .
 
-clinical:ConsultationNote a owl:Class ;
+clinical:ConsultationNote a owl:Class, cascade:RecordClass ;
     rdfs:label "Consultation Note"@en ;
     rdfs:comment "Specialist consultation note"@en ;
     rdfs:subClassOf clinical:ClinicalDocument .
 
-clinical:LaboratoryReport a owl:Class ;
+clinical:LaboratoryReport a owl:Class, cascade:RecordClass ;
     rdfs:label "Laboratory Report"@en ;
     rdfs:comment "Laboratory test results with narrative interpretation"@en ;
     rdfs:subClassOf clinical:ClinicalDocument ;
     rdfs:subClassOf fhir:DiagnosticReport .
 
-clinical:ImagingReport a owl:Class ;
+clinical:ImagingReport a owl:Class, cascade:RecordClass ;
     rdfs:label "Imaging Report"@en ;
     rdfs:comment "Radiology/imaging report with findings and impressions"@en ;
     rdfs:subClassOf clinical:ClinicalDocument .
 
-clinical:VisitSummary a owl:Class ;
+clinical:VisitSummary a owl:Class, cascade:RecordClass ;
     rdfs:label "Visit Summary"@en ;
     rdfs:comment "After-visit summary provided to patient"@en ;
     rdfs:subClassOf clinical:ClinicalDocument .
@@ -93,13 +93,13 @@ clinical:VisitSummary a owl:Class ;
 # Structured Clinical Record Classes
 # ============================================================================
 
-clinical:Medication a owl:Class ;
+clinical:Medication a owl:Class, cascade:RecordClass ;
     rdfs:label "Medication"@en ;
     rdfs:comment "Medication record from EHR MedicationStatement or MedicationRequest resource"@en ;
     rdfs:subClassOf fhir:MedicationStatement ;
     rdfs:subClassOf prov:Entity .
 
-clinical:Allergy a owl:Class ;
+clinical:Allergy a owl:Class, cascade:RecordClass ;
     rdfs:label "Allergy"@en ;
     rdfs:comment "Allergy or intolerance record from EHR AllergyIntolerance resource. DEPRECATED in clinical v1.13: use health:AllergyRecord, which is the type every import path already emits. Retained, not removed: the pod export path is still the sole emitter of this class and existing pods contain it. Readers must continue to accept both."@en ;
     rdfs:subClassOf fhir:AllergyIntolerance ;
@@ -108,7 +108,7 @@ clinical:Allergy a owl:Class ;
     rdfs:seeAlso <https://ns.cascadeprotocol.org/health/v1#AllergyRecord> ;
     owl:versionInfo "Deprecated in clinical v1.13; superseded by health:AllergyRecord" .
 
-clinical:LabResult a owl:Class ;
+clinical:LabResult a owl:Class, cascade:RecordClass ;
     rdfs:label "Lab Result"@en ;
     rdfs:comment "Laboratory test result from EHR Observation resource. DEPRECATED in clinical v1.13: use health:LabResultRecord, which is the type every import path already emits. Retained, not removed: the pod export path is still the sole emitter of this class and existing pods contain it. Readers must continue to accept both."@en ;
     rdfs:subClassOf fhir:Observation ;
@@ -117,7 +117,7 @@ clinical:LabResult a owl:Class ;
     rdfs:seeAlso <https://ns.cascadeprotocol.org/health/v1#LabResultRecord> ;
     owl:versionInfo "Deprecated in clinical v1.13; superseded by health:LabResultRecord" .
 
-clinical:Condition a owl:Class ;
+clinical:Condition a owl:Class, cascade:RecordClass ;
     rdfs:label "Condition"@en ;
     rdfs:comment "Medical condition or diagnosis from EHR Condition resource. DEPRECATED in clinical v1.13: use health:ConditionRecord, which is the type every import path already emits. Retained, not removed: the pod export path is still the sole emitter of this class and existing pods contain it. Readers must continue to accept both."@en ;
     rdfs:subClassOf fhir:Condition ;
@@ -126,7 +126,7 @@ clinical:Condition a owl:Class ;
     rdfs:seeAlso <https://ns.cascadeprotocol.org/health/v1#ConditionRecord> ;
     owl:versionInfo "Deprecated in clinical v1.13; superseded by health:ConditionRecord" .
 
-clinical:Immunization a owl:Class ;
+clinical:Immunization a owl:Class, cascade:RecordClass ;
     rdfs:label "Immunization"@en ;
     rdfs:comment "Vaccination record from EHR Immunization resource. DEPRECATED in clinical v1.13: use health:ImmunizationRecord, which is the type every import path already emits. Retained, not removed: the pod export path is still the sole emitter of this class and existing pods contain it. Readers must continue to accept both."@en ;
     rdfs:subClassOf fhir:Immunization ;
@@ -135,13 +135,13 @@ clinical:Immunization a owl:Class ;
     rdfs:seeAlso <https://ns.cascadeprotocol.org/health/v1#ImmunizationRecord> ;
     owl:versionInfo "Deprecated in clinical v1.13; superseded by health:ImmunizationRecord" .
 
-clinical:Procedure a owl:Class ;
+clinical:Procedure a owl:Class, cascade:RecordClass ;
     rdfs:label "Procedure"@en ;
     rdfs:comment "Medical procedure record from EHR Procedure resource"@en ;
     rdfs:subClassOf fhir:Procedure ;
     rdfs:subClassOf prov:Entity .
 
-clinical:VitalSign a owl:Class ;
+clinical:VitalSign a owl:Class, cascade:RecordClass ;
     rdfs:label "Vital Sign"@en ;
     rdfs:comment "Vital sign observation (heart rate, blood pressure, etc.) from EHR"@en ;
     rdfs:subClassOf fhir:Observation ;
@@ -151,13 +151,13 @@ clinical:VitalSign a owl:Class ;
 # Longitudinal Record Classes (v1.2)
 # ============================================================================
 
-clinical:MedicationUseEpisode a owl:Class ;
+clinical:MedicationUseEpisode a owl:Class, cascade:RecordClass ;
     rdfs:label "Medication Use Episode"@en ;
     rdfs:comment "Canonical longitudinal record of patient's relationship with a medication over time. Derived from one or more source records via reconciliation. Episodes represent continuous periods of use - a gap beyond threshold creates a new episode."@en ;
     rdfs:subClassOf prov:Entity ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/clinical/v1.0/episodes/> .
 
-clinical:Supplement a owl:Class ;
+clinical:Supplement a owl:Class, cascade:RecordClass ;
     rdfs:label "Supplement"@en ;
     rdfs:comment "Dietary supplement, OTC product, or herbal remedy with explicit regulatory status. Separate from Medication class due to different regulatory status and evidence requirements."@en ;
     rdfs:subClassOf prov:Entity .
@@ -166,7 +166,7 @@ clinical:Supplement a owl:Class ;
 # Longitudinal Lab Classes (v1.4)
 # ============================================================================
 
-clinical:LabTestSeries a owl:Class ;
+clinical:LabTestSeries a owl:Class, cascade:RecordClass ;
     rdfs:label "Lab Test Series"@en ;
     rdfs:comment """Longitudinal record of repeated measurements of the same laboratory
         test (identified by LOINC code) over time. Derived from one or more
@@ -182,10 +182,11 @@ clinical:LabTestSeries a owl:Class ;
 # Coverage Record Class (v1.5)
 # ============================================================================
 
-clinical:CoverageRecord a owl:Class ;
+clinical:CoverageRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Coverage Record"@en ;
     rdfs:comment "DEPRECATED (v1.5+): Use coverage:InsurancePlan from coverage.ttl for new insurance data. This class remains for backward compatibility with existing EHR import pipeline data. Insurance coverage record imported from EHR. Layer 2 representation of patient insurance data with FHIR Coverage alignment."@en ;
     rdfs:subClassOf prov:Entity ;
+    rdfs:seeAlso <https://ns.cascadeprotocol.org/coverage/v1#InsurancePlan> ;
     rdfs:seeAlso fhir:Coverage ;
     owl:deprecated "true"^^xsd:boolean ;
     cascade:subConcern "deprecated" .
@@ -1869,7 +1870,7 @@ clinical:isActive a owl:DatatypeProperty ;
 # Added in v1.7 — supports FHIR Encounter conversion
 # ============================================================================
 
-clinical:Encounter a owl:Class ;
+clinical:Encounter a owl:Class, cascade:RecordClass ;
     rdfs:label "Clinical Encounter"@en ;
     rdfs:comment "A clinical encounter — any interaction between a patient and a healthcare provider. Enables grouping of clinical events (procedures, observations, prescriptions) that occurred in the same visit context."@en ;
     rdfs:subClassOf prov:Entity .
@@ -1992,7 +1993,7 @@ clinical:facilityName a owl:DatatypeProperty ;
 # A participation is not an entity in the PROV sense and is not asserted to be
 # one.
 
-clinical:EncounterParticipant a owl:Class ;
+clinical:EncounterParticipant a owl:Class, cascade:RecordClass ;
     rdfs:label "Encounter Participant"@en ;
     rdfs:comment "One participation in an encounter: a named person together with the role they played in that visit, and their specialty where the source states it. Mirrors the FHIR R4 Encounter.participant BackboneElement (https://hl7.org/fhir/R4/encounter-definitions.html#Encounter.participant). Attached to the encounter with clinical:hasParticipant."@en ;
     rdfs:seeAlso <https://hl7.org/fhir/R4/encounter-definitions.html#Encounter.participant> .
@@ -2043,7 +2044,7 @@ Servers commonly convey it on Encounter.participant as an extension rather than 
 # Added in v1.7 — supports FHIR MedicationAdministration conversion
 # ============================================================================
 
-clinical:MedicationAdministration a owl:Class ;
+clinical:MedicationAdministration a owl:Class, cascade:RecordClass ;
     rdfs:label "Medication Administration"@en ;
     rdfs:comment "A single administration event of a medication given at a specific time by a provider (e.g., IV antibiotics administered pre-surgery, vaccine injection at visit). Semantically distinct from clinical:Medication (ongoing prescription regimens): represents a one-time event, not an ongoing regimen."@en ;
     rdfs:subClassOf prov:Entity .
@@ -2076,7 +2077,7 @@ clinical:administrationStatus a owl:DatatypeProperty ;
 # Added in v1.7 — supports FHIR Device conversion
 # ============================================================================
 
-clinical:ImplantedDevice a owl:Class ;
+clinical:ImplantedDevice a owl:Class, cascade:RecordClass ;
     rdfs:label "Implanted Device"@en ;
     rdfs:comment "A medical device implanted in or attached to the patient as a permanent part of their health profile (e.g., pacemaker, cardiac stent, cochlear implant, insulin pump). Presence affects medication safety, imaging eligibility (MRI contraindications), and surgical risk."@en ;
     rdfs:subClassOf prov:Entity .
@@ -2114,7 +2115,7 @@ clinical:deviceStatus a owl:DatatypeProperty ;
 # Added in v1.7 — supports FHIR ImagingStudy conversion
 # ============================================================================
 
-clinical:ImagingStudy a owl:Class ;
+clinical:ImagingStudy a owl:Class, cascade:RecordClass ;
     rdfs:label "Imaging Study"@en ;
     rdfs:comment "Metadata record for a diagnostic imaging study (CT, MRI, X-ray, ultrasound). Records that imaging exists and its key characteristics without requiring access to DICOM images. Useful for clinical timeline, pre-procedure review, and agent reasoning about the patient's imaging history."@en ;
     rdfs:subClassOf prov:Entity .
@@ -2179,7 +2180,7 @@ clinical:reportCategory a owl:DatatypeProperty ;
 # ============================================================================
 # Social History (v1.8) — EHR-extracted social history with 42 CFR Part 2 compliance
 
-clinical:SocialHistoryRecord a owl:Class ;
+clinical:SocialHistoryRecord a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf cascade:HealthRecord ;
     rdfs:label "Social History Record"@en ;
     rdfs:comment "An EHR-extracted social or behavioral history observation from a C-CDA Social History section. Distinct from health:SocialHistoryRecord (consumer-reported). Requires separate consent scope (cascade:SocialHistoryConsent) and pod path (social-history/). Subject to 42 CFR Part 2 for substance use records."@en ;

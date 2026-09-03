@@ -21,8 +21,8 @@
     dct:description "Vocabulary for POTS (Postural Orthostatic Tachycardia Syndrome) home screening checks using the NASA Lean Test protocol"@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2025-10-31"^^xsd:date ;
-    dct:modified "2026-02-26"^^xsd:date ;
-    owl:versionInfo "1.4" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.5" ;
     rdfs:comment "Layer 2 domain-specific vocabulary for POTS Check app. Defines the POTS screening test protocol, raw measurement classes, and computed results. Describes consumer-generated wellness data from guided orthostatic screening checks performed with Apple Watch and iPhone."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/pots/v1.4/> .
 
@@ -30,7 +30,7 @@
 # Core Classes
 # ============================================================================
 
-pots:POTSCheckResult a owl:Class ;
+pots:POTSCheckResult a owl:Class, cascade:RecordClass ;
     rdfs:label "POTS Check Result"@en ;
     rdfs:comment "Complete result bundle from a guided home orthostatic screening check using Apple Watch heart rate monitoring and iPhone posture detection"@en ;
     rdfs:subClassOf [

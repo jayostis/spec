@@ -54,8 +54,8 @@
     dct:description "Layer 2 cross-cutting vocabulary for grounding assertions in cited evidence with explicit verdicts."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-06-16"^^xsd:date ;
-    dct:modified "2026-08-20"^^xsd:date ;
-    owl:versionInfo "1.0-draft.0.3" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.4" ;
     rdfs:comment "Generalizes the assertion -> evidence -> verdict pattern needed by Cascade Workbench (checking claims pulled from AI conversations against a patient's records and literature), the Cascade Appeal system (citing clinical evidence against policy criteria, cf. coverage:deniedClinicalContext), and PGx/genomics decision support. Reuses core provenance primitives (cascade:extractionModel, cascade:extractionConfidence, cascade:requiresUserReview, prov:wasDerivedFrom) rather than redefining them. Uses 'Assertion' (not 'Claim') to avoid collision with coverage:ClaimRecord. Draft: not in VOCAB_VERSIONS until v1.0 graduation."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/evidence/v1-draft/> .
 
@@ -63,27 +63,27 @@
 # Classes
 # ============================================================================
 
-evidence:Assertion a owl:Class ;
+evidence:Assertion a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Assertion"@en ;
     rdfs:comment "A discrete, checkable statement extracted from a source (e.g. an AI conversation) or entered by the user, evaluated against evidence in the Pod and/or literature. Carries exactly one verdict and zero-or-more evidence links. The extraction of an Assertion from its source SHOULD be recorded with a cascade:AIExtractionActivity; an assertion surfaced by a general-purpose AI assistant SHOULD carry cascade:dataProvenance cascade:AIAsserted."@en ;
     owl:versionInfo "Added in evidence v1-draft.0.1" ;
     vs:term_status "unstable" .
 
-evidence:EvidenceLink a owl:Class ;
+evidence:EvidenceLink a owl:Class, cascade:RecordClass ;
     rdfs:label "Evidence Link"@en ;
     rdfs:comment "A reified link from an Assertion to one piece of evidence (a Pod record or an external Citation), carrying a stance (supports / contradicts / contextual). Modeled as a node so a single Assertion can carry multiple, differently-directed pieces of evidence. Pattern mirrors cascade:ConflictDetail."@en ;
     owl:versionInfo "Added in evidence v1-draft.0.1" ;
     vs:term_status "unstable" .
 
-evidence:Citation a owl:Class ;
+evidence:Citation a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Entity ;
     rdfs:label "Citation"@en ;
     rdfs:comment "An external bibliographic source (e.g. a research paper) used as evidence, identified by DOI and/or PMID. When retrieved into the Pod it is a first-class resource (recommended path literature/) so an evidence chip can resolve to it exactly as it resolves to a clinical record."@en ;
     owl:versionInfo "Added in evidence v1-draft.0.1" ;
     vs:term_status "unstable" .
 
-evidence:GroundingActivity a owl:Class ;
+evidence:GroundingActivity a owl:Class, cascade:RecordClass ;
     rdfs:subClassOf prov:Activity ;
     rdfs:label "Grounding Activity"@en ;
     rdfs:comment "A PROV-O Activity representing the model pass that graded an Assertion against evidence and produced its verdict. Distinct from cascade:AIExtractionActivity (which extracts structured records from documents); grounding grades free-text assertions. Reuses cascade:extractionModel to record the model."@en ;

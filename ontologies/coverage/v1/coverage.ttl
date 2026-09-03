@@ -18,8 +18,8 @@
     dct:description "Domain vocabulary for patient-owned insurance, benefits, and financial health data. Layer 2 vocabulary resolving the overlap between checkup:InsuranceInfo (patient-reported) and clinical:CoverageRecord (EHR-imported) with a unified, standardized representation."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-02-18"^^xsd:date ;
-    dct:modified "2026-09-01"^^xsd:date ;
-    owl:versionInfo "1.8" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.9" ;
     rdfs:comment "Insurance and benefits data is cross-cutting: not clinical (it's administrative/financial), not app-specific (any health app benefits from knowing coverage), and contributed by both patient self-report and EHR import. This vocabulary provides a single Layer 2 domain model that both checkup: (Layer 3, patient-reported) and clinical: (Layer 2, EHR-imported) can reference via the mixed namespace pattern. Recommended Pod storage path: /coverage/"@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/coverage/v1/> .
 
@@ -27,19 +27,19 @@
 # Classes
 # ============================================================================
 
-coverage:InsurancePlan a owl:Class ;
+coverage:InsurancePlan a owl:Class, cascade:RecordClass ;
     rdfs:label "Insurance Plan"@en ;
     rdfs:comment "An insurance plan the patient is enrolled in. Unifies patient-reported data (from checkup:InsuranceInfo) and EHR-imported data (from clinical:CoverageRecord) into a single standardized representation. Recommended Pod storage: /coverage/plans/{plan-id}.ttl"@en ;
     rdfs:subClassOf prov:Entity ;
     rdfs:seeAlso fhir:Coverage .
 
-coverage:Deductible a owl:Class ;
+coverage:Deductible a owl:Class, cascade:RecordClass ;
     rdfs:label "Deductible"@en ;
     rdfs:comment "Annual deductible status and progress tracking for an insurance plan. Enables patients to monitor their progress toward meeting annual deductible limits. Properties for this class will be defined in a future version."@en ;
     rdfs:subClassOf prov:Entity ;
     rdfs:seeAlso fhir:ExplanationOfBenefit .
 
-coverage:CopaySchedule a owl:Class ;
+coverage:CopaySchedule a owl:Class, cascade:RecordClass ;
     rdfs:label "Copay Schedule"@en ;
     rdfs:comment "Copay amounts by service category for an insurance plan. Helps patients understand their cost-sharing responsibilities for different types of care. Properties for this class will be defined in a future version."@en ;
     rdfs:subClassOf prov:Entity .
@@ -316,7 +316,7 @@ coverage:rxGroup a owl:DatatypeProperty ;
 # is rdfs:subClassOf prov:Entity and coverage:AppealRecord rdfs:subClassOf
 # prov:Activity. This is the artifact submitted, not the act of submitting, so
 # it takes prov:Entity beside DenialNotice.
-coverage:ClaimRecord a owl:Class ;
+coverage:ClaimRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Claim Record"@en ;
     rdfs:comment "A medical claim submitted to an insurer for reimbursement. FHIR alignment: fhir:Claim"@en ;
     rdfs:subClassOf prov:Entity .
@@ -327,18 +327,18 @@ coverage:ClaimRecord a owl:Class ;
 # -- and nothing declares it as an rdfs:range. A class with nine fields of its
 # own that is nobody's value is as unambiguously a record as this gets: it is a
 # document the patient receives, stores and reads money out of.
-coverage:BenefitStatement a owl:Class ;
+coverage:BenefitStatement a owl:Class, cascade:RecordClass ;
     rdfs:label "Benefit Statement (EOB)"@en ;
     rdfs:comment "An Explanation of Benefits document — the insurer's formal response to a claim, including adjudication, denial reasons, and patient cost responsibility. FHIR alignment: fhir:ExplanationOfBenefit. CMS mandates patient access via CARIN Alliance FHIR IG."@en ;
     rdfs:subClassOf prov:Entity .
 
-coverage:DenialNotice a owl:Class ;
+coverage:DenialNotice a owl:Class, cascade:RecordClass ;
     rdfs:label "Denial Notice"@en ;
     rdfs:comment "A formal denial of coverage issued by an insurer. Distinct from BenefitStatement — a DenialNotice initiates an appeal process, not a payment record. Recommended Pod storage: /coverage/denials/{id}.ttl"@en ;
     rdfs:subClassOf prov:Entity ;
     rdfs:seeAlso fhir:ExplanationOfBenefit .
 
-coverage:AppealRecord a owl:Class ;
+coverage:AppealRecord a owl:Class, cascade:RecordClass ;
     rdfs:label "Appeal Record"@en ;
     rdfs:comment "A formal appeal filing contesting a denial notice. One record per appeal level. Recommended Pod storage: /coverage/appeals/{id}.ttl"@en ;
     rdfs:subClassOf prov:Activity ;

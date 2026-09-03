@@ -38,8 +38,8 @@
     dct:description "Vocabulary for the Cascade Advisory Patch (CAP) profile — a constrained subset of W3C LDPatch carrying clinical knowledge updates (variant reclassifications, PGx dosing changes, surveillance guideline updates, etc.) into a Cascade pod with author-readable, statically-auditable, bounded-execution semantics."@en ;
     dct:creator "Cascade Agentic Labs" ;
     dct:created "2026-05-05"^^xsd:date ;
-    dct:modified "2026-08-20"^^xsd:date ;
-    owl:versionInfo "1.0-draft.0.2" ;
+    dct:modified "2026-09-03"^^xsd:date ;
+    owl:versionInfo "1.0-draft.0.3" ;
     rdfs:comment "DRAFT — vocabulary is under development and subject to change before v1.0 stable release. Architecture: (1) constrained-LDPatch envelope (advisory:CascadeAdvisoryPatch) with required human-readable summary, advisory class, issuer, and issuance time; (2) tiered cadence — SafetyCritical advisories check on every app open, VariantReclassification monthly, SurveillanceGuidelineUpdate quarterly-to-annual (advisory:Cadence enum); (3) per-pod trust — each pod chooses which issuers to trust via advisory:TrustedIssuer records (advisory:TrustSourceEnum tracks how each was added: cascade-cli starter list vs user-added vs imported-from-registry vs verified-via-DID); (4) detached JWS Ed25519 signatures (RFC 7515) for issuer authentication (advisory:signature plus issuer claims); (5) opt-in auto-apply scoped per (issuer x advisoryClass) pair via advisory:AutoApplyPolicy. The application of an advisory to a pod is recorded using cascade:AdvisoryApplicationActivity (declared in core v3.1, not redeclared here)."@en ;
     rdfs:seeAlso <https://cascadeprotocol.org/docs/advisory/v1-draft/> .
 
@@ -47,7 +47,7 @@
 # Profile envelope: CascadeAdvisoryPatch
 # ============================================================================
 
-advisory:CascadeAdvisoryPatch a owl:Class ;
+advisory:CascadeAdvisoryPatch a owl:Class, cascade:RecordClass ;
     rdfs:label "Cascade Advisory Patch"@en ;
     rdfs:comment "The envelope of a CAP file — a constrained-LDPatch document delivering a clinical knowledge update to a Cascade pod. Subclass of prov:Entity so applications can be linked via prov:used / prov:wasGeneratedBy. The application of a CAP to a pod is recorded as a cascade:AdvisoryApplicationActivity (defined in core v3.1) which uses prov:used to point at both the patch and the matched record. Every CascadeAdvisoryPatch MUST carry advisory:humanSummary, advisory:advisoryClass, advisory:issuer, and advisory:issuedAt; SHOULD carry advisory:signature; MAY carry advisory:supersedes, advisory:applicableUntil, advisory:advisoryId, advisory:issuerName, advisory:evidenceUrl, advisory:profileVersion, and advisory:appliesToActiveOnly."@en ;
     rdfs:subClassOf prov:Entity ;
@@ -269,7 +269,7 @@ advisory:Annually a owl:NamedIndividual, advisory:Cadence ;
 # TrustedIssuer (per D-Q3: per-pod, lives in <pod>/trust/issuers.ttl)
 # ============================================================================
 
-advisory:TrustedIssuer a owl:Class ;
+advisory:TrustedIssuer a owl:Class, cascade:RecordClass ;
     rdfs:label "Trusted Issuer"@en ;
     rdfs:comment "An issuer the pod has chosen to trust. Lives per-pod (typically at <pod>/trust/issuers.ttl) — the protocol does NOT define a centralized registry. How the pod populates this graph (cascade-cli starter list, user-added in-app, imported from a community-driven registry URL, or verified via DID) is operational and is captured per-record by advisory:trustSource. Per D-Q3 the protocol is positioned as an extensible framework rather than a gatekeeper; community-driven issuer evaluation and certification is a separate, parallel workstream."@en ;
     vs:term_status "unstable" .
@@ -338,7 +338,7 @@ advisory:VerifiedViaDID a owl:NamedIndividual, advisory:TrustSourceEnum ;
 # AutoApplyPolicy
 # ============================================================================
 
-advisory:AutoApplyPolicy a owl:Class ;
+advisory:AutoApplyPolicy a owl:Class, cascade:RecordClass ;
     rdfs:label "Auto-Apply Policy"@en ;
     rdfs:comment "A per-pod policy declaring which (issuer x advisoryClass) pairs the pod will apply silently rather than queueing for explicit user approval. Auto-apply is opt-in by default; the user adds policy records explicitly. Each record points at one or more advisory:AutoApplyScope tuples."@en ;
     vs:term_status "unstable" .
@@ -371,7 +371,7 @@ advisory:requiresQuorum a owl:DatatypeProperty ;
     rdfs:range xsd:boolean ;
     vs:term_status "unstable" .
 
-advisory:AutoApplyScope a owl:Class ;
+advisory:AutoApplyScope a owl:Class, cascade:RecordClass ;
     rdfs:label "Auto-Apply Scope"@en ;
     rdfs:comment "One (issuer, advisoryClass) tuple authorizing silent auto-application. Reusable across multiple AutoApplyPolicy records."@en ;
     vs:term_status "unstable" .
