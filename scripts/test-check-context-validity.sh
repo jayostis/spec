@@ -523,6 +523,46 @@ else
        "expected exit 2 and a 'no contexts found' message, got $STATUS: $OUT"
 fi
 
+# -- 21. A keyword-only context is legal, so it is not exit 1 ----------------
+# {"@context": {"@vocab": "..."}} defines no TERMS but is a perfectly valid
+# context that PyLD accepts. The non-vacuity guard of control 5 reported it
+# FAILED at exit 1 -- and exit 1 is this script's "a published context is
+# invalid", said about a file nothing is wrong with. It still must not read
+# as success, so it is exit 2: examined nothing, same as an unfetchable
+# remote layer. Control 5 keeps its teeth -- it asserts non-zero, not 1.
+cat > "$WORK/keywordonly.jsonld" <<'JSON'
+{ "@context": { "@vocab": "https://ns.cascadeprotocol.org/core/v1#" } }
+JSON
+OUT="$("$PYTHON" "$CHECK" "$WORK/keywordonly.jsonld" 2>&1)"
+STATUS=$?
+if [ "$STATUS" -eq 2 ] && echo "$OUT" | grep -q "EMPTY"; then
+  pass "a keyword-only context is exit 2, not the exit 1 that means invalid"
+else
+  fail "a keyword-only context is exit 2, not the exit 1 that means invalid" \
+       "expected exit 2 naming EMPTY, got $STATUS: $OUT"
+fi
+
+# -- 22. A file's culprits must be attributable to that file -----------------
+# The status line went to stdout and every diagnostic beneath it to stderr.
+# Both are a terminal locally, so the order looked right; in CI stdout is a
+# PIPE and block-buffered, so every culprit in the run printed before every
+# status line and no INVALID TERM could be attributed to a file. That defeats
+# the whole NAMING THE CULPRIT design at exactly the size it matters -- the
+# eight-culprit, three-file defect this branch exists to fix. Piping through
+# cat is the point: it is what makes stdout a pipe rather than a terminal.
+mkdir -p "$WORK/order/contexts/v1"
+cp "$SUBJECT" "$WORK/order/contexts/v1/clean.jsonld"
+inject "$SUBJECT" "$WORK/order/contexts/v1/broken.jsonld" "__comment_x" "=== Section ==="
+OUT="$(cd "$WORK/order" && "$PYTHON" "$CHECK" 2>/dev/null | cat)"
+FILE_LINE="$(echo "$OUT" | grep -n "broken.jsonld" | head -1 | cut -d: -f1)"
+TERM_LINE="$(echo "$OUT" | grep -n "INVALID TERM" | head -1 | cut -d: -f1)"
+if [ -n "$FILE_LINE" ] && [ -n "$TERM_LINE" ] && [ "$FILE_LINE" -lt "$TERM_LINE" ]; then
+  pass "a culprit prints on stdout under its own file's status line"
+else
+  fail "a culprit prints on stdout under its own file's status line" \
+       "expected broken.jsonld's line before its INVALID TERM: $OUT"
+fi
+
 echo ""
 echo "passed: $PASSED   failed: $FAILED"
 [ "$FAILED" -eq 0 ] || exit 1

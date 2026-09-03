@@ -285,7 +285,7 @@ def check(path):
         # labelled NOT A CONTEXT rather than UNREADABLE.
         label = "UNREADABLE" if isinstance(exc, OSError) else "NOT A CONTEXT"
         print(f"{name:22s}    -- FAILED")
-        print(f"      {label}: {exc}", file=sys.stderr)
+        print(f"      {label}: {exc}")
         return (1, 0)
 
     terms = local_terms(ctx)
@@ -294,11 +294,18 @@ def check(path):
     # A context that defines nothing must not read as success. The whole class
     # of defect this file guards against is a check that examines nothing and
     # reports green.
+    #
+    # NOT_CHECKED rather than a problem, though, because {"@vocab": "..."} --
+    # or an @import, or any keyword-only context -- defines no term and is
+    # perfectly legal; PyLD accepts it. Exit 1 here would be this script
+    # saying "a published context is invalid" about a file with nothing wrong
+    # with it. Exit 2 says the true thing: nothing was examined. The
+    # non-vacuity guard is unweakened -- it was never the exit CODE that
+    # carried it, only that the run does not read as success.
     if not terms and not remote:
-        print(f"{name:22s} {0:4d} terms -- FAILED")
-        print("      EMPTY: no term definitions, so nothing was checked",
-              file=sys.stderr)
-        return (1, 0)
+        print(f"{name:22s} {0:4d} terms -- NOT CHECKED")
+        print("      EMPTY: no term definitions, so nothing was checked")
+        return (0, 1)
 
     try:
         exercise(ctx)
@@ -311,24 +318,24 @@ def check(path):
             # would refetch the same unreachable IRI once per term.
             url = (unfetched.details or {}).get("url", "the remote layer")
             print(f"{name:22s} {len(terms):4d} terms -- NOT CHECKED")
-            print(f"      COULD NOT FETCH {url}", file=sys.stderr)
-            print(f"      {str(unfetched).splitlines()[0]}", file=sys.stderr)
+            print(f"      COULD NOT FETCH {url}")
+            print(f"      {str(unfetched).splitlines()[0]}")
             print("      (a layer of this context is remote and was not "
                   "retrieved, so nothing here was verified -- this file is "
-                  "not being called invalid)", file=sys.stderr)
+                  "not being called invalid)")
             return (0, 1)
 
         print(f"{name:22s} {len(terms):4d} terms -- FAILED")
-        print(f"      {str(exc).splitlines()[0]}", file=sys.stderr)
+        print(f"      {str(exc).splitlines()[0]}")
         bad = culprits(ctx)
         for key, value in bad:
             shown = value if isinstance(value, str) else json.dumps(value)
             if len(shown) > 60:
                 shown = shown[:57] + "..."
-            print(f"      INVALID TERM {key!r} -> {shown!r}", file=sys.stderr)
+            print(f"      INVALID TERM {key!r} -> {shown!r}")
         if not bad:
             print("      (no single term reproduces it; the fault is in the "
-                  "context as a whole)", file=sys.stderr)
+                  "context as a whole)")
         return (max(len(bad), 1), 0)
 
     print(f"{name:22s} {len(terms):4d} terms -- OK")
@@ -359,12 +366,17 @@ def main():
     unchecked = sum(r[1] for r in results)
 
     print()
+    # The summary goes to stderr and every line above it to stdout. Under CI
+    # stdout is a pipe and block-buffered, so without this flush the summary
+    # overtakes the report it summarises.
+    sys.stdout.flush()
     if problems:
         print(f"FAILED: {problems} problem(s).", file=sys.stderr)
     if unchecked:
-        print(f"NOT CHECKED: {unchecked} context(s) have a remote layer that "
-              "could not be retrieved, so nothing about them was verified.",
-              file=sys.stderr)
+        print(f"NOT CHECKED: {unchecked} context(s) were not verified. Each "
+              "says why on its own line above -- a remote layer that could "
+              "not be retrieved, or no term definitions to check. They have "
+              "NOT been found invalid.", file=sys.stderr)
     if problems:
         return 1
     # Exit 2, the same code a missing PyLD uses, and for the same reason: a run
