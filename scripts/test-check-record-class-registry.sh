@@ -234,6 +234,93 @@ else
 fi
 rm -rf "$DIR"
 
+# ---------------------------------------------------------------------------
+# 8. A TURTLE OBJECT LIST IS SEVERAL REGISTRATIONS. `solid:forClass a:X, b:Y ;`
+#    is legal Turtle and registers BOTH classes. The pattern used to require a
+#    single non-space token before the terminator, which does not merely lose
+#    the tail of such a line -- it fails to match it AT ALL, so every class in
+#    the list is dropped. A pod path registered for an unmarked class then
+#    reaches no comparison: the silent omission this check exists to catch,
+#    performed by the check.
+#
+#    The probe puts a MARKED class first and an unmarked one second, so a
+#    finding can only come from reading past the comma.
+# ---------------------------------------------------------------------------
+echo ""
+echo "8. A comma-separated registration is read as several registrations"
+
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#object-list-probe>
+        a solid:TypeRegistration ;
+        solid:forClass health:LabResultRecord, cascade:DataProvenance ;
+        solid:instanceContainer </clinical/object-list.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
+  pass "exits non-zero"
+else
+  fail "exits 0 with an unmarked class registered after a comma" \
+"solid:forClass health:LabResultRecord, cascade:DataProvenance registers both.
+        cascade:DataProvenance carries no marker, so the two sources disagree
+        and this must be a finding. $OUT"
+fi
+if printf '%s\n' "$OUT" | grep -q "cascade:DataProvenance"; then
+  pass "names cascade:DataProvenance, the second object in the list"
+else
+  fail "the class after the comma never reached the comparison" \
+"Turtle permits an object list here and every object in it is a registration. $OUT"
+fi
+rm -rf "$DIR"
+
+# The cure, and proof the reading is satisfiable: an object list whose every
+# class is marked passes. Without this leg the fix could have turned a dropped
+# registration into a permanent unfixable finding.
+DIR="$(scratch)"
+cat >> "$DIR/pod-structure.md" <<'MD'
+
+    <#object-list-probe>
+        a solid:TypeRegistration ;
+        solid:forClass health:LabResultRecord, health:ImmunizationRecord ;
+        solid:instanceContainer </clinical/object-list.ttl> .
+MD
+OUT="$("$PYTHON" "$CHECK" "$DIR" 2>&1)"
+if [ $? -eq 0 ]; then
+  pass "an object list of MARKED classes passes"
+else
+  fail "an all-marked object list was reported" \
+"Both classes carry the marker, so the two sources agree. $OUT"
+fi
+rm -rf "$DIR"
+
+# ---------------------------------------------------------------------------
+# 9. THE TWO CHECKS READ ONE CORPUS. check-context-coverage.py loads the same
+#    ontology corpus, and the loader was duplicated byte-for-byte in both
+#    files -- free to drift on the .shapes.ttl exclusion or the glob while both
+#    still claimed to read "the ontologies". It now lives in
+#    scripts/cascade_ontology.py; this asserts the two agree on what they read,
+#    which is the property the duplication put at risk.
+# ---------------------------------------------------------------------------
+echo ""
+echo "9. check-context-coverage.py parses the same ontology corpus"
+
+COVERAGE_CHECK="$SCRIPT_DIR/check-context-coverage.py"
+parsed() {
+  printf '%s\n' "$1" | \
+    sed -n 's/^[[:space:]]*ontologies parsed:[[:space:]]*\([0-9][0-9]*\).*/\1/p'
+}
+MINE="$(parsed "$("$PYTHON" "$CHECK" "$SPEC_ROOT" 2>&1)")"
+THEIRS="$(parsed "$("$PYTHON" "$COVERAGE_CHECK" "$SPEC_ROOT" 2>&1)")"
+if [ -n "$MINE" ] && [ "$MINE" = "$THEIRS" ]; then
+  pass "both checks parse $MINE ontology file(s)"
+else
+  fail "the two checks disagree on the corpus: $MINE vs $THEIRS" \
+"Both load the ontologies through scripts/cascade_ontology.py, so these cannot
+        differ unless one has been given a loader of its own again."
+fi
+
 echo ""
 echo "=========================================================="
 echo "  passed:  $PASSED"

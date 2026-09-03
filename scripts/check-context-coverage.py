@@ -63,21 +63,21 @@ import json
 import os
 import sys
 
-try:
-    from rdflib import Graph, RDF, URIRef
-    from rdflib.namespace import OWL
-except ImportError:  # pragma: no cover - environment guard
-    sys.stderr.write(
-        "ERROR: rdflib is not installed. This check parses Turtle and cannot\n"
-        "       degrade to a text scan without becoming unsound.\n"
-        "       Install it with:  python3 -m pip install -r scripts/requirements.txt\n"
-    )
-    sys.exit(2)
+# The ontology corpus -- the glob, the .shapes.ttl exclusion, the marker -- is
+# defined once, in cascade_ontology, because check-record-class-registry.py
+# compares against the same corpus and a second copy of that definition is a
+# second thing that can drift. See that module's docstring.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
-RECORD_CLASS_MARKER = URIRef(CASCADE_NS_PREFIX + "core/v1#RecordClass")
+from cascade_ontology import (  # noqa: E402  (needs the path insert above)
+    CASCADE_NS_PREFIX,
+    RECORD_CLASS_MARKER,
+    load_ontology,
+    spec_root,
+)
+from rdflib import RDF, URIRef  # noqa: E402  (guarded by the import above)
+from rdflib.namespace import OWL  # noqa: E402
 
-ONTOLOGY_GLOB = "ontologies/*/v1*/*.ttl"
 CONTEXT_GLOB = "contexts/v1/*.jsonld"
 
 # The one context that carries every vocabulary, so every record class owes it
@@ -102,21 +102,6 @@ def vocabulary_dir(uri):
     """The ontologies/<dir> that declares this class, from its namespace."""
     rest = str(uri)[len(CASCADE_NS_PREFIX):]
     return rest.partition("#")[0].split("/")[0]
-
-
-def load_ontology(root):
-    graph, files = Graph(), []
-    for path in sorted(glob.glob(os.path.join(root, ONTOLOGY_GLOB))):
-        if path.endswith(".shapes.ttl"):
-            continue
-        graph.parse(path, format="turtle")
-        files.append(path)
-    if not files:
-        sys.stderr.write(
-            "ERROR: no ontology files matched %s under %s\n" % (ONTOLOGY_GLOB, root)
-        )
-        sys.exit(2)
-    return graph, files
 
 
 def context_names(root):
@@ -174,11 +159,7 @@ def context_names(root):
 
 
 def main():
-    args = [a for a in sys.argv[1:]]
-    root = args[0] if args else os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), ".."
-    )
-    root = os.path.abspath(root)
+    root = spec_root(sys.argv[1:])
 
     ontology, onto_files = load_ontology(root)
     by_context, ctx_files = context_names(root)

@@ -59,6 +59,12 @@ declarations, and whatever still does not resolve is a finding. The single
 exception is the documented TEMPLATE `solid:forClass {vocabulary}:{ClassName}`,
 which names no class by design.
 
+An OBJECT LIST is several registrations. Turtle permits
+`solid:forClass a:X, b:Y ;` and both classes are registered by it. The pattern
+used to require a single non-space token before the terminator, which did not
+truncate such a line so much as fail to match it at all -- every class in it
+was dropped, and the same silent omission again.
+
 Exit status: 0 if every registered class carries the marker, 1 on any finding,
 and 1 if no registration was found at all -- a check with no material to inspect
 has proven nothing.
@@ -68,31 +74,39 @@ Usage:  python3 scripts/check-record-class-registry.py [spec-root]
 Requires: rdflib (see scripts/requirements.txt)
 """
 
-import glob
 import os
 import re
 import sys
 
-try:
-    from rdflib import Graph, RDF, URIRef
-except ImportError:  # pragma: no cover - environment guard
-    sys.stderr.write(
-        "ERROR: rdflib is not installed. This check parses Turtle and cannot\n"
-        "       degrade to a text scan without becoming unsound.\n"
-        "       Install it with:  python3 -m pip install -r scripts/requirements.txt\n"
-    )
-    sys.exit(2)
+# The ontology corpus -- the glob, the .shapes.ttl exclusion, the marker -- is
+# defined once, in cascade_ontology, because check-context-coverage.py compares
+# against the same corpus and a second copy of that definition is a second
+# thing that can drift. See that module's docstring.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-CASCADE_NS_PREFIX = "https://ns.cascadeprotocol.org/"
-RECORD_CLASS_MARKER = URIRef(CASCADE_NS_PREFIX + "core/v1#RecordClass")
+from cascade_ontology import (  # noqa: E402  (needs the path insert above)
+    CASCADE_NS_PREFIX,
+    ONTOLOGY_GLOB,
+    RECORD_CLASS_MARKER,
+    load_ontology,
+    spec_root,
+)
+from rdflib import RDF, URIRef  # noqa: E402  (guarded by the import above)
 
-ONTOLOGY_GLOB = "ontologies/*/v1*/*.ttl"
 POD_STRUCTURE = "pod-structure.md"
 
-# The whole token after solid:forClass, whatever shape it is. Reading it and
-# then JUDGING it is the point: a narrower pattern makes an unrecognised
-# registration invisible instead of reporting it (see registered_classes).
-REGISTRATION = re.compile(r"solid:forClass\s+(\S+)\s*[;.]")
+# Everything between solid:forClass and the `;` or `.` that closes the
+# predicate-object pair -- which may be an OBJECT LIST, since Turtle permits
+# `solid:forClass a:X, b:Y ;` and every object in it registers a class.
+#
+# DELIBERATELY WIDE IN BOTH DIRECTIONS. This required a single non-space token
+# before the terminator, which did not merely truncate an object list: the
+# pattern failed to match such a line AT ALL, so every class in it was dropped
+# and no pod path in it was ever compared to a marker. Reading the whole region
+# and then JUDGING each token is the point -- a narrower pattern makes an
+# unrecognised registration invisible instead of reporting it, which is the
+# silent omission this check exists to catch (see registered_classes).
+REGISTRATION = re.compile(r"solid:forClass\s+([^;.]+)[;.]")
 QNAME = re.compile(r"^([A-Za-z][A-Za-z0-9]*):([A-Za-z][A-Za-z0-9_-]*)$")
 
 
@@ -121,6 +135,10 @@ def registered_classes(root, namespaces):
     name no resolvable class -- an unknown prefix, a typo like `helth:`, a
     spelling that is not a qname at all.
 
+    ONE PREDICATE, POSSIBLY SEVERAL OBJECTS. Turtle's comma separates objects
+    of a shared predicate, so `solid:forClass a:X, b:Y ;` registers both and
+    each object is judged on its own marker.
+
     AN UNRESOLVED REGISTRATION IS A FINDING, NOT A NON-REGISTRATION. Skipping it
     is how `helth:LabResultRecord` or a draft class registers a pod path and is
     compared to nothing, which is the exact failure mode this check exists to
@@ -136,41 +154,27 @@ def registered_classes(root, namespaces):
         text = handle.read()
 
     seen, out, unresolved = set(), [], []
-    for token in REGISTRATION.findall(text):
-        if "{" in token or "}" in token:
-            continue
-        if token in seen:
-            continue
-        seen.add(token)
-        match = QNAME.match(token)
-        if match and match.group(1) in namespaces:
-            out.append((token, URIRef(namespaces[match.group(1)] + match.group(2))))
-        else:
-            unresolved.append(token)
+    for objects in REGISTRATION.findall(text):
+        # One predicate-object pair, so possibly several objects: Turtle's
+        # comma separates them and each is its own registration.
+        for token in (part.strip() for part in objects.split(",")):
+            if not token:
+                continue
+            if "{" in token or "}" in token:
+                continue
+            if token in seen:
+                continue
+            seen.add(token)
+            match = QNAME.match(token)
+            if match and match.group(1) in namespaces:
+                out.append((token, URIRef(namespaces[match.group(1)] + match.group(2))))
+            else:
+                unresolved.append(token)
     return out, unresolved
 
 
-def load_ontology(root):
-    graph, files = Graph(), []
-    for path in sorted(glob.glob(os.path.join(root, ONTOLOGY_GLOB))):
-        if path.endswith(".shapes.ttl"):
-            continue
-        graph.parse(path, format="turtle")
-        files.append(path)
-    if not files:
-        sys.stderr.write(
-            "ERROR: no ontology files matched %s under %s\n" % (ONTOLOGY_GLOB, root)
-        )
-        sys.exit(2)
-    return graph, files
-
-
 def main():
-    args = [a for a in sys.argv[1:]]
-    root = args[0] if args else os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), ".."
-    )
-    root = os.path.abspath(root)
+    root = spec_root(sys.argv[1:])
 
     ontology, onto_files = load_ontology(root)
     namespaces = cascade_namespaces(ontology)

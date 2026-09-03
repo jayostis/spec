@@ -49,6 +49,7 @@ on:
       - 'scripts/known-unshaped-classes.json'
       - 'scripts/check-record-class-registry.py'
       - 'scripts/test-check-record-class-registry.sh'
+      - 'scripts/cascade_ontology.py'
       - 'pod-structure.md'
       - 'scripts/requirements.txt'
       - '.github/workflows/shapes.yml'

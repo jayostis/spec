@@ -26,6 +26,7 @@ on:
       - 'scripts/check-context-validity.py'
       - 'scripts/test-check-context-validity.sh'
       - 'scripts/check-context-coverage.py'
+      - 'scripts/cascade_ontology.py'
       - 'scripts/test-check-context-coverage.sh'
       - 'scripts/requirements.txt'
       - '.github/workflows/contexts.yml'
